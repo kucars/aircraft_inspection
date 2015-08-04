@@ -23,7 +23,7 @@
 	<arg name="ns" value="$(arg ns)"/>
 </include>
 <group ns="$(arg ns)">
-	<node pkg="AircraftInspection" name="demo_offboard_position_control" type="demo_offboard_position_control" output="screen"/>
+	<node pkg="aircraft_inspection" name="demo_offboard_position_control" type="demo_offboard_position_control" output="screen"/>
 <!--	<node pkg="px4" name="demo_offboard_attitude_setpoints" type="demo_offboard_attitude_setpoints" output="screen"/>-->
 <!--	<node pkg="px4" name="demo_offboard_velocity_test" type="demo_offboard_velocity_test" output="screen"/>-->
   

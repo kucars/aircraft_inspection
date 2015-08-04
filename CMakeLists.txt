@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(AircraftInspection)
+project(aircraft_inspection)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 add_definitions(-D__PX4_ROS)
 add_definitions(-D__EXPORT=)
@@ -163,100 +163,6 @@ target_link_libraries(px
   ${catkin_LIBRARIES}
 )
 
-## Declare a test publisher
-# add_executable(publisher
-# 	src/examples/publisher/publisher_main.cpp
-# 	src/examples/publisher/publisher_example.cpp)
-# add_dependencies(publisher ${PROJECT_NAME}_generate_messages_cpp multiplatform_message_headers)
-# target_link_libraries(publisher
-#   ${catkin_LIBRARIES}
-#   px4
-# )
-
-## Declare a test subscriber
-# add_executable(subscriber
-# 	src/examples/subscriber/subscriber_main.cpp
-# 	src/examples/subscriber/subscriber_example.cpp)
-# add_dependencies(subscriber ${PROJECT_NAME}_generate_messages_cpp multiplatform_message_headers)
-# target_link_libraries(subscriber
-#   ${catkin_LIBRARIES}
-#   px4
-# )
-
-## MC Attitude Control
-# add_executable(mc_att_control
-# 	src/modules/mc_att_control_multiplatform/mc_att_control_main.cpp
-# 	src/modules/mc_att_control_multiplatform/mc_att_control.cpp
-# 	src/modules/mc_att_control_multiplatform/mc_att_control_base.cpp)
-# add_dependencies(mc_att_control ${PROJECT_NAME}_generate_messages_cpp_cpp)
-# target_link_libraries(mc_att_control
-#   ${catkin_LIBRARIES}
-#   px4
-# )
-
-## MC Position Control
-# add_executable(mc_pos_control
-# 	src/modules/mc_pos_control_multiplatform/mc_pos_control_main.cpp
-# 	src/modules/mc_pos_control_multiplatform/mc_pos_control.cpp)
-# add_dependencies(mc_pos_control ${PROJECT_NAME}_generate_messages_cpp_cpp)
-# target_link_libraries(mc_pos_control
-#   ${catkin_LIBRARIES}
-#   px4
-# )
-
-## Attitude Estimator dummy
-# add_executable(attitude_estimator
-# 	src/platforms/ros/nodes/attitude_estimator/attitude_estimator.cpp)
-# add_dependencies(attitude_estimator ${PROJECT_NAME}_generate_messages_cpp_cpp)
-# target_link_libraries(attitude_estimator
-#   ${catkin_LIBRARIES}
-#   px4
-# )
-
-## Position Estimator dummy
-# add_executable(position_estimator
-# 	src/platforms/ros/nodes/position_estimator/position_estimator.cpp)
-# add_dependencies(position_estimator ${PROJECT_NAME}_generate_messages_cpp_cpp)
-# target_link_libraries(position_estimator
-#   ${catkin_LIBRARIES}
-#   px4
-# )
-
-## Manual input
-# add_executable(manual_input
-# 	src/platforms/ros/nodes/manual_input/manual_input.cpp)
-# add_dependencies(manual_input ${PROJECT_NAME}_generate_messages_cpp_cpp)
-# target_link_libraries(manual_input
-#   ${catkin_LIBRARIES}
-#   px4
-# )
-
-## Multicopter Mixer dummy
-# add_executable(mc_mixer
-#   src/platforms/ros/nodes/mc_mixer/mc_mixer.cpp)
-# add_dependencies(mc_mixer ${PROJECT_NAME}_generate_messages_cpp_cpp)
-# target_link_libraries(mc_mixer
-#   ${catkin_LIBRARIES}
-#   px4
-# )
-
-## Commander dummy
-# add_executable(commander
-# 	src/platforms/ros/nodes/commander/commander.cpp)
-# add_dependencies(commander ${PROJECT_NAME}_generate_messages_cpp_cpp)
-# target_link_libraries(commander
-#   ${catkin_LIBRARIES}
-#   px4
-# )
-
-## Mavlink dummy
-# add_executable(mavlink
-# 	src/platforms/ros/nodes/mavlink/mavlink.cpp)
-# add_dependencies(mavlink ${PROJECT_NAME}_generate_messages_cpp_cpp)
-# target_link_libraries(mavlink
-#   ${catkin_LIBRARIES}
-#   px4
-# )
 
 ## Offboard Position Setpoint Demo
 add_executable(demo_offboard_position_control
@@ -267,7 +173,7 @@ target_link_libraries(demo_offboard_position_control
   px
 )
 
-## Offboard Attitude Setpoint Demo
+## Offboard Velocity Setpoint Demo
 add_executable(demo_offboard_velocity_test
 	${CMAKE_CURRENT_SOURCE_DIR}/src/demo_offboard_velocity_test/demo_offboard_velocity_test.cpp)
 add_dependencies(demo_offboard_velocity_test ${PROJECT_NAME}_generate_messages_cpp_cpp)
