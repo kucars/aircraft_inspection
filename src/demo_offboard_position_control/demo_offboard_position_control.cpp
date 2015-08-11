@@ -83,104 +83,32 @@ int DemoOffboardPositionSetpoints::main()
             geometry_msgs::PoseStamped pose;
             pose.pose.position.x = 0;
             pose.pose.position.y = 0;
-            pose.pose.position.z = 3.0;
+            pose.pose.position.z = 14.5;
             _local_position_sp_pub.publish(pose);
 
-            ros::Duration(10).sleep(); //15; //use later if statements
+            ros::Duration(15).sleep(); //15;
 
-            for(int i=0; i<18; i++)
+//            pose.pose.position.x = 2;
+//            _local_position_sp_pub.publish(pose);
+
+//            ros::Duration(5).sleep(); //15;
+
+            for(int i=0; i<36; i++)
             {
-                yaw= (-10 + offset) * (M_PI/180);
-                pose.pose.position.z = 3.0;
+                yaw= (10 + offset) * (M_PI/180);
+                pose.pose.position.z = 14.5;
                 tf::Quaternion q = tf::createQuaternionFromRPY(roll, pitch , yaw );
                 quaternionTFToMsg(q, pose.pose.orientation);
                 _local_position_sp_pub.publish(pose);
-                offset=offset-5;
+                offset=offset+5;
                 ros::Duration(0.5).sleep();
             }
-            ros::Duration(20).sleep();
-
-            //down
-            pose.pose.position.z = 2.2;
-            _local_position_sp_pub.publish(pose);
             ros::Duration(10).sleep();
 
             //left
-            pose.pose.position.x = -1;
+            pose.pose.position.y = 20.0;
             _local_position_sp_pub.publish(pose);
-            ros::Duration(10).sleep();
-
-            //up
-            pose.pose.position.z = 3.0;
-            _local_position_sp_pub.publish(pose);
-            ros::Duration(10).sleep();
-
-            //left
-            pose.pose.position.x = -2;
-            _local_position_sp_pub.publish(pose);
-            ros::Duration(10).sleep();
-
-            //down
-            pose.pose.position.z = 2.2;
-            _local_position_sp_pub.publish(pose);
-            ros::Duration(10).sleep();
-
-            //left
-            pose.pose.position.x = -3;
-            _local_position_sp_pub.publish(pose);
-            ros::Duration(10).sleep();
-
-            //up
-            pose.pose.position.z = 3.0;
-            _local_position_sp_pub.publish(pose);
-            ros::Duration(10).sleep();
-
-            //left
-            pose.pose.position.x = -4.5;
-            _local_position_sp_pub.publish(pose);
-            ros::Duration(10).sleep();
-
-            for(int i=0; i<18; i++)
-            {
-                yaw= (-10 + offset) * (M_PI/180);
-                pose.pose.position.z = 2.5;
-                tf::Quaternion q = tf::createQuaternionFromRPY(roll, pitch , yaw );
-                quaternionTFToMsg(q, pose.pose.orientation);
-                _local_position_sp_pub.publish(pose);
-                offset=offset-5;
-                ros::Duration(1.5).sleep();
-            }
-
-            ros::Duration(10).sleep();
-            //down
-            pose.pose.position.z = 2.5;
-            _local_position_sp_pub.publish(pose);
-            ros::Duration(10).sleep();
-
-            //down
-            pose.pose.position.z = 2.2;
-            _local_position_sp_pub.publish(pose);
-            ros::Duration(10).sleep();
-
-            //left
-            pose.pose.position.y = -1;
-            _local_position_sp_pub.publish(pose);
-            ros::Duration(10).sleep();
-
-            //up
-            pose.pose.position.z = 3.0;
-            _local_position_sp_pub.publish(pose);
-            ros::Duration(10).sleep();
-
-            //left
-            pose.pose.position.y = -1;
-            _local_position_sp_pub.publish(pose);
-            ros::Duration(10).sleep();
-
-            //left
-            pose.pose.position.x = 0;
-            _local_position_sp_pub.publish(pose);
-            ros::Duration(10).sleep();
+            ros::Duration(5).sleep();
 
             flag=1;
 
