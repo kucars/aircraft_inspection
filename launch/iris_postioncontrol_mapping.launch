@@ -103,7 +103,7 @@
     </node>
     
       <!-- Visualization RVIZ -->
-  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="rviz" args="-d $(find rtabmap_ros)/launch/config/rgbd_gazebo.rviz"/>
+  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="rviz" args="-d $(find aircraft_inspection)/rviz/rgbd_gazebo.rviz"/>
   <!-- sync cloud with odometry and voxelize the point cloud (for fast visualization in rviz) -->
   <node if="$(arg rviz)" pkg="nodelet" type="nodelet" name="points_xyzrgb" args="load rtabmap_ros/point_cloud_xyzrgb standalone_nodelet">
     <remap from="rgb/image"       to="/iris/xtion_sensor/iris/xtion_sensor_camera/rgb/image_raw"/>

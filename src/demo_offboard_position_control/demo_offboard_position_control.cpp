@@ -65,16 +65,6 @@ int DemoOffboardPositionSetpoints::main()
         loop_rate.sleep();
         ros::spinOnce();
 
-        //        ros::Duration(7).sleep();
-        //        /* Publish example offboard position setpoint */
-        //        geometry_msgs::PoseStamped pose;
-        //        pose.pose.position.x = 0;
-        //        pose.pose.position.y = 0;
-        //        pose.pose.position.z = 4;
-        //        _local_position_sp_pub.publish(pose);
-
-        //        ros::Duration(10).sleep(); //15;
-
 
         // just to make the trajectory once
         if(flag==0){
@@ -83,32 +73,23 @@ int DemoOffboardPositionSetpoints::main()
             geometry_msgs::PoseStamped pose;
             pose.pose.position.x = 0;
             pose.pose.position.y = 0;
-            pose.pose.position.z = 14.5;
+            pose.pose.position.z = 5;
             _local_position_sp_pub.publish(pose);
 
-            ros::Duration(15).sleep(); //15;
-
-//            pose.pose.position.x = 2;
-//            _local_position_sp_pub.publish(pose);
-
-//            ros::Duration(5).sleep(); //15;
-
-            for(int i=0; i<36; i++)
-            {
-                yaw= (10 + offset) * (M_PI/180);
-                pose.pose.position.z = 14.5;
-                tf::Quaternion q = tf::createQuaternionFromRPY(roll, pitch , yaw );
-                quaternionTFToMsg(q, pose.pose.orientation);
-                _local_position_sp_pub.publish(pose);
-                offset=offset+5;
-                ros::Duration(0.5).sleep();
-            }
-            ros::Duration(10).sleep();
+            ros::Duration(10).sleep(); //15;
 
             //left
-            pose.pose.position.y = 20.0;
+            pose.pose.position.y = 8.0;
             _local_position_sp_pub.publish(pose);
-            ros::Duration(5).sleep();
+            ros::Duration(15).sleep();
+
+            pose.pose.position.z = 8.0;
+            _local_position_sp_pub.publish(pose);
+            ros::Duration(10).sleep();
+
+            pose.pose.position.y = 0.0;
+            _local_position_sp_pub.publish(pose);
+            ros::Duration(10).sleep();
 
             flag=1;
 
