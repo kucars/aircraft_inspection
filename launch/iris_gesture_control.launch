@@ -7,9 +7,9 @@
 <include file="$(find rotors_gazebo)/launch/iris_gesture_control_world.launch">
 	<arg name="ns" value="$(arg ns)"/>
 </include>
-<include file="$(find px4)/launch/mavros_sitl.launch">
+<!--include file="$(find px4)/launch/mavros_sitl.launch">
 	<arg name="ns" value="$(arg ns)"/>
-</include>
+</include-->
 <group ns="$(arg ns)">
 	<!--node pkg="aircraft_inspection" name="demo_offboard_position_control" type="demo_offboard_position_control" output="screen"/-->
 <!--	<node pkg="px4" name="demo_offboard_attitude_setpoints" type="demo_offboard_attitude_setpoints" output="screen"/>-->
