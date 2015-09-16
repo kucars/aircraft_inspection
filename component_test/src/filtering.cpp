@@ -65,7 +65,7 @@
 #include "fcl/broadphase/broadphase.h"
 #include "fcl/shape/geometric_shape_to_BVH_model.h"
 #include "fcl/math/transform.h"
-#include "test_fcl_utility.h"
+#include "fcl_utility.h"
 #include "fcl/BVH/BV_fitter.h"
 #include "fcl/BV/BV.h"
 //#include "fcl/traversal/traversal_node_bvhs.h"

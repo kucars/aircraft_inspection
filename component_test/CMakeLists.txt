@@ -23,14 +23,11 @@ add_definitions(${PCL_DEFINITIONS})
 
 catkin_package()
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/../../fcl/test/fcl_resources/config.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/../../fcl/test/fcl_resources/config.h")
 include_directories(include
   ${catkin_INCLUDE_DIRS}
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../fcl/test/
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../fcl/test/fcl_resources
 )
   
-add_library(fcl_test ${CMAKE_CURRENT_SOURCE_DIR}/../../fcl/test/test_fcl_utility.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../../fcl/src/traversal/traversal_node_bvhs.cpp)
+add_library(fcl_test src/fcl_utility.cpp )
 add_executable(frustum_test src/frustum_test.cpp)
 add_dependencies(frustum_test ${catkin_EXPORTED_TARGETS})
 target_link_libraries(frustum_test ${catkin_LIBRARIES} ${PCL_LIBRARIES})
