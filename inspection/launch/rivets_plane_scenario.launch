@@ -9,9 +9,9 @@
 <include file="$(find px4)/launch/mavros_sitl.launch">
 	<arg name="ns" value="$(arg ns)"/>
 </include>
-<group ns="$(arg ns)">
+<!--group ns="$(arg ns)">
 	<node pkg="aircraft_inspection" name="demo_offboard_position_control" type="demo_offboard_position_control" output="screen"/>
   
-</group>
+</group-->
 <node name="rviz" pkg="rviz" type="rviz" args="-d $(find aircraft_inspection)/rviz/plane_rivets.rviz" required="true" />
 </launch>

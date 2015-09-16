@@ -5,9 +5,6 @@ add_definitions(-D__PX4_ROS)
 add_definitions(-D__EXPORT=)
 add_definitions(-DMAVLINK_DIALECT=common)
 
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
@@ -21,214 +18,16 @@ find_package(catkin REQUIRED COMPONENTS
   libmavconn
   tf
 )
+
 find_package(Eigen REQUIRED)
-
-## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
-
-
-## Uncomment this if the package has a setup.py. This macro ensures
-## modules and global scripts declared therein get installed
-## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
-
-################################################
-## Declare ROS messages, services and actions ##
-################################################
-
-## To declare and build messages, services or actions from within this
-## package, follow these steps:
-## * Let MSG_DEP_SET be the set of packages whose message types you use in
-##   your messages/services/actions (e.g. std_msgs, actionlib_msgs, ...).
-## * In the file package.xml:
-##   * add a build_depend and a run_depend tag for each package in MSG_DEP_SET
-##   * If MSG_DEP_SET isn't empty the following dependencies might have been
-##     pulled in transitively but can be declared for certainty nonetheless:
-##     * add a build_depend tag for "message_generation"
-##     * add a run_depend tag for "message_runtime"
-## * In this file (CMakeLists.txt):
-##   * add "message_generation" and every package in MSG_DEP_SET to
-##     find_package(catkin REQUIRED COMPONENTS ...)
-##   * add "message_runtime" and every package in MSG_DEP_SET to
-##     catkin_package(CATKIN_DEPENDS ...)
-##   * uncomment the add_*_files sections below as needed
-##     and list every .msg/.srv/.action file to be processed
-##   * uncomment the generate_messages entry below
-##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
-
-## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   rc_channels.msg
-#   vehicle_attitude.msg
-#   vehicle_attitude_setpoint.msg
-#   manual_control_setpoint.msg
-#   actuator_controls.msg
-#   actuator_controls_0.msg
-#   actuator_controls_virtual_mc.msg
-#   vehicle_rates_setpoint.msg
-#   mc_virtual_rates_setpoint.msg
-#   vehicle_attitude.msg
-#   vehicle_control_mode.msg
-#   actuator_armed.msg
-#   parameter_update.msg
-#   vehicle_status.msg
-#   vehicle_local_position.msg
-#   position_setpoint.msg
-#   position_setpoint_triplet.msg
-#   vehicle_local_position_setpoint.msg
-#   vehicle_global_velocity_setpoint.msg
-#   offboard_control_mode.msg
-#   vehicle_force_setpoint.msg
-#   distance_sensor.msg
-# )
-
-## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
-
-## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
-
-## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-#   gazebo_msgs
-# )
-
-###################################
-## catkin specific configuration ##
-###################################
-## The catkin_package macro generates cmake config files for your package
-## Declare things to be passed to dependent projects
-## INCLUDE_DIRS: uncomment this if you package contains header files
-## LIBRARIES: libraries you create in this project that dependent projects also need
-## CATKIN_DEPENDS: catkin_packages dependent projects also need
-## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS #src/include
-  LIBRARIES px4
-  CATKIN_DEPENDS message_runtime
-  roscpp rospy std_msgs libmavconn
-  DEPENDS system_lib
+  #LIBRARIES px4
+  #CATKIN_DEPENDS message_runtime
+  #roscpp rospy std_msgs libmavconn
+  #DEPENDS system_lib
 )
 
-###########
-## Build ##
-###########
-
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
-include_directories(
-  ${catkin_INCLUDE_DIRS}
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Firmware/src/platforms
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Firmware/src/platforms/ros/px4_messages
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Firmware/src/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Firmware/src/modules
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Firmware/src/
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Firmware/src/lib
-  ${EIGEN_INCLUDE_DIRS}
-  integrationtests
-)
-
-## generate multiplatform wrapper headers
-## note that the message header files are generated as in any ROS project with generate_messages()
-set(MULTIPLATFORM_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../Firmware/src/platforms/ros/px4_messages)
-set(MULTIPLATFORM_TEMPLATE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../Firmware/msg/templates/px4/ros)
-set(TOPICHEADER_TEMP_DIR ${CMAKE_BINARY_DIR}/topics_temporary)
-set(MULTIPLATFORM_PREFIX px4_)
-add_custom_target(multiplatform_message ALL ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../Firmware/Tools/px_generate_uorb_topic_headers.py
-	-d ${CMAKE_CURRENT_SOURCE_DIR}/../Firmware/msg -o ${MULTIPLATFORM_HEADER_DIR} -e ${MULTIPLATFORM_TEMPLATE_DIR}
-	-t ${TOPICHEADER_TEMP_DIR} -p ${MULTIPLATFORM_PREFIX})
-
-## Declare a cpp library
-add_library(px
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Firmware/src/platforms/ros/px4_ros_impl.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Firmware/src/platforms/ros/perf_counter.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Firmware/src/platforms/ros/geo.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Firmware/src/lib/mathlib/math/Limits.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Firmware/src/modules/systemlib/circuit_breaker.cpp
-)
-add_dependencies(px ${PROJECT_NAME}_generate_messages_cpp multiplatform_message)
-# 
-target_link_libraries(px
-  ${catkin_LIBRARIES}
-)
-
-
-## Offboard Position Setpoint Demo
-add_executable(demo_offboard_position_control
-	${CMAKE_CURRENT_SOURCE_DIR}/src/demo_offboard_position_control/demo_offboard_position_control.cpp)
-add_dependencies(demo_offboard_position_control ${PROJECT_NAME}_generate_messages_cpp_cpp)
-target_link_libraries(demo_offboard_position_control
-  ${catkin_LIBRARIES}
-  px
-)
-
-## Offboard Velocity Setpoint Demo
-add_executable(demo_offboard_velocity_test
-	${CMAKE_CURRENT_SOURCE_DIR}/src/demo_offboard_velocity_test/demo_offboard_velocity_test.cpp)
-add_dependencies(demo_offboard_velocity_test ${PROJECT_NAME}_generate_messages_cpp_cpp)
-target_link_libraries(demo_offboard_velocity_test
-  ${catkin_LIBRARIES}
-  px
-)
-
-#############
-## Install ##
-#############
-
-# all install targets should use catkin DESTINATION variables
-# See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
-
-## Mark executable scripts (Python etc.) for installation
-## in contrast to setup.py, you can choose the destination
-# install(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
-
-## Mark executables and/or libraries for installation
-install(TARGETS px
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
-
-## Mark cpp header files for installation
-# install(DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#   PATTERN ".svn" EXCLUDE
-# )
-
-## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
-#   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
-
-#############
-## Testing ##
-#############
-
-## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_px4test.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
-
-## Add folders to be run by python nosetests
-# catkin_add_nosetests(test)
 
 
 
