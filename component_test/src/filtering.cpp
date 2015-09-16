@@ -160,7 +160,8 @@ int main(int argc, char **argv)
     //testing the mesh example
     std::vector<Vec3f> p1;
     std::vector<Triangle> t1;
-    loadOBJFile("/home/randa/workspace/catkin_ws/src/component_test/src/mesh/desktop_scaleddown.obj", p1, t1);
+    std::string str = path+"/src/mesh/desktop_scaleddown.obj";
+    loadOBJFile(str.c_str(), p1, t1);
 
     BVHModel<OBBRSS>* m1 = new BVHModel<OBBRSS>();
     boost::shared_ptr<CollisionGeometry> m1_ptr(m1);
@@ -230,27 +231,27 @@ int main(int argc, char **argv)
     }
 
     //***************making a mesh (Optional)*******************
-    vtkSmartPointer< vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
-    polydata->SetPoints(filtered_points);
-
-    vtkSmartPointer<vtkXMLPolyDataWriter> pointsWriter = vtkSmartPointer<vtkXMLPolyDataWriter>::New();
-    pointsWriter->SetFileName("points.vtp");
-    pointsWriter->SetInput(polydata);
-    pointsWriter->Write();
-
-    //convert vtp to ply mesh
-    std::string inputFileName = "points.vtp";
-    std::string outputFileName = "samples.ply";
-
-    vtkSmartPointer<vtkXMLPolyDataReader> reader = vtkSmartPointer<vtkXMLPolyDataReader>::New();
-    reader->SetFileName(inputFileName.c_str());
-    reader->Update();
-
-    vtkSmartPointer<vtkPLYWriter> writer = vtkSmartPointer<vtkPLYWriter>::New();
-    writer->SetFileName(outputFileName.c_str());
-    writer->SetInputConnection(reader->GetOutputPort());
-    writer->Update();
-    ROS_INFO("DONE :) samples mesh is generated");
+//     vtkSmartPointer< vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+//     polydata->SetPoints(filtered_points);
+// 
+//     vtkSmartPointer<vtkXMLPolyDataWriter> pointsWriter = vtkSmartPointer<vtkXMLPolyDataWriter>::New();
+//     pointsWriter->SetFileName("points.vtp");
+//     pointsWriter->SetInput(polydata);
+//     pointsWriter->Write();
+// 
+//     //convert vtp to ply mesh
+//     std::string inputFileName = "points.vtp";
+//     std::string outputFileName = "samples.ply";
+// 
+//     vtkSmartPointer<vtkXMLPolyDataReader> reader = vtkSmartPointer<vtkXMLPolyDataReader>::New();
+//     reader->SetFileName(inputFileName.c_str());
+//     reader->Update();
+// 
+//     vtkSmartPointer<vtkPLYWriter> writer = vtkSmartPointer<vtkPLYWriter>::New();
+//     writer->SetFileName(outputFileName.c_str());
+//     writer->SetInputConnection(reader->GetOutputPort());
+//     writer->Update();
+//     ROS_INFO("DONE :) samples mesh is generated");
     //***********************************************
 
 

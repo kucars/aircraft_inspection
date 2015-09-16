@@ -167,7 +167,8 @@ int main(int argc, char **argv)
     //testing the mesh example
     std::vector<Vec3f> p1;
     std::vector<Triangle> t1;
-    loadOBJFile("/home/randa/workspace/catkin_ws/src/component_test/src/mesh/desktop_scaleddown.obj", p1, t1);
+    std::string str = path+"/src/mesh/desktop_scaleddown.obj";
+    loadOBJFile(str.c_str(), p1, t1);
 
     BVHModel<OBBRSS>* m1 = new BVHModel<OBBRSS>();
     boost::shared_ptr<CollisionGeometry> m1_ptr(m1);
@@ -190,7 +191,8 @@ int main(int argc, char **argv)
 
     //openning the file for writing the points positions and the orientation
     ofstream pointfile;
-    pointfile.open ("/home/randa/workspace/catkin_ws/src/component_test/src/poses.txt");
+    std::string file_loc = path+"/src/poses.txt";
+    pointfile.open (file_loc.c_str());
     for (int j=0; j<points.poses.size();j++)
     {
         boost::shared_ptr<Box> Sample(new Box(1));
