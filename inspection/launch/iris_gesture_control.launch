@@ -3,7 +3,7 @@
   
 <arg name="ns" default="iris"/>
 <arg name="rviz"                    default="true" />
-<node if="$(arg rviz)" pkg="rviz" type="rviz" name="rviz" args="-d $(find rtabmap_ros)/launch/config/rgbd_gazebo.rviz"/>
+<node if="$(arg rviz)" pkg="rviz" type="rviz" name="rviz" args="-d $(find aircraft_inspection)/rgbd_gazebo.rviz"/>
 <include file="$(find rotors_gazebo)/launch/iris_gesture_control_world.launch">
 	<arg name="ns" value="$(arg ns)"/>
 </include>
