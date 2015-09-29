@@ -51,3 +51,7 @@ target_link_libraries(samples_orientation fcl_test ${catkin_LIBRARIES} ${PCL_LIB
 add_executable(orientation_testing src/orientation_testing.cpp)
 add_dependencies(orientation_testing ${catkin_EXPORTED_TARGETS})
 target_link_libraries(orientation_testing fcl_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES})
+
+add_executable(reconstruction src/reconstruction.cpp)
+add_dependencies(reconstruction ${catkin_EXPORTED_TARGETS})
+target_link_libraries(reconstruction fcl_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES})

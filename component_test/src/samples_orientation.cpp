@@ -403,6 +403,8 @@ geometry_msgs::Pose calcOrienation(Vec3f position,Vec3f nearestP)
     rpy.z = yaw;
 
     std::cout<<"roll: "<<roll<<" pitch: "<<pitch<<" yaw: "<<yaw<<std::endl;
+    std::cout<<"Qx: "<<output_vector.orientation.x<<" Qy: "<<output_vector.orientation.y<<" Qz: "<<output_vector.orientation.z<<" Qw: "<<output_vector.orientation.w<<std::endl;
+
     return output_vector;
 
 }

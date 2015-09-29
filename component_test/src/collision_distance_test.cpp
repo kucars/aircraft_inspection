@@ -105,7 +105,7 @@ int main(int argc, char **argv)
     geometry_msgs::PoseArray points;
     geometry_msgs::Pose pose[points_num];
     //x is the width of the aircraft, y is the hight of the aircraft, z is the length of the aircraft
-    pose[0].position.x=0.0; pose[0].position.y=0.0; pose[0].position.z=-5.0;
+    pose[0].position.x=0.3; pose[0].position.y=0.0; pose[0].position.z=-5.0;
 //    pose[1].position.x=0.0; pose[1].position.y=0.0; pose[1].position.z=-5.0;
 //    pose[2].position.x=0.0; pose[2].position.y=0.0; pose[2].position.z=0.0;
 //    pose[3].position.x=0.0; pose[3].position.y=0.0; pose[3].position.z=0.0;
@@ -177,6 +177,9 @@ int main(int argc, char **argv)
         DistanceResult localResult;
         distance(&co0, obj, request2, localResult);
         FCL_REAL min_dist = localResult.min_distance;
+//        Vec3f vec= localResult.nearest_points[0];
+//        marker = drawCUBE(vec, 222, 3,0.005) ;//green
+//        marker_array.markers.push_back(marker);
         std::cout<<"minimum distance point"<<j<<" : "<<min_dist<<std::endl;
 
 
