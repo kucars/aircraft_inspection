@@ -105,7 +105,7 @@ int main(int argc, char **argv)
     geometry_msgs::PoseArray points;
     geometry_msgs::Pose pose[points_num];
     //x is the width of the aircraft, y is the hight of the aircraft, z is the length of the aircraft
-    pose[0].position.x=0.3; pose[0].position.y=0.0; pose[0].position.z=-5.0;
+    pose[0].position.x=0.0; pose[0].position.y=0.0; pose[0].position.z=-1.0;
 //    pose[1].position.x=0.0; pose[1].position.y=0.0; pose[1].position.z=-5.0;
 //    pose[2].position.x=0.0; pose[2].position.y=0.0; pose[2].position.z=0.0;
 //    pose[3].position.x=0.0; pose[3].position.y=0.0; pose[3].position.z=0.0;
@@ -119,10 +119,11 @@ int main(int argc, char **argv)
     //testing the mesh example
     std::vector<Vec3f> p1;
     std::vector<Triangle> t1;
-    std::string str = path+"/src/mesh/desktop_scaleddown.obj";
+    std::string str = path+"/src/mesh/desktop_scaled_filled1.obj";
     loadOBJFile(str.c_str(), p1, t1);
 
     BVHModel<OBBRSS>* m1 = new BVHModel<OBBRSS>();
+    m1->bv_splitter.reset(new BVSplitter<OBBRSS>(SPLIT_METHOD_MEAN));
     boost::shared_ptr<CollisionGeometry> m1_ptr(m1);
 
     m1->beginModel();
@@ -140,7 +141,7 @@ int main(int argc, char **argv)
 
     for(int j=0; j<=points_num; j++)
     {
-        boost::shared_ptr<Box> Sample(new Box(1));
+        boost::shared_ptr<Box> Sample(new Box(0.2));
         tf0.setIdentity();
         tf0.setTranslation(Vec3f(points.poses[j].position.x , points.poses[j].position.y  ,points.poses[j].position.z ));
         CollisionObject co0(Sample, tf0);
@@ -162,13 +163,13 @@ int main(int argc, char **argv)
         if (result.isCollision() == true )
         {
             std::cout<<"Collision"<<endl;
-            marker = drawCUBE(vec2,j,2,1) ;//red
+            marker = drawCUBE(vec2,j,2,0.2) ;//red
             marker_array.markers.push_back(marker);
         }
         else
         {
             std:cout<<"NO Collision"<<endl;
-            marker = drawCUBE(vec2, j, 1,1) ;//blue
+            marker = drawCUBE(vec2, j, 1,0.2) ;//blue
             marker_array.markers.push_back(marker);
 
         }

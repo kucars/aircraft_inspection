@@ -68,7 +68,7 @@ int main(int argc, char **argv)
     pcl::visualization::CloudViewer viewer ("viewer");
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
     std::string path = ros::package::getPath("component_test");
-    
+
     //******************PCL Visualizer*******************
         for(int i=1; i<3;i=i++) //visualizing 3 scans
         {
