@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<launch>
+  
+<arg name="ns" default="iris"/>
+ <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0 0 0.0 -0.5 0.5 -0.5 0.5 /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link /iris/xtion_sensor/camera_depth_optical_frame 500" />
+
+<include file="$(find rotors_gazebo)/launch/gazebo_iris_aircraft_world.launch">
+	<arg name="ns" value="$(arg ns)"/>
+</include>
+<include file="$(find px4)/launch/mavros_sitl.launch">
+	<arg name="ns" value="$(arg ns)"/>
+</include>
+
+<!--<node name="rviz" pkg="rviz" type="rviz" args="-d $(find aircraft_inspection)/rviz/scenario.rviz" required="true" />-->
+</launch>
