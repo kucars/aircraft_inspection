@@ -10,6 +10,9 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   tf_conversions
   eigen_conversions
+  nav_msgs
+  shape_msgs
+  std_msgs
   )
 
 find_package(PCL REQUIRED)
@@ -55,3 +58,7 @@ target_link_libraries(orientation_testing fcl_test ${catkin_LIBRARIES} ${PCL_LIB
 add_executable(reconstruction src/reconstruction.cpp)
 add_dependencies(reconstruction ${catkin_EXPORTED_TARGETS})
 target_link_libraries(reconstruction fcl_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES})
+
+add_executable(z_buffer_test src/z_buffer_test.cpp)
+add_dependencies(z_buffer_test ${catkin_EXPORTED_TARGETS})
+target_link_libraries(z_buffer_test fcl_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES})
