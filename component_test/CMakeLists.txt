@@ -19,6 +19,15 @@ find_package(PCL REQUIRED)
 find_package(Boost REQUIRED)
 find_package(fcl REQUIRED)
 find_package(octomap REQUIRED)
+# CGAL and its components
+find_package( CGAL QUIET COMPONENTS  )
+
+if ( NOT CGAL_FOUND )
+
+  message(STATUS "This project requires the CGAL library, and will not be compiled.")
+  return()  
+
+endif()
 
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
@@ -62,3 +71,7 @@ target_link_libraries(reconstruction fcl_test ${catkin_LIBRARIES} ${PCL_LIBRARIE
 add_executable(z_buffer_test src/z_buffer_test.cpp)
 add_dependencies(z_buffer_test ${catkin_EXPORTED_TARGETS})
 target_link_libraries(z_buffer_test fcl_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES})
+
+add_executable(cgal_test src/cgal_test.cpp)
+add_dependencies(cgal_test ${catkin_EXPORTED_TARGETS})
+target_link_libraries(cgal_test ${catkin_LIBRARIES} ${CGAL_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
