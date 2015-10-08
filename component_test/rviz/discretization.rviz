@@ -33,7 +33,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud2
+    SyncSource: ""
 Visualization Manager:
   Class: ""
   Displays:
@@ -103,7 +103,7 @@ Visualization Manager:
       Marker Topic: /visualization_marker
       Name: Marker
       Namespaces:
-        my_namespace: true
+        {}
       Queue Size: 10000
       Value: true
     - Arrow Length: 0.1
@@ -133,7 +133,7 @@ Visualization Manager:
       Voxel Rendering: Occupied Voxels
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: Cube
+      Marker Topic: filtered_poses
       Name: MarkerArray
       Namespaces:
         {}

@@ -188,7 +188,7 @@ int main(int argc, char **argv)
         // compute closest point and squared distance
         
         // Inside if the number of intersections is odd
-        if(intersectionsCount%2 == 1)
+        if(intersectionsCount%2 != 1)
         {
             Vec3f vec2(points.poses[j].position.x , points.poses[j].position.y  ,points.poses[j].position.z);
             marker2 = drawCUBE(vec2, j, 1) ;

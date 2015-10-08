@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project( component_test )
-
+SET ( CMAKE_CXX_FLAGS "-frounding-math" )
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp

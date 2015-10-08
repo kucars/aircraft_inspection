@@ -94,7 +94,7 @@ int main(int argc, char **argv)
     ros::Publisher model_pub = n.advertise<sensor_msgs::PointCloud2>("point_cloud", 1);
 //    ros::Publisher point_pub = n.advertise<geometry_msgs::PoseArray>("voxel", 1);
 //    ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 1);
-    ros::Publisher visCubePub = n.advertise<visualization_msgs::MarkerArray>("Cube", 1);
+    ros::Publisher visCubePub = n.advertise<visualization_msgs::MarkerArray>("filtered_poses", 1);
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
     std::string path = ros::package::getPath("component_test");
