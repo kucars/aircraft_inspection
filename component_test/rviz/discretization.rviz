@@ -33,7 +33,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: PointCloud2
 Visualization Manager:
   Class: ""
   Displays:
@@ -109,10 +109,10 @@ Visualization Manager:
     - Arrow Length: 0.1
       Class: rviz/PoseArray
       Color: 255; 25; 0
-      Enabled: true
+      Enabled: false
       Name: PoseArray
       Topic: /voxel
-      Value: true
+      Value: false
     - Alpha: 0.7
       Class: octomap_rviz_plugin/OccupancyMap
       Color Scheme: map
@@ -163,22 +163,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 0.381227
+      Distance: 10.3417
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.830045
-        Y: 0.209309
-        Z: -4.93329
+        X: -0.333352
+        Y: -0.353698
+        Z: -0.913982
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.309797
+      Pitch: 0.3048
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.0316749
+      Yaw: 1.54166
     Saved: ~
 Window Geometry:
   Displays:

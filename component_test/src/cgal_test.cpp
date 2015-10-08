@@ -136,18 +136,18 @@ int main(int argc, char **argv)
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
     std::string path = ros::package::getPath("component_test");
     std::cout<<"PATH is:"<<path;
-    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/scaled_desktop.pcd", *cloud);
+    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/sphere_densed.pcd", *cloud);
     geometry_msgs::PoseArray points;
     geometry_msgs::Pose pose;
 
-    int x_space=16;//put half the length here (32)
-    int y_space=11;//put half the length here (18)
-    int z_space=37;
+    int x_space=3;//put half the length here (32)
+    int y_space=3;//put half the length here (18)
+    int z_space=3;
     double res=1;
-    for (int z=(-1*z_space) ; z < 2; z+=res)//the length of the aircraft
+    for (int z=(-1*z_space) ; z < z_space; z+=res)//the length of the aircraft//2
     {
 
-        for (int y=-1*(y_space-4) ; y< y_space; y+=res)//the hight of the aircraft
+        for (int y=-1*(y_space) ; y< y_space; y+=res)//the hight of the aircraft//-4
         {
 
             for (int x=-1*x_space ; x< x_space; x+=res)//the width of the aircraft
@@ -165,16 +165,17 @@ int main(int argc, char **argv)
     visualization_msgs::Marker marker2 ;
     std::vector<Vec3f> p1;
     std::list<CGALTriangle> triangles;
-    std::string str = path+"/src/mesh/desktop_scaleddown.obj";
+    std::string str = path+"/src/mesh/sphere_densed.obj";
     loadOBJFile(str.c_str(), p1, triangles);
     // constructs AABB tree
     Tree tree(triangles.begin(),triangles.end());
+    std::cout<<"traingles size:"<<triangles.size()<<"\n";
     int intersectionsCount=0;
     for (int j=0; j<points.poses.size();j++)
-    {       
+    {
         Point a(points.poses[j].position.x , points.poses[j].position.y  ,points.poses[j].position.z);
         // Some Random point in arbitrary orientation
-        Point b(100.0, 10.0, 56.0);   
+        Point b(100.0, 10.0, 56.0);
         Ray ray_query(a,b);
         // counts #intersections
         intersectionsCount = tree.number_of_intersected_primitives(ray_query);
@@ -196,6 +197,9 @@ int main(int argc, char **argv)
         }
     }
     visCubePub.publish(marker_array);
+
+    //    int publishCounter = 0;
+    ros::Rate loop_rate(1);
     while(ros::ok())
     {
         //mesh points publish
@@ -209,10 +213,14 @@ int main(int argc, char **argv)
         points.header.frame_id= "base_point_cloud";
         points.header.stamp = ros::Time::now();
         point_pub.publish(points);
-
+        //        if(publishCounter++<2)
+        //        {
+        //            visCubePub.publish(marker_array);
+        //        }
         ros::spinOnce();
+        loop_rate.sleep();
     }
-    return EXIT_SUCCESS;    
+    return EXIT_SUCCESS;
 }
 
 visualization_msgs::Marker drawCUBE(Vec3f vec , int id , int c_color)
@@ -263,99 +271,99 @@ visualization_msgs::Marker drawCUBE(Vec3f vec , int id , int c_color)
 void loadOBJFile(const char* filename, std::vector<Vec3f>& points, std::list<CGALTriangle>& triangles)
 {
 
-  FILE* file = fopen(filename, "rb");
-  if(!file)
-  {
-    std::cerr << "file not exist" << std::endl;
-    return;
-  }
-
-  bool has_normal = false;
-  bool has_texture = false;
-  char line_buffer[2000];
-  while(fgets(line_buffer, 2000, file))
-  {
-    char* first_token = strtok(line_buffer, "\r\n\t ");
-    if(!first_token || first_token[0] == '#' || first_token[0] == 0)
-      continue;
-
-    switch(first_token[0])
+    FILE* file = fopen(filename, "rb");
+    if(!file)
     {
-    case 'v':
-      {        
-        if(first_token[1] == 'n')
-        {
-          strtok(NULL, "\t ");
-          strtok(NULL, "\t ");
-          strtok(NULL, "\t ");
-          has_normal = true;
-        }
-        else if(first_token[1] == 't')
-        {
-          strtok(NULL, "\t ");
-          strtok(NULL, "\t ");
-          has_texture = true;
-        }
-        else
-        {
-          FCL_REAL x = (FCL_REAL)atof(strtok(NULL, "\t "));
-          FCL_REAL y = (FCL_REAL)atof(strtok(NULL, "\t "));
-          FCL_REAL z = (FCL_REAL)atof(strtok(NULL, "\t "));
-          Vec3f p(x, y, z);
-          points.push_back(p);
-        }
-      }
-      break;
-    case 'f':
-      {
-        CGALTriangle tri;
-        char* data[30];
-        int n = 0;
-        while((data[n] = strtok(NULL, "\t \r\n")) != NULL)
-        {
-          if(strlen(data[n]))
-            n++;
-        }
-
-        for(int t = 0; t < (n - 2); ++t)
-        {
-          if((!has_texture) && (!has_normal))
-          {
-            Point p1(points[atoi(data[0]) - 1][0],points[atoi(data[0]) - 1][1],points[atoi(data[0]) - 1][2]);
-            Point p2(points[atoi(data[1]) - 1][0],points[atoi(data[1]) - 1][1],points[atoi(data[1]) - 1][2]);
-            Point p3(points[atoi(data[2]) - 1][0],points[atoi(data[2]) - 1][1],points[atoi(data[2]) - 1][2]);           
-            tri = CGALTriangle(p1,p2,p3);
-            //std::cout<<"1: Yep, I get here p1:"<<atoi(data[0]) - 1<<" p2:"<<atoi(data[1]) - 1<<" p2:"<<atoi(data[2]) - 1;
-            if(!CGAL::collinear(p1,p2,p3))
-            {
-                triangles.push_back(tri);
-            }
-          }
-          else
-          {
-            const char *v1;
-            uint indxs[3];
-            for(int i = 0; i < 3; i++)
-            {
-              // vertex ID
-              if(i == 0)
-                v1 = data[0];
-              else
-                v1 = data[t + i];
-              
-              indxs[i] = atoi(v1) - 1;
-            }
-            Point p1(points[indxs[0]][0],points[indxs[0]][1],points[indxs[0]][2]);
-            Point p2(points[indxs[1]][0],points[indxs[1]][1],points[indxs[1]][2]);
-            Point p3(points[indxs[2]][0],points[indxs[2]][1],points[indxs[2]][2]);
-            tri = CGALTriangle(p1,p2,p3);            
-            if(!CGAL::collinear(p1,p2,p3))
-            {
-                triangles.push_back(tri);
-            }
-          }
-        }
-      }
+        std::cerr << "file not exist" << std::endl;
+        return;
     }
-  }
+
+    bool has_normal = false;
+    bool has_texture = false;
+    char line_buffer[2000];
+    while(fgets(line_buffer, 2000, file))
+    {
+        char* first_token = strtok(line_buffer, "\r\n\t ");
+        if(!first_token || first_token[0] == '#' || first_token[0] == 0)
+            continue;
+
+        switch(first_token[0])
+        {
+        case 'v':
+        {
+            if(first_token[1] == 'n')
+            {
+                strtok(NULL, "\t ");
+                strtok(NULL, "\t ");
+                strtok(NULL, "\t ");
+                has_normal = true;
+            }
+            else if(first_token[1] == 't')
+            {
+                strtok(NULL, "\t ");
+                strtok(NULL, "\t ");
+                has_texture = true;
+            }
+            else
+            {
+                FCL_REAL x = (FCL_REAL)atof(strtok(NULL, "\t "));
+                FCL_REAL y = (FCL_REAL)atof(strtok(NULL, "\t "));
+                FCL_REAL z = (FCL_REAL)atof(strtok(NULL, "\t "));
+                Vec3f p(x, y, z);
+                points.push_back(p);
+            }
+        }
+            break;
+        case 'f':
+        {
+            CGALTriangle tri;
+            char* data[30];
+            int n = 0;
+            while((data[n] = strtok(NULL, "\t \r\n")) != NULL)
+            {
+                if(strlen(data[n]))
+                    n++;
+            }
+
+            for(int t = 0; t < (n - 2); ++t)
+            {
+                if((!has_texture) && (!has_normal))
+                {
+                    Point p1(points[atoi(data[0]) - 1][0],points[atoi(data[0]) - 1][1],points[atoi(data[0]) - 1][2]);
+                    Point p2(points[atoi(data[1]) - 1][0],points[atoi(data[1]) - 1][1],points[atoi(data[1]) - 1][2]);
+                    Point p3(points[atoi(data[2]) - 1][0],points[atoi(data[2]) - 1][1],points[atoi(data[2]) - 1][2]);
+                    tri = CGALTriangle(p1,p2,p3);
+                    //std::cout<<"1: Yep, I get here p1:"<<atoi(data[0]) - 1<<" p2:"<<atoi(data[1]) - 1<<" p2:"<<atoi(data[2]) - 1;
+                    if(!CGAL::collinear(p1,p2,p3))
+                    {
+                        triangles.push_back(tri);
+                    }
+                }
+                else
+                {
+                    const char *v1;
+                    uint indxs[3];
+                    for(int i = 0; i < 3; i++)
+                    {
+                        // vertex ID
+                        if(i == 0)
+                            v1 = data[0];
+                        else
+                            v1 = data[t + i];
+
+                        indxs[i] = atoi(v1) - 1;
+                    }
+                    Point p1(points[indxs[0]][0],points[indxs[0]][1],points[indxs[0]][2]);
+                    Point p2(points[indxs[1]][0],points[indxs[1]][1],points[indxs[1]][2]);
+                    Point p3(points[indxs[2]][0],points[indxs[2]][1],points[indxs[2]][2]);
+                    tri = CGALTriangle(p1,p2,p3);
+                    if(!CGAL::collinear(p1,p2,p3))
+                    {
+                        triangles.push_back(tri);
+                    }
+                }
+            }
+        }
+        }
+    }
 }

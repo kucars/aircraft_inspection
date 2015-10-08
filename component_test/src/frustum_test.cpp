@@ -31,7 +31,7 @@ int main(int argc, char **argv)
     
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
     std::string path = ros::package::getPath("component_test");
-    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/apple.pcd", *cloud);
+    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/sphere_densed.pcd", *cloud);
 
     pcl::FrustumCulling<pcl::PointXYZ> fc (true);
     fc.setInputCloud (cloud);
@@ -48,7 +48,7 @@ int main(int argc, char **argv)
             Eigen::AngleAxisf (0 * M_PI / 180, Eigen::Vector3f::UnitZ ());
     camera_pose.block (0, 0, 3, 3) = R;
     Eigen::Vector3f T;
-    T (0) = -2; T (1) = 0; T (2) = 0;
+    T (0) = -4; T (1) = 0; T (2) = 0;
     camera_pose.block (0, 3, 3, 1) = T;
     camera_pose (3, 3) = 1;
     fc.setCameraPose (camera_pose);
@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 
     Eigen::Matrix3f R1;
     R1 = Eigen::AngleAxisf (0 * M_PI / 180, Eigen::Vector3f::UnitX ()) *
-            Eigen::AngleAxisf (90 * M_PI / 180, Eigen::Vector3f::UnitY ()) *
+            Eigen::AngleAxisf (-90 * M_PI / 180, Eigen::Vector3f::UnitY ()) *
             Eigen::AngleAxisf (0 * M_PI / 180, Eigen::Vector3f::UnitZ ());
     Eigen::Affine3f sensorPose = Eigen::Affine3f(Eigen::Translation3f(T[0],T[1],T[2]));
             sensorPose.rotate (R1);
