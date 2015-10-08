@@ -16,6 +16,7 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/common/eigen.h>
 #include <pcl/common/transforms.h>
+#include <pcl/range_image/range_image.h>
 
 int main(int argc, char **argv)
 {
@@ -27,17 +28,18 @@ int main(int argc, char **argv)
     ros::Publisher pub2 = n.advertise<sensor_msgs::PointCloud2>("point_cloud2", 100);
     ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 1);
 
+    
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
     std::string path = ros::package::getPath("component_test");
-    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/bun000_Structured.pcd", *cloud);
+    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/apple.pcd", *cloud);
 
     pcl::FrustumCulling<pcl::PointXYZ> fc (true);
     fc.setInputCloud (cloud);
     fc.setVerticalFOV (45);
     fc.setHorizontalFOV (58);
     fc.setNearPlaneDistance (0.8);
-    fc.setFarPlaneDistance (3.8);
-    
+    fc.setFarPlaneDistance (5.8);
+
     Eigen::Matrix4f camera_pose;
     camera_pose.setZero ();
     Eigen::Matrix3f R;
@@ -46,7 +48,7 @@ int main(int argc, char **argv)
             Eigen::AngleAxisf (0 * M_PI / 180, Eigen::Vector3f::UnitZ ());
     camera_pose.block (0, 0, 3, 3) = R;
     Eigen::Vector3f T;
-    T (0) = -3.8; T (1) = 0; T (2) = 0;
+    T (0) = -2; T (1) = 0; T (2) = 0;
     camera_pose.block (0, 3, 3, 1) = T;
     camera_pose (3, 3) = 1;
     fc.setCameraPose (camera_pose);
@@ -55,7 +57,7 @@ int main(int argc, char **argv)
     //    pcl::PCDWriter writer;
     //    writer.write<pcl::PointXYZRGB> (path+"/src/pcd/frustum_bun.pcd", *output, false);
 
-    //*****************Camera View Vector *****************
+    //*****************Camera View Vector (frustum culling tool camera) *****************
     tf::Matrix3x3 rotation;
     Eigen::Matrix3d D;
     D= R.cast<double>();
@@ -83,21 +85,44 @@ int main(int argc, char **argv)
     tf::poseEigenToMsg(pose, output_vector);
     visualization_msgs::Marker marker;
 
+    //*****************Z buffering test (range_image tool) *****************
 
+    boost::shared_ptr<pcl::RangeImage> cull_ptr(new pcl::RangeImage);
+    pcl::RangeImage& visible = *cull_ptr;
 
-
+    Eigen::Matrix3f R1;
+    R1 = Eigen::AngleAxisf (0 * M_PI / 180, Eigen::Vector3f::UnitX ()) *
+            Eigen::AngleAxisf (90 * M_PI / 180, Eigen::Vector3f::UnitY ()) *
+            Eigen::AngleAxisf (0 * M_PI / 180, Eigen::Vector3f::UnitZ ());
+    Eigen::Affine3f sensorPose = Eigen::Affine3f(Eigen::Translation3f(T[0],T[1],T[2]));
+            sensorPose.rotate (R1);
+    float angularResolutionX = (float)(50.0f / 640.0f * (M_PI / 180.0f));
+    float angularResolutionY = (float)(40.0f / 480.0f * (M_PI / 180.0f));
+    float maxAngleX = (float)(50.0f * (M_PI / 180.0f));
+    float maxAngleY = (float)(40.0f * (M_PI / 180.0f));
+    float noise_level=0.0;
+    float min_range=0.0;
+    float borderSize=1.0;
+    visible.createFromPointCloud(*output, angularResolutionX, angularResolutionY,
+                                    maxAngleX, maxAngleY, sensorPose, pcl::RangeImage::CAMERA_FRAME,
+                                    noise_level, min_range, borderSize);
+//    uint32_t width  = static_cast<uint32_t> (pcl_lrint (floor (maxAngleX*(1/angularResolutionX))));
+//    uint32_t height = static_cast<uint32_t> (pcl_lrint (floor (maxAngleY*(1/angularResolutionY))));
+//    int top=height, right=-1, bottom=-1, left=width;
+//    visible.doZBuffer(*output, noise_level, min_range, top, right, bottom, left );
+//    visible.recalculate3DPointPositions();
     //*****************PCL Visualer *****************
-    //    pcl::visualization::PCLVisualizer visualizer;
-    //    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> red_source (cloud, 255, 0, 0);
-    //    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ>green_target (output, 0, 255, 0);
-    //    visualizer.addPointCloud<pcl::PointXYZ> (cloud, red_source,"cloud");
-    //    visualizer.addPointCloud<pcl::PointXYZ> (output, green_target,"output");
+        pcl::visualization::PCLVisualizer visualizer;
+        pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> red_source (output, 255, 0, 0);
+        pcl::visualization::PointCloudColorHandlerCustom<pcl::PointWithRange>green_target (cull_ptr, 0, 255, 0);
+        visualizer.addPointCloud<pcl::PointXYZ> (output, red_source,"cloud");
+        visualizer.addPointCloud<pcl::PointWithRange> (cull_ptr, green_target,"output");
 
-    //    while (!visualizer.wasStopped ())
-    //    {
-    //        visualizer.spinOnce (100);
-    //        boost::this_thread::sleep (boost::posix_time::microseconds (100000));
-    //    }
+        while (!visualizer.wasStopped ())
+        {
+            visualizer.spinOnce (100);
+            boost::this_thread::sleep (boost::posix_time::microseconds (100000));
+        }
     //*****************Cloud Visualer *****************
     //  pcl::visualization::CloudViewer viewer ("viewer");
     //        viewer.showCloud (cloud);
@@ -139,8 +164,8 @@ int main(int argc, char **argv)
         //***mesh and intersection publish***
         sensor_msgs::PointCloud2 cloud1;
         sensor_msgs::PointCloud2 cloud2;
-        pcl::toROSMsg(*cloud, cloud1);
-        pcl::toROSMsg(*output, cloud2);
+        pcl::toROSMsg(*output, cloud1);
+        pcl::toROSMsg(*cull_ptr, cloud2);
         cloud1.header.frame_id = "base_point_cloud";
         cloud2.header.frame_id = "base_point_cloud";
 

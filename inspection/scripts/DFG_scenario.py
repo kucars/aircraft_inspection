@@ -69,7 +69,7 @@ class SetpointPosition:
             msg.pose.position.x = self.x
             msg.pose.position.y = self.y
             msg.pose.position.z = self.z
-
+	    msg.pose.orientation.y = self.yaw
             # For demo purposes we will lock yaw/heading to north.
             #yaw_degrees = 180  # North
             #yaw = radians(yaw_degrees)
@@ -100,7 +100,8 @@ class SetpointPosition:
 
         if is_near('X', topic.pose.position.x, self.x) and \
            is_near('Y', topic.pose.position.y, self.y) and \
-           is_near('Z', topic.pose.position.z, self.z):
+           is_near('Z', topic.pose.position.z, self.z): #and \
+	   #is_near('Yaw', topic.pose.orientation.y, self.yaw):
             self.done = True
             self.done_evt.set()
 
@@ -115,16 +116,24 @@ def setpoint_demo():
 
     rospy.loginfo("climb")
     setpoint.set(2.0, 0.0, 5.0, 180, 0)
-    setpoint.set(2.0, 0.0, 10.0, 180, 2)
-    setpoint.set(2.0, 0.0, 11.5, 180, 2)
+    setpoint.set(2.0, 0.0, 10.0, 180, 1)
+    setpoint.set(2.0, 0.0, 11.5, 180, 1)
     
     rospy.loginfo("move right")
-    setpoint.set(2.0, 3.0, 12.5, 180, 3)
-    setpoint.set(4.0, 10.0, 12.5, 180, 3)
-    setpoint.set(4.0, 25.0, 12.5, 180, 3)
-
+    setpoint.set(2.0, 3.0, 13.5, 180, 2)
+    setpoint.set(2.0, 5.0, 13.5, 180, 2)
+    setpoint.set(4.0, 10.0, 13.5, 180, 1)
+    setpoint.set(4.0, 25.0, 13.5, 180, 1)
+    setpoint.set(4.0, 27.0, 13.5, 180, 1)
+    setpoint.set(4.0, 31.0, 13.5, 180, 1)
     rospy.loginfo("rotate")
-    setpoint.set(2.0, 3.0, 12.5, 90, 3)
+    setpoint.set(4.0, 31.0, 13.5, 90, 8)
+    setpoint.set(6.5, 31.0, 10.5, 90, 8)
+    #setpoint.set(9.0, 31.0, 10.5, 90, 5)
+    setpoint.set(6.5, 31.0, 8.5, 90, 8)
+    setpoint.set(12.0, 25.0, 8.5, 90, 5)
+    setpoint.set(14.0, 25.0, 8.5, 90, 5)
+    #setpoint.set(16.0, 26.0, 8.5, 90, 4)
     #setpoint.set(4.0, 10.0, 12.5, 90, 3)
     #setpoint.set(4.0, 25.0, 12.5, 90, 3)
 
