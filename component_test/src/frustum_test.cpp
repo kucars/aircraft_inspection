@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 
     Eigen::Matrix3f R1;
     R1 = Eigen::AngleAxisf (0 * M_PI / 180, Eigen::Vector3f::UnitX ()) *
-            Eigen::AngleAxisf (-90 * M_PI / 180, Eigen::Vector3f::UnitY ()) *
+            Eigen::AngleAxisf (90 * M_PI / 180, Eigen::Vector3f::UnitY ()) *
             Eigen::AngleAxisf (0 * M_PI / 180, Eigen::Vector3f::UnitZ ());
     Eigen::Affine3f sensorPose = Eigen::Affine3f(Eigen::Translation3f(T[0],T[1],T[2]));
             sensorPose.rotate (R1);
@@ -112,17 +112,17 @@ int main(int argc, char **argv)
 //    visible.doZBuffer(*output, noise_level, min_range, top, right, bottom, left );
 //    visible.recalculate3DPointPositions();
     //*****************PCL Visualer *****************
-        pcl::visualization::PCLVisualizer visualizer;
-        pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> red_source (output, 255, 0, 0);
-        pcl::visualization::PointCloudColorHandlerCustom<pcl::PointWithRange>green_target (cull_ptr, 0, 255, 0);
-        visualizer.addPointCloud<pcl::PointXYZ> (output, red_source,"cloud");
-        visualizer.addPointCloud<pcl::PointWithRange> (cull_ptr, green_target,"output");
-
-        while (!visualizer.wasStopped ())
-        {
-            visualizer.spinOnce (100);
-            boost::this_thread::sleep (boost::posix_time::microseconds (100000));
-        }
+//         pcl::visualization::PCLVisualizer visualizer;
+//         pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> red_source (output, 255, 0, 0);
+//         pcl::visualization::PointCloudColorHandlerCustom<pcl::PointWithRange>green_target (cull_ptr, 0, 255, 0);
+//         visualizer.addPointCloud<pcl::PointXYZ> (output, red_source,"cloud");
+//         visualizer.addPointCloud<pcl::PointWithRange> (cull_ptr, green_target,"output");
+// 
+//         while (!visualizer.wasStopped ())
+//         {
+//             visualizer.spinOnce (100);
+//             boost::this_thread::sleep (boost::posix_time::microseconds (100000));
+//         }
     //*****************Cloud Visualer *****************
     //  pcl::visualization::CloudViewer viewer ("viewer");
     //        viewer.showCloud (cloud);
