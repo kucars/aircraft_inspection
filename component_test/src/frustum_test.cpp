@@ -43,9 +43,10 @@ int main(int argc, char **argv)
     Eigen::Matrix4f camera_pose;
     camera_pose.setZero ();
     Eigen::Matrix3f R;
-    R = Eigen::AngleAxisf (0 * M_PI / 180, Eigen::Vector3f::UnitX ()) *
-            Eigen::AngleAxisf (0 * M_PI / 180, Eigen::Vector3f::UnitY ()) *
-            Eigen::AngleAxisf (0 * M_PI / 180, Eigen::Vector3f::UnitZ ());
+    Eigen::Vector3f theta(0.0,0.0,0.0);
+    R = Eigen::AngleAxisf (theta[0] * M_PI / 180, Eigen::Vector3f::UnitX ()) *
+            Eigen::AngleAxisf (theta[1] * M_PI / 180, Eigen::Vector3f::UnitY ()) *
+            Eigen::AngleAxisf (theta[2] * M_PI / 180, Eigen::Vector3f::UnitZ ());
     camera_pose.block (0, 0, 3, 3) = R;
     Eigen::Vector3f T;
     T (0) = -4; T (1) = 0; T (2) = 0;
@@ -57,7 +58,11 @@ int main(int argc, char **argv)
     //    pcl::PCDWriter writer;
     //    writer.write<pcl::PointXYZRGB> (path+"/src/pcd/frustum_bun.pcd", *output, false);
 
-    //*****************Camera View Vector (frustum culling tool camera) *****************
+    //*****************Visualization Camera View Vector (frustum culling tool camera) *****************
+    // the rviz axis is different from the frustum camera axis and range image axis
+    R = Eigen::AngleAxisf (theta[0] * M_PI / 180, Eigen::Vector3f::UnitX ()) *  
+            Eigen::AngleAxisf (-theta[1] * M_PI / 180, Eigen::Vector3f::UnitY ()) *
+            Eigen::AngleAxisf (-theta[2] * M_PI / 180, Eigen::Vector3f::UnitZ ());
     tf::Matrix3x3 rotation;
     Eigen::Matrix3d D;
     D= R.cast<double>();
@@ -67,12 +72,8 @@ int main(int argc, char **argv)
     rotation.getRotation(orientation);
 
     //    pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>);
-    Eigen::Vector3d axis_vector;
     geometry_msgs::Pose output_vector;
     Eigen::Quaterniond q;
-    axis_vector[0] = T[0];
-    axis_vector[1] = T[1];
-    axis_vector[2] = T[2];
     geometry_msgs::Quaternion quet;
     tf::quaternionTFToEigen(orientation, q);
     tf::quaternionTFToMsg(orientation,quet);
@@ -89,7 +90,7 @@ int main(int argc, char **argv)
 
     boost::shared_ptr<pcl::RangeImage> cull_ptr(new pcl::RangeImage);
     pcl::RangeImage& visible = *cull_ptr;
-
+    // range image camera z axis orientation is different from the frustum cull camera 
     Eigen::Matrix3f R1;
     R1 = Eigen::AngleAxisf (0 * M_PI / 180, Eigen::Vector3f::UnitX ()) *
             Eigen::AngleAxisf (90 * M_PI / 180, Eigen::Vector3f::UnitY ()) *
@@ -161,11 +162,11 @@ int main(int argc, char **argv)
         // Publish the marker
         marker_pub.publish(marker);
 
-        //***mesh and intersection publish***
+        //***frustum cull and occlusion cull publish***
         sensor_msgs::PointCloud2 cloud1;
         sensor_msgs::PointCloud2 cloud2;
-        pcl::toROSMsg(*output, cloud1);
-        pcl::toROSMsg(*cull_ptr, cloud2);
+        pcl::toROSMsg(*output, cloud1); //cloud of frustum cull (white) using pcl::frustumcull
+        pcl::toROSMsg(*cull_ptr, cloud2); //cloud of the Occlusion cull (blue) using pcl::rangeImage
         cloud1.header.frame_id = "base_point_cloud";
         cloud2.header.frame_id = "base_point_cloud";
 
