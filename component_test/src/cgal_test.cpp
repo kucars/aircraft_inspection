@@ -140,17 +140,17 @@ int main(int argc, char **argv)
     geometry_msgs::PoseArray points;
     geometry_msgs::Pose pose;
 
-    int x_space=3;//put half the length here (32)
-    int y_space=3;//put half the length here (18)
-    int z_space=3;
-    double res=1;
-    for (int z=(-1*z_space) ; z < z_space; z+=res)//the length of the aircraft//2
+    int x_space=4.0;//put half the length here (32)
+    int y_space=4.0;//put half the length here (18)
+    int z_space=4.0;
+    double res=1.0;
+    for (int z=(-1*z_space) ; z <=z_space; z+=res)//the length of the aircraft//2
     {
 
-        for (int y=-1*(y_space) ; y< y_space; y+=res)//the hight of the aircraft//-4
+        for (int y=-1*(y_space) ; y<=y_space; y+=res)//the hight of the aircraft//-4
         {
 
-            for (int x=-1*x_space ; x< x_space; x+=res)//the width of the aircraft
+            for (int x=-1*x_space ; x<=x_space; x+=res)//the width of the aircraft
             {
                 pose.position.z=z;
                 pose.position.y=y;
@@ -180,20 +180,21 @@ int main(int argc, char **argv)
         // counts #intersections
         intersectionsCount = tree.number_of_intersected_primitives(ray_query);
         std::cout << "intersections: "<<intersectionsCount<< " intersections(s) with ray query" << std::endl;
-        /*
-        Point closest_point = tree.closest_point(a);
-        std::cerr << "closest point is: " << closest_point << std::endl;
-        FT sqd = tree.squared_distance(a);
-        std::cout << "squared distance: " << sqd << std::endl;
-        */
-        // compute closest point and squared distance
         
         // Inside if the number of intersections is odd
         if(intersectionsCount%2 != 1)
-        {
-            Vec3f vec2(points.poses[j].position.x , points.poses[j].position.y  ,points.poses[j].position.z);
-            marker2 = drawCUBE(vec2, j, 1) ;
-            marker_array.markers.push_back(marker2);
+	{
+	    // compute closest point and squared distance
+	    Point closest_point = tree.closest_point(a);
+	    std::cerr << "closest point is: " << closest_point << std::endl;
+	    FT sqd = tree.squared_distance(a);
+	    std::cout << "squared distance: " << sqd << std::endl;
+	    if (sqd >=1 && sqd <= 4)
+	    {
+		Vec3f vec2(points.poses[j].position.x , points.poses[j].position.y  ,points.poses[j].position.z);
+		marker2 = drawCUBE(vec2, j, 1) ;
+		marker_array.markers.push_back(marker2);
+	    }
         }
     }
     visCubePub.publish(marker_array);
