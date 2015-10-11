@@ -39,14 +39,14 @@ int main(int argc, char **argv)
     int x_space=16;//put half the length here
     int y_space=11;//put half the length here
     int z_space=37;
-    double res=1;
-    for (int z=(-1*z_space) ; z < 2; z+=res)//the length of the aircraft
+    float res=1;
+    for (float z=(-1*z_space) ; z < 2; z+=res)//the length of the aircraft
     {
 
-        for (int y=-1*(y_space-4) ; y< y_space; y+=res)//the hight of the aircraft
+        for (float y=-1*(y_space-4) ; y< y_space; y+=res)//the hight of the aircraft
         {
 
-            for (int x=-1*x_space ; x< x_space; x+=res)//the width of the aircraft
+            for (float x=-1*x_space ; x< x_space; x+=res)//the width of the aircraft
             {
                 pose.position.z=z;
                 pose.position.y=y;

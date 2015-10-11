@@ -143,20 +143,21 @@ int main(int argc, char **argv)
     int x_space=4.0;//put half the length here (32)
     int y_space=4.0;//put half the length here (18)
     int z_space=4.0;
-    double res=1.0;
-    for (int z=(-1*z_space) ; z <=z_space; z+=res)//the length of the aircraft//2
+    float res=0.5;
+    for (float z=-1*z_space ; z <z_space; z+=res)//the length of the aircraft//2
     {
 
-        for (int y=-1*(y_space) ; y<=y_space; y+=res)//the hight of the aircraft//-4
+        for (float y=-1*y_space ; y<y_space; y+=res)//the hight of the aircraft//-4
         {
 
-            for (int x=-1*x_space ; x<=x_space; x+=res)//the width of the aircraft
+            for (float x=-1*x_space ; x<x_space; x+=res)//the width of the aircraft
             {
                 pose.position.z=z;
                 pose.position.y=y;
                 pose.position.x=x;
                 pose.orientation.x=0;pose.orientation.y=0;pose.orientation.z=0;pose.orientation.w=1;
                 points.poses.push_back(pose);
+                std::cout<<"discretization:"<<x<<" "<<y<<" "<<z<<std::endl;
 
             }
         }
@@ -183,23 +184,23 @@ int main(int argc, char **argv)
         
         // Inside if the number of intersections is odd
         if(intersectionsCount%2 != 1)
-	{
-	    // compute closest point and squared distance
-	    Point closest_point = tree.closest_point(a);
-	    std::cerr << "closest point is: " << closest_point << std::endl;
-	    FT sqd = tree.squared_distance(a);
-	    std::cout << "squared distance: " << sqd << std::endl;
-	    if (sqd >=1 && sqd <= 4)
-	    {
-		Vec3f vec2(points.poses[j].position.x , points.poses[j].position.y  ,points.poses[j].position.z);
-		marker2 = drawCUBE(vec2, j, 1) ;
-		marker_array.markers.push_back(marker2);
-	    }
+        {
+            // compute closest point and squared distance
+            Point closest_point = tree.closest_point(a);
+            std::cerr << "closest point is: " << closest_point << std::endl;
+            FT sqd = tree.squared_distance(a);
+            std::cout << "squared distance: " << sqd << std::endl;
+            if (sqd >=1 && sqd <= 4)
+            {
+                Vec3f vec2(points.poses[j].position.x , points.poses[j].position.y  ,points.poses[j].position.z);
+                marker2 = drawCUBE(vec2, j, 1);
+                marker_array.markers.push_back(marker2);
+            }
         }
     }
-    visCubePub.publish(marker_array);
+    //    visCubePub.publish(marker_array);
 
-    //    int publishCounter = 0;
+    int publishCounter = 0;
     ros::Rate loop_rate(1);
     while(ros::ok())
     {
@@ -214,10 +215,10 @@ int main(int argc, char **argv)
         points.header.frame_id= "base_point_cloud";
         points.header.stamp = ros::Time::now();
         point_pub.publish(points);
-        //        if(publishCounter++<2)
-        //        {
-        //            visCubePub.publish(marker_array);
-        //        }
+        if(publishCounter++<10)
+        {
+            visCubePub.publish(marker_array);
+        }
         ros::spinOnce();
         loop_rate.sleep();
     }
