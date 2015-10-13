@@ -44,6 +44,11 @@ add_executable(frustum_test src/frustum_test.cpp)
 add_dependencies(frustum_test ${catkin_EXPORTED_TARGETS})
 target_link_libraries(frustum_test ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
+add_executable(occlusion_culling src/occlusion_culling.cpp)
+add_dependencies(occlusion_culling ${catkin_EXPORTED_TARGETS})
+target_link_libraries(occlusion_culling ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+
 add_executable(discretization src/discretization.cpp)
 add_dependencies(discretization ${catkin_EXPORTED_TARGETS})
 target_link_libraries(discretization ${catkin_LIBRARIES} ${PCL_LIBRARIES})
