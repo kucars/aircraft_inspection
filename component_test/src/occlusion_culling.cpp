@@ -98,7 +98,7 @@ int main(int argc, char **argv)
     output->sensor_orientation_= quat;
     pcl::VoxelGridOcclusionEstimation<pcl::PointXYZ> voxelFilter;
     voxelFilter.setInputCloud (output);
-    voxelFilter.setLeafSize (0.03f, 0.03f, 0.03f);  
+    voxelFilter.setLeafSize (0.03279f, 0.03279f, 0.03279f);
     //voxelFilter.filter(*occlusion_cloud);
     voxelFilter.initializeVoxelGrid(); 
     
