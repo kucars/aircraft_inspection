@@ -92,8 +92,9 @@ int main(int argc, char **argv)
     tf::poseEigenToMsg(pose, output_vector);
     visualization_msgs::Marker marker;
 
+    //*****************voxel grid occlusion estimation *****************
     Eigen::Quaternionf quat(q.w(),q.x(),q.y(),q.z());
-    //Eigen::Quaternionf quat(1,0,0,0); 
+    //Eigen::Quaternionf quat(1,0,0,0);
     output->sensor_origin_  = Eigen::Vector4f(a[0],a[1],a[2],0);
     output->sensor_orientation_= quat;
     pcl::VoxelGridOcclusionEstimation<pcl::PointXYZ> voxelFilter;
@@ -139,26 +140,6 @@ int main(int argc, char **argv)
 //    int top=height, right=-1, bottom=-1, left=width;
 //    visible.doZBuffer(*output, noise_level, min_range, top, right, bottom, left );
 //    visible.recalculate3DPointPositions();
-    //*****************PCL Visualer *****************
-//         pcl::visualization::PCLVisualizer visualizer;
-//         pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> red_source (output, 255, 0, 0);
-//         pcl::visualization::PointCloudColorHandlerCustom<pcl::PointWithRange>green_target (cull_ptr, 0, 255, 0);
-//         visualizer.addPointCloud<pcl::PointXYZ> (output, red_source,"cloud");
-//         visualizer.addPointCloud<pcl::PointWithRange> (cull_ptr, green_target,"output");
-// 
-//         while (!visualizer.wasStopped ())
-//         {
-//             visualizer.spinOnce (100);
-//             boost::this_thread::sleep (boost::posix_time::microseconds (100000));
-//         }
-    //*****************Cloud Visualer *****************
-    //  pcl::visualization::CloudViewer viewer ("viewer");
-    //        viewer.showCloud (cloud);
-    //        viewer.showCloud (output);
-    //        while (!viewer.wasStopped ())
-    //        {
-    //          boost::this_thread::sleep (boost::posix_time::microseconds (100));
-    //        }
 
     //*****************Rviz Visualization ************
     ros::Rate loop_rate(10);
