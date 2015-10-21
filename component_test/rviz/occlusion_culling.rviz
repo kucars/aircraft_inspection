@@ -78,7 +78,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -91,10 +91,10 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.01
       Style: Flat Squares
-      Topic: /original_cloud
+      Topic: /point_cloud1
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -144,7 +144,7 @@ Visualization Manager:
       Color: 255; 0; 0
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 0; 0
       Max Intensity: 4096
@@ -157,10 +157,10 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.01
       Style: Flat Squares
-      Topic: rangeimage_cloud
+      Topic: /point_cloud2
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -185,22 +185,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 10.8993
+      Distance: 4.50826
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.501872
-        Y: -1.71507
-        Z: 0.594655
+        X: -0.471168
+        Y: -0.98765
+        Z: -0.0875471
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.302757
+      Pitch: 0.497757
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.3382
+      Yaw: 1.5832
     Saved: ~
 Window Geometry:
   Displays:

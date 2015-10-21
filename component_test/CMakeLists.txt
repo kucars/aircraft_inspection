@@ -50,7 +50,7 @@ target_link_libraries(frustum_test ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(occlusion_culling src/occlusion_culling.cpp)
 add_dependencies(occlusion_culling ${catkin_EXPORTED_TARGETS})
-target_link_libraries(occlusion_culling ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(occlusion_culling ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
 add_executable(occlusion_culling_debug src/occlusion_culling_debug.cpp)
 add_dependencies(occlusion_culling_debug ${catkin_EXPORTED_TARGETS})
