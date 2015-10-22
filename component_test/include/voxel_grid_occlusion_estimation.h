@@ -167,6 +167,7 @@ namespace pcl
                           const Eigen::Vector4f& direction,
                           pcl::PointXYZ &minPoint,
                           pcl::PointXYZ &maxPoint);
+
     protected:
 
       /** \brief Returns the scaling value (tmin) were the ray intersects with the
@@ -220,16 +221,16 @@ namespace pcl
       }
 
       // We use round here instead of floor due to some numerical issues.
-      /** \brief Returns the corresponding (i,j,k) coordinates in the grid of point (x,y,z). 
+      /** \brief Returns the corresponding (i,j,k) coordinates in the grid of point (x,y,z).
         * \param[in] x the X point coordinate to get the (i, j, k) index at
         * \param[in] y the Y point coordinate to get the (i, j, k) index at
         * \param[in] z the Z point coordinate to get the (i, j, k) index at
         */
       inline Eigen::Vector3i
-      getGridCoordinatesRound (float x, float y, float z) 
+      getGridCoordinatesRound (float x, float y, float z)
       {
-        return Eigen::Vector3i (static_cast<int> (round (x * inverse_leaf_size_[0])), 
-                                static_cast<int> (round (y * inverse_leaf_size_[1])), 
+        return Eigen::Vector3i (static_cast<int> (round (x * inverse_leaf_size_[0])),
+                                static_cast<int> (round (y * inverse_leaf_size_[1])),
                                 static_cast<int> (round (z * inverse_leaf_size_[2])));
       }
 

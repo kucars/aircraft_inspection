@@ -67,8 +67,8 @@ int main(int argc, char **argv)
     pcl::VoxelGridOcclusionEstimationT voxelFilter;
     voxelFilter.setInputCloud (cloud);
     //voxelFilter.setLeafSize (0.03279f, 0.03279f, 0.03279f);
-    voxelFilter.setLeafSize (0.03f, 0.03f, 0.03f);
-    voxelFilter.filter(*cloud);
+    voxelFilter.setLeafSize (0.04f, 0.04f, 0.04f);
+    //voxelFilter.filter(*cloud); // This filter doesn't really work, it introduces points inside the sphere !
     voxelFilter.initializeVoxelGrid(); 
     
     int state,ret;
@@ -78,7 +78,89 @@ int main(int argc, char **argv)
     std::vector<Eigen::Vector3i, Eigen::aligned_allocator<Eigen::Vector3i> > out_ray;
     std::vector<geometry_msgs::Point> lineSegments;
     geometry_msgs::Point linePoint;
+    Eigen::Vector3i  min_b = voxelFilter.getMinBoxCoordinates ();
+    Eigen::Vector3i  max_b = voxelFilter.getMaxBoxCoordinates ();
     int count = 0;
+    bool foundBug = false;
+    // iterate over the entire voxel grid
+    for (int kk = min_b.z (); kk <= max_b.z () && !foundBug; ++kk)
+    {
+        for (int jj = min_b.y (); jj <= max_b.y () && !foundBug; ++jj)
+        {
+            for (int ii = min_b.x (); ii <= max_b.x () && !foundBug; ++ii)
+            {
+                Eigen::Vector3i ijk (ii, jj, kk);
+                // process all free voxels
+                int index = voxelFilter.getCentroidIndexAt (ijk);
+                Eigen::Vector4f centroid = voxelFilter.getCentroidCoordinate (ijk);
+                point = pcl::PointXYZRGB(0,244,0);
+                point.x = centroid[0];
+                point.y = centroid[1];
+                point.z = centroid[2];
+                if(index!=-1 )//&& point.x<-1.2 && point.y<0.2 && point.y>-0.2)
+                {
+                    out_ray.clear();
+                    ret = voxelFilter.occlusionEstimation( state,out_ray, ijk);
+                    std::cout<<"State is:"<<state<<"\n";
+
+                    if(state == 1)
+                    {
+                        /*
+                        if(count++>=1)
+                        {
+                            foundBug = true;
+                            break;
+                        }
+                        */
+                        for(uint j=0; j< out_ray.size(); j++)
+                        {
+                            Eigen::Vector4f centroid = voxelFilter.getCentroidCoordinate (out_ray[j]);
+                            pcl::PointXYZRGB p = pcl::PointXYZRGB(255,255,0);
+                            p.x = centroid[0];
+                            p.y = centroid[1];
+                            p.z = centroid[2];
+                            rayCloud->points.push_back(p);
+                        }
+                    }
+                    if(state != 1)
+                    {
+                        // estimate direction to target voxel
+                        Eigen::Vector4f direction = centroid - cloud->sensor_origin_;
+                        direction.normalize ();
+                        // estimate entry point into the voxel grid
+                        float tmin = voxelFilter.rayBoxIntersection (cloud->sensor_origin_, direction,p1,p2);
+                        if(tmin!=-1)
+                        {
+                            // coordinate of the boundary of the voxel grid
+                            Eigen::Vector4f start = cloud->sensor_origin_ + tmin * direction;
+                            linePoint.x = cloud->sensor_origin_[0]; linePoint.y = cloud->sensor_origin_[1]; linePoint.z = cloud->sensor_origin_[2];
+                            //std::cout<<"Box Min X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
+                            lineSegments.push_back(linePoint);
+
+                            linePoint.x = start[0]; linePoint.y = start[1]; linePoint.z = start[2];
+                            //std::cout<<"Box Max X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
+                            lineSegments.push_back(linePoint);
+
+                            linePoint.x = start[0]; linePoint.y = start[1]; linePoint.z = start[2];
+                            //std::cout<<"Box Max X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
+                            lineSegments.push_back(linePoint);
+
+                            linePoint.x = centroid[0]; linePoint.y = centroid[1]; linePoint.z = centroid[2];
+                            //std::cout<<"Box Max X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
+                            lineSegments.push_back(linePoint);
+
+                            rayCloud->points.push_back(point);
+                            pt.x = centroid[0];
+                            pt.y = centroid[1];
+                            pt.z = centroid[2];
+                            occlusionFreeCloud->points.push_back(pt);
+                        }
+                    }
+                }
+            }
+        }
+    }
+/*
     for ( int i = 0; i < (int)cloud->points.size(); i ++ )
     {
         pt = cloud->points[i];
@@ -170,14 +252,14 @@ int main(int argc, char **argv)
             linePoint.x = pt.x; linePoint.y = pt.y; linePoint.z = pt.z;
             //            std::cout<<"Box Max X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
             lineSegments.push_back(linePoint);
-            /*
-            linePoint.x = p1.x; linePoint.y = p1.y; linePoint.z = p1.z;
-            std::cout<<"Box Min X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
-            lineSegments.push_back(linePoint);
-            linePoint.x = p2.x; linePoint.y = p2.y; linePoint.z = p2.z;
-            std::cout<<"Box Max X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
-            lineSegments.push_back(linePoint);
-            */
+
+//            linePoint.x = p1.x; linePoint.y = p1.y; linePoint.z = p1.z;
+//            std::cout<<"Box Min X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
+//            lineSegments.push_back(linePoint);
+//            linePoint.x = p2.x; linePoint.y = p2.y; linePoint.z = p2.z;
+//            std::cout<<"Box Max X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
+//            lineSegments.push_back(linePoint);
+
             occlusionFreeCloud->points.push_back(pt);
         }
         if(count++<100 && pt.x>=-1.8 && pt.x<-1.1 && pt.y<0.4 && pt.y>-0.4)
@@ -193,7 +275,7 @@ int main(int argc, char **argv)
             }
         }
     }
-
+*/
     visualization_msgs::Marker linesList = drawLines(lineSegments);
 
     //*****************Rviz Visualization ************

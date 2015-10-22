@@ -485,12 +485,16 @@ pcl::VoxelGridOcclusionEstimationT::rayTraversal (std::vector<Eigen::Vector3i, E
   // the index of the cloud (-1 if empty)
   int index = -1;
   int result = 0;
-
-  while ( (ijk[0]-2 < max_b_[0]+1) && (ijk[0] >= min_b_[0]) &&
-          (ijk[1] < max_b_[1]+1) && (ijk[1] >= min_b_[1]) && 
-          (ijk[2] < max_b_[2]+1) && (ijk[2] >= min_b_[2]) )
+  bool hereOnce=false;
+  while ( (ijk[0]-2 < max_b_[0]+1) && (ijk[0]+1 >= min_b_[0]) &&
+          (ijk[1]-2 < max_b_[1]+1) && (ijk[1]+1 >= min_b_[1]) &&
+          (ijk[2]-2 < max_b_[2]+1) && (ijk[2]+1 >= min_b_[2]) )
   {
-//     std::cout<<"I am here\n";
+      if(!hereOnce)
+      {
+          std::cout<<"I am here\n";
+          //hereOnce = true;
+      }
     // add voxel to ray
     out_ray.push_back (ijk);
 
@@ -501,8 +505,13 @@ pcl::VoxelGridOcclusionEstimationT::rayTraversal (std::vector<Eigen::Vector3i, E
     // check if voxel is occupied
     index = this->getCentroidIndexAt (ijk);
     if (index != -1)
-      result = 1;
-
+    {
+      Eigen::Vector4f here = getCentroidCoordinate (ijk);
+      Eigen::Vector4f target = getCentroidCoordinate (target_voxel);
+      double dist = sqrt((here[0] -target[0])*(here[0] -target[0]) + (here[1] -target[1])*(here[1] -target[1]) +(here[2] -target[2])*(here[2] -target[2]));
+      if(dist>leaf_size_[0]*2)
+        result = 1;
+    }
     // estimate next voxel
     if(t_max_x <= t_max_y && t_max_x <= t_max_z)
     {
