@@ -162,6 +162,11 @@ namespace pcl
       // inline void
       // setSensorOrientation (const Eigen::Quaternionf orientation) { sensor_orientation_ = orientation; }
 
+      float
+      rayBoxIntersection (const Eigen::Vector4f& origin,
+                          const Eigen::Vector4f& direction,
+                          pcl::PointXYZ &minPoint,
+                          pcl::PointXYZ &maxPoint);
     protected:
 
       /** \brief Returns the scaling value (tmin) were the ray intersects with the
@@ -171,7 +176,7 @@ namespace pcl
         * \return the scaling value
         */
       float
-      rayBoxIntersection (const Eigen::Vector4f& origin, 
+      rayBoxIntersection (const Eigen::Vector4f& origin,
                           const Eigen::Vector4f& direction);
 
       /** \brief Returns the state of the target voxel (0 = visible, 1 = occupied)

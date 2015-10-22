@@ -233,7 +233,82 @@ pcl::VoxelGridOcclusionEstimationT::rayBoxIntersection (const Eigen::Vector4f& o
     tmin = tzmin;
   if (tzmax < tmax)
     tmax = tzmax;
+//  std::cout<<"Tmin is:"<<tmin<<"\n";
+  return tmin;
+}
 
+float
+pcl::VoxelGridOcclusionEstimationT::rayBoxIntersection (const Eigen::Vector4f& origin,
+                                                               const Eigen::Vector4f& direction, pcl::PointXYZ &minPoint,pcl::PointXYZ &maxPoint)
+{
+  float tmin, tmax, tymin, tymax, tzmin, tzmax;
+
+  if (direction[0] >= 0)
+  {
+    tmin = (b_min_[0] - origin[0]) / direction[0];
+    tmax = (b_max_[0] - origin[0]) / direction[0];
+  }
+  else
+  {
+    tmin = (b_max_[0] - origin[0]) / direction[0];
+    tmax = (b_min_[0] - origin[0]) / direction[0];
+  }
+
+  minPoint.x =  tmin;
+  maxPoint.x =  tmax;
+
+  if (direction[1] >= 0)
+  {
+    tymin = (b_min_[1] - origin[1]) / direction[1];
+    tymax = (b_max_[1] - origin[1]) / direction[1];
+  }
+  else
+  {
+    tymin = (b_max_[1] - origin[1]) / direction[1];
+    tymax = (b_min_[1] - origin[1]) / direction[1];
+  }
+
+  minPoint.y =  tymin;
+  maxPoint.y =  tymax;
+  
+  if ((tmin > tymax) || (tymin > tmax))
+  {
+    PCL_ERROR ("no intersection with the bounding box \n");
+    tmin = -1.0f;
+    return tmin;
+  }
+
+  if (tymin > tmin)
+    tmin = tymin;
+  if (tymax < tmax)
+    tmax = tymax;
+
+  if (direction[2] >= 0)
+  {
+    tzmin = (b_min_[2] - origin[2]) / direction[2];
+    tzmax = (b_max_[2] - origin[2]) / direction[2];
+  }
+  else
+  {
+    tzmin = (b_max_[2] - origin[2]) / direction[2];
+    tzmax = (b_min_[2] - origin[2]) / direction[2];
+  }
+
+  minPoint.z =  tzmin;
+  maxPoint.z =  tzmax;
+  
+  if ((tmin > tzmax) || (tzmin > tmax))
+  {
+    PCL_ERROR ("no intersection with the bounding box \n");
+    tmin = -1.0f;
+    return tmin;
+  }
+
+  if (tzmin > tmin)
+    tmin = tzmin;
+  if (tzmax < tmax)
+    tmax = tzmax;
+  //std::cout<<"Tmin is:"<<tmin<<"\n";
   return tmin;
 }
 
@@ -342,7 +417,7 @@ pcl::VoxelGridOcclusionEstimationT::rayTraversal (std::vector<Eigen::Vector3i, E
   // reserve space for the ray vector
   int reserve_size = div_b_.maxCoeff () * div_b_.maxCoeff ();
   out_ray.reserve (reserve_size);
-  std::cout<<"t_min is x:"<<t_min<<"\n";
+//  std::cout<<"t_min is x:"<<t_min<<"\n";
   // coordinate of the boundary of the voxel grid
   Eigen::Vector4f start = origin + t_min * direction;
   
@@ -355,7 +430,7 @@ pcl::VoxelGridOcclusionEstimationT::rayTraversal (std::vector<Eigen::Vector3i, E
 
   // centroid coordinate of the entry voxel
   Eigen::Vector4f voxel_max = getCentroidCoordinate (ijk);
-  std::cout<<"Direction is x:"<<direction[0]<<" y:"<<direction[1]<<" z:"<<direction[2]<<"\n";
+//  std::cout<<"Direction is x:"<<direction[0]<<" y:"<<direction[1]<<" z:"<<direction[2]<<"\n";
   
   if (direction[0] >= 0)
   {
@@ -396,15 +471,26 @@ pcl::VoxelGridOcclusionEstimationT::rayTraversal (std::vector<Eigen::Vector3i, E
   float t_delta_y = leaf_size_[1] / static_cast<float> (fabs (direction[1]));
   float t_delta_z = leaf_size_[2] / static_cast<float> (fabs (direction[2]));
 
+  //if(ijk[0] < max_b_[0]+1)
+  if(ijk[0]!=43)
+  {
+      std::cout<<"IN - Direction X:"<<direction[0]<<" y:"<< direction[1]<<" z:"<< direction[2]<<"\n";
+      std::cout<<"IN - LeafSize X:"<<leaf_size_[0]<<" y:"<< leaf_size_[1]<<" z:"<< leaf_size_[2]<<"\n";
+      std::cout<<"IN - Delta X:"<<t_delta_x<<" y:"<< t_delta_y<<" z:"<< t_delta_z<<"\n";
+
+      std::cout<<"IN - IJK X:"<<ijk[0]<<" y:"<< ijk[1]<<" z:"<< ijk[2]<<"\n";
+      std::cout<<"IN - MAXb X:"<<max_b_[0]<<" y:"<< max_b_[1]<<" z:"<< max_b_[2]<<"\n";
+      std::cout<<"IN - MINb X:"<<min_b_[0]<<" y:"<< min_b_[1]<<" z:"<< min_b_[2]<<"\n";
+  }
   // the index of the cloud (-1 if empty)
   int index = -1;
   int result = 0;
 
-  while ( (ijk[0] < max_b_[0]+1) && (ijk[0] >= min_b_[0]) && 
+  while ( (ijk[0]-2 < max_b_[0]+1) && (ijk[0] >= min_b_[0]) &&
           (ijk[1] < max_b_[1]+1) && (ijk[1] >= min_b_[1]) && 
           (ijk[2] < max_b_[2]+1) && (ijk[2] >= min_b_[2]) )
   {
-      std::cout<<"I am here\n";
+//     std::cout<<"I am here\n";
     // add voxel to ray
     out_ray.push_back (ijk);
 
