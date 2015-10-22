@@ -63,58 +63,122 @@ typedef CGAL::AABB_tree<AABB_triangle_traits> Tree;
 //typedef CGAL::Triangulation_vertex_base_with_info_3<CGAL::Color, K1> Vb;
 //typedef CGAL::Triangulation_data_structure_3<Vb>                    Tds;
 //typedef CGAL::Delaunay_triangulation_3<K1, Tds>                      Delaunay;
+visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color);
 
-void from_voxel(Eigen::Vector4f t, float res, std::list<CGALTriangle>& triangles)
+void from_voxel(Eigen::Vector4f t, float res, std::list<CGALTriangle>& triangles,std::vector<geometry_msgs::Point>& TrlineSegments)
 {
+    geometry_msgs::Point point;
+    std::vector<geometry_msgs::Point> points;
+
     std::vector<Eigen::Vector3f> vertices;
     Eigen::Vector3f p1,p2,p3,p4,p5,p6,p7,p8;
     p1[0]=t[0]+(res/2);p1[1]=t[1]+(res/2);p1[2]=t[2]+(res/2);vertices.push_back(p1);
+    point.x=p1[0]; point.y=p1[1]; point.z=p1[2];points.push_back(point);
     p2[0]=t[0]-(res/2);p2[1]=t[1]+(res/2);p2[2]=t[2]+(res/2);vertices.push_back(p2);
+    point.x=p2[0]; point.y=p2[1]; point.z=p2[2];points.push_back(point);
     p3[0]=t[0]-(res/2);p3[1]=t[1]-(res/2);p3[2]=t[2]+(res/2);vertices.push_back(p3);
+    point.x=p3[0]; point.y=p3[1]; point.z=p3[2];points.push_back(point);
     p4[0]=t[0]+(res/2);p4[1]=t[1]-(res/2);p4[2]=t[2]+(res/2);vertices.push_back(p4);
+    point.x=p4[0]; point.y=p4[1]; point.z=p4[2];points.push_back(point);
 
     p5[0]=t[0]+(res/2);p5[1]=t[1]+(res/2);p5[2]=t[2]-(res/2);vertices.push_back(p5);
+    point.x=p5[0]; point.y=p5[1]; point.z=p5[2];points.push_back(point);
     p6[0]=t[0]-(res/2);p6[1]=t[1]+(res/2);p6[2]=t[2]-(res/2);vertices.push_back(p6);
+    point.x=p6[0]; point.y=p6[1]; point.z=p6[2];points.push_back(point);
     p7[0]=t[0]-(res/2);p7[1]=t[1]-(res/2);p7[2]=t[2]-(res/2);vertices.push_back(p7);
-    p8[0]=t[0]+(res/2);p7[1]=t[1]-(res/2);p7[2]=t[2]-(res/2);vertices.push_back(p8);
+    point.x=p7[0]; point.y=p7[1]; point.z=p7[2];points.push_back(point);
+    p8[0]=t[0]+(res/2);p8[1]=t[1]-(res/2);p8[2]=t[2]-(res/2);vertices.push_back(p8);
+    point.x=p8[0]; point.y=p8[1]; point.z=p8[2];points.push_back(point);
 
     //    std::cout<<"vertice 1x: "<<t[0]<<"vertice 1y: "<<t[1]<<"vertice 1z: "<<t[2]<<std::endl;
     CGALTriangle tri;
     //0
     tri = CGALTriangle(Point(vertices.at(0)[0],vertices.at(0)[1],vertices.at(0)[2]),Point(vertices.at(1)[0],vertices.at(1)[1],vertices.at(1)[2]),Point(vertices.at(2)[0],vertices.at(2)[1],vertices.at(2)[2]));
     triangles.push_back(tri);
+    TrlineSegments.push_back(points[0]);TrlineSegments.push_back(points[1]);//line1
+    TrlineSegments.push_back(points[1]);TrlineSegments.push_back(points[2]);//line2
+    TrlineSegments.push_back(points[2]);TrlineSegments.push_back(points[0]);//line3
     tri = CGALTriangle(Point(vertices.at(0)[0],vertices.at(0)[1],vertices.at(0)[2]),Point(vertices.at(3)[0],vertices.at(3)[1],vertices.at(3)[2]),Point(vertices.at(2)[0],vertices.at(2)[1],vertices.at(2)[2]));
     triangles.push_back(tri);
+    TrlineSegments.push_back(points[0]);TrlineSegments.push_back(points[3]);//line1
+    TrlineSegments.push_back(points[3]);TrlineSegments.push_back(points[2]);//line2
+    TrlineSegments.push_back(points[2]);TrlineSegments.push_back(points[0]);//line3
     tri = CGALTriangle(Point(vertices.at(0)[0],vertices.at(0)[1],vertices.at(0)[2]),Point(vertices.at(3)[0],vertices.at(3)[1],vertices.at(3)[2]),Point(vertices.at(7)[0],vertices.at(7)[1],vertices.at(7)[2]));
     triangles.push_back(tri);
+    TrlineSegments.push_back(points[0]);TrlineSegments.push_back(points[3]);//line1
+    TrlineSegments.push_back(points[3]);TrlineSegments.push_back(points[7]);//line2
+    TrlineSegments.push_back(points[7]);TrlineSegments.push_back(points[0]);//line3
     tri = CGALTriangle(Point(vertices.at(0)[0],vertices.at(0)[1],vertices.at(0)[2]),Point(vertices.at(4)[0],vertices.at(4)[1],vertices.at(4)[2]),Point(vertices.at(7)[0],vertices.at(7)[1],vertices.at(7)[2]));
     triangles.push_back(tri);
+    TrlineSegments.push_back(points[0]);TrlineSegments.push_back(points[4]);//line1
+    TrlineSegments.push_back(points[4]);TrlineSegments.push_back(points[7]);//line2
+    TrlineSegments.push_back(points[7]);TrlineSegments.push_back(points[0]);//line3
     tri = CGALTriangle(Point(vertices.at(0)[0],vertices.at(0)[1],vertices.at(0)[2]),Point(vertices.at(4)[0],vertices.at(4)[1],vertices.at(4)[2]),Point(vertices.at(5)[0],vertices.at(5)[1],vertices.at(5)[2]));
     triangles.push_back(tri);
+    TrlineSegments.push_back(points[0]);TrlineSegments.push_back(points[4]);//line1
+    TrlineSegments.push_back(points[4]);TrlineSegments.push_back(points[5]);//line2
+    TrlineSegments.push_back(points[5]);TrlineSegments.push_back(points[0]);//line3
     tri = CGALTriangle(Point(vertices.at(0)[0],vertices.at(0)[1],vertices.at(0)[2]),Point(vertices.at(1)[0],vertices.at(1)[1],vertices.at(1)[2]),Point(vertices.at(5)[0],vertices.at(5)[1],vertices.at(5)[2]));
     triangles.push_back(tri);
-    tri = CGALTriangle(Point(vertices.at(0)[0],vertices.at(0)[1],vertices.at(0)[2]),Point(vertices.at(4)[0],vertices.at(4)[1],vertices.at(4)[2]),Point(vertices.at(6)[0],vertices.at(6)[1],vertices.at(6)[2]));
-    triangles.push_back(tri);
-    tri = CGALTriangle(Point(vertices.at(0)[0],vertices.at(0)[1],vertices.at(0)[2]),Point(vertices.at(2)[0],vertices.at(2)[1],vertices.at(2)[2]),Point(vertices.at(6)[0],vertices.at(6)[1],vertices.at(6)[2]));
-    triangles.push_back(tri);
+    TrlineSegments.push_back(points[0]);TrlineSegments.push_back(points[1]);//line1
+    TrlineSegments.push_back(points[1]);TrlineSegments.push_back(points[5]);//line2
+    TrlineSegments.push_back(points[5]);TrlineSegments.push_back(points[0]);//line3
+    //internal triangles
+//    tri = CGALTriangle(Point(vertices.at(0)[0],vertices.at(0)[1],vertices.at(0)[2]),Point(vertices.at(4)[0],vertices.at(4)[1],vertices.at(4)[2]),Point(vertices.at(6)[0],vertices.at(6)[1],vertices.at(6)[2]));
+//    triangles.push_back(tri);
+//    TrlineSegments.push_back(points[0]);TrlineSegments.push_back(points[4]);//line1
+//    TrlineSegments.push_back(points[4]);TrlineSegments.push_back(points[6]);//line2
+//    TrlineSegments.push_back(points[6]);TrlineSegments.push_back(points[0]);//line3
+//    tri = CGALTriangle(Point(vertices.at(0)[0],vertices.at(0)[1],vertices.at(0)[2]),Point(vertices.at(2)[0],vertices.at(2)[1],vertices.at(2)[2]),Point(vertices.at(6)[0],vertices.at(6)[1],vertices.at(6)[2]));
+//    triangles.push_back(tri);
+//    TrlineSegments.push_back(points[0]);TrlineSegments.push_back(points[2]);//line1
+//    TrlineSegments.push_back(points[2]);TrlineSegments.push_back(points[6]);//line2
+//    TrlineSegments.push_back(points[6]);TrlineSegments.push_back(points[0]);//line3
 
     //7
     tri = CGALTriangle(Point(vertices.at(6)[0],vertices.at(6)[1],vertices.at(6)[2]),Point(vertices.at(2)[0],vertices.at(2)[1],vertices.at(2)[2]),Point(vertices.at(1)[0],vertices.at(1)[1],vertices.at(1)[2]));
     triangles.push_back(tri);
+    TrlineSegments.push_back(points[6]);TrlineSegments.push_back(points[2]);//line1
+    TrlineSegments.push_back(points[2]);TrlineSegments.push_back(points[1]);//line2
+    TrlineSegments.push_back(points[1]);TrlineSegments.push_back(points[6]);//line3
     tri = CGALTriangle(Point(vertices.at(6)[0],vertices.at(6)[1],vertices.at(6)[2]),Point(vertices.at(5)[0],vertices.at(5)[1],vertices.at(5)[2]),Point(vertices.at(1)[0],vertices.at(1)[1],vertices.at(1)[2]));
     triangles.push_back(tri);
+    TrlineSegments.push_back(points[6]);TrlineSegments.push_back(points[5]);//line1
+    TrlineSegments.push_back(points[5]);TrlineSegments.push_back(points[1]);//line2
+    TrlineSegments.push_back(points[1]);TrlineSegments.push_back(points[6]);//line3
     tri = CGALTriangle(Point(vertices.at(6)[0],vertices.at(6)[1],vertices.at(6)[2]),Point(vertices.at(5)[0],vertices.at(5)[1],vertices.at(5)[2]),Point(vertices.at(4)[0],vertices.at(4)[1],vertices.at(4)[2]));
     triangles.push_back(tri);
+    TrlineSegments.push_back(points[6]);TrlineSegments.push_back(points[5]);//line1
+    TrlineSegments.push_back(points[5]);TrlineSegments.push_back(points[4]);//line2
+    TrlineSegments.push_back(points[4]);TrlineSegments.push_back(points[6]);//line3
     tri = CGALTriangle(Point(vertices.at(6)[0],vertices.at(6)[1],vertices.at(6)[2]),Point(vertices.at(7)[0],vertices.at(7)[1],vertices.at(7)[2]),Point(vertices.at(4)[0],vertices.at(4)[1],vertices.at(4)[2]));
     triangles.push_back(tri);
+    TrlineSegments.push_back(points[6]);TrlineSegments.push_back(points[7]);//line1
+    TrlineSegments.push_back(points[7]);TrlineSegments.push_back(points[4]);//line2
+    TrlineSegments.push_back(points[4]);TrlineSegments.push_back(points[6]);//line3
     tri = CGALTriangle(Point(vertices.at(6)[0],vertices.at(6)[1],vertices.at(6)[2]),Point(vertices.at(7)[0],vertices.at(7)[1],vertices.at(7)[2]),Point(vertices.at(3)[0],vertices.at(3)[1],vertices.at(3)[2]));
     triangles.push_back(tri);
+    TrlineSegments.push_back(points[6]);TrlineSegments.push_back(points[7]);//line1
+    TrlineSegments.push_back(points[7]);TrlineSegments.push_back(points[3]);//line2
+    TrlineSegments.push_back(points[3]);TrlineSegments.push_back(points[6]);//line3
     tri = CGALTriangle(Point(vertices.at(6)[0],vertices.at(6)[1],vertices.at(6)[2]),Point(vertices.at(2)[0],vertices.at(2)[1],vertices.at(2)[2]),Point(vertices.at(3)[0],vertices.at(3)[1],vertices.at(3)[2]));
     triangles.push_back(tri);
-    tri = CGALTriangle(Point(vertices.at(5)[0],vertices.at(5)[1],vertices.at(5)[2]),Point(vertices.at(1)[0],vertices.at(1)[1],vertices.at(1)[2]),Point(vertices.at(3)[0],vertices.at(3)[1],vertices.at(3)[2]));
-    triangles.push_back(tri);
-    tri = CGALTriangle(Point(vertices.at(5)[0],vertices.at(5)[1],vertices.at(5)[2]),Point(vertices.at(7)[0],vertices.at(7)[1],vertices.at(7)[2]),Point(vertices.at(3)[0],vertices.at(3)[1],vertices.at(3)[2]));
-    triangles.push_back(tri);
+    TrlineSegments.push_back(points[6]);TrlineSegments.push_back(points[2]);//line1
+    TrlineSegments.push_back(points[2]);TrlineSegments.push_back(points[3]);//line2
+    TrlineSegments.push_back(points[3]);TrlineSegments.push_back(points[6]);//line3
+      //internal triangles
+//    tri = CGALTriangle(Point(vertices.at(5)[0],vertices.at(5)[1],vertices.at(5)[2]),Point(vertices.at(1)[0],vertices.at(1)[1],vertices.at(1)[2]),Point(vertices.at(3)[0],vertices.at(3)[1],vertices.at(3)[2]));
+//    triangles.push_back(tri);
+//    TrlineSegments.push_back(points[5]);TrlineSegments.push_back(points[1]);//line1
+//    TrlineSegments.push_back(points[1]);TrlineSegments.push_back(points[3]);//line2
+//    TrlineSegments.push_back(points[3]);TrlineSegments.push_back(points[5]);//line3
+//    tri = CGALTriangle(Point(vertices.at(5)[0],vertices.at(5)[1],vertices.at(5)[2]),Point(vertices.at(7)[0],vertices.at(7)[1],vertices.at(7)[2]),Point(vertices.at(3)[0],vertices.at(3)[1],vertices.at(3)[2]));
+//    triangles.push_back(tri);
+//    TrlineSegments.push_back(points[5]);TrlineSegments.push_back(points[7]);//line1
+//    TrlineSegments.push_back(points[7]);TrlineSegments.push_back(points[3]);//line2
+//    TrlineSegments.push_back(points[3]);TrlineSegments.push_back(points[5]);//line3
+
+
 
 }
 
@@ -127,6 +191,7 @@ int main(int argc, char **argv)
     ros::Publisher pub1 = n.advertise<sensor_msgs::PointCloud2>("point_cloud1", 100);
     ros::Publisher pub2 = n.advertise<sensor_msgs::PointCloud2>("point_cloud2", 100);
     ros::Publisher pub3 = n.advertise<sensor_msgs::PointCloud2>("occlusion_free_cloud", 100);
+    ros::Publisher trianglesPub = n.advertise<visualization_msgs::Marker>("triangles", 100);
 
     ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 1);
 
@@ -183,11 +248,11 @@ int main(int argc, char **argv)
     tf::quaternionTFToEigen(orientation, q);
     tf::quaternionTFToMsg(orientation,quet);
     Eigen::Affine3d pose;
-    Eigen::Vector3d a;
-    a[0]= T[0];
-    a[1]= T[1];
-    a[2]= T[2];
-    pose.translation() = a;
+    Eigen::Vector3d a1;
+    a1[0]= T[0];
+    a1[1]= T[1];
+    a1[2]= T[2];
+    pose.translation() = a1;
     tf::poseEigenToMsg(pose, output_vector);
     visualization_msgs::Marker marker;
 
@@ -200,7 +265,7 @@ int main(int argc, char **argv)
     std::cout<<"output orientatio= x: "<<output->sensor_orientation_.x()<<" y: "<<output->sensor_orientation_.y()<<" z: "<<output->sensor_orientation_.z()<<" w: "<<output->sensor_orientation_.w()<<"\n";
     pcl::VoxelGridOcclusionEstimation<pcl::PointXYZ> voxelFilter;
     voxelFilter.setInputCloud (output);
-    float res = 0.1;
+    float res = 0.10;
     std::list<CGALTriangle> triangles;
     voxelFilter.setLeafSize (res, res, res);
     voxelFilter.filter(*occlusion_cloud);
@@ -212,55 +277,90 @@ int main(int argc, char **argv)
     std::cout<<"minimum box  x: "<<min_b[0]<<" y: "<<min_b[1]<<" z: "<<min_b[2]<<"\n";
     std::cout<<"maximum box  x: "<<max_b[0]<<" y: "<<max_b[1]<<" z: "<<max_b[2]<<"\n";
 
+    //turn all the voxels to triangles
+    std::vector<geometry_msgs::Point> TrlineSegments;
     for (int kk = min_b[2]; kk <= max_b[2]; ++kk)
         for (int jj = min_b[1]; jj <= max_b[1]; ++jj)
             for (int ii = min_b[0]; ii <= max_b[0]; ++ii)
             {
-                int intersectionsCount=0;
+                Eigen::Vector3i ijk (ii, jj, kk);
+                int index = voxelFilter.getCentroidIndexAt (ijk);
+
+                if(index!=-1)
+                {
+                    Eigen::Vector4f centroid = voxelFilter.getCentroidCoordinate (ijk);
+                    from_voxel(centroid,res, triangles, TrlineSegments);
+
+                }
+
+            }
+
+    Tree tree(triangles.begin(),triangles.end());
+//    visualization_msgs::Marker linesList = drawLines(TrlineSegments,1000,1);//for displaying the triangulation of the voxels
+
+    visualization_msgs::Marker testline ;
+    std::vector<geometry_msgs::Point> lineSegment;
+    geometry_msgs::Point point;
+    int intersectionsCount=0;
+
+    //check the intersection and the occluded regions
+    for (int kk = min_b[2]; kk <= max_b[2]; ++kk)
+        for (int jj = min_b[1]; jj <= max_b[1]; ++jj)
+            for (int ii = min_b[0]; ii <= max_b[0]; ++ii)
+            {
+
+
                 Point a(T[0] , T[1]  ,T[2]);//sensor origin
                 Eigen::Vector3i ijk (ii, jj, kk);
                 int index = voxelFilter.getCentroidIndexAt (ijk);
 
-                if(index!=-1){ // get the occupied voxels
+                if(index!=-1)// get the occupied voxels
+                {
+
+                    std::cout << "index: "<<index<<"\n";
                     Eigen::Vector4f centroid = voxelFilter.getCentroidCoordinate (ijk);
-                    from_voxel(centroid,res, triangles);
-                    Tree tree(triangles.begin(),triangles.end());
-                    std::cout<<"traingles size:"<<triangles.size()<<"\n";
                     Point b(centroid[0], centroid[1], centroid[2]);
 //                    Line l(a,b);
 
                     //calculate the voxel entry point
-                    //using calculations
-//                    float distance = std::sqrt(((b[0]-a[0])*(b[0]-a[0]))+((b[1]-a[1])*(b[1]-a[1]))+((b[2]-a[2])*(b[2]-a[2])));
-//                    float dist_p2p3= (res/2)+((res/2)*(res/2));//distance from point 2
-//                    float ratio = dist_partial/distance;
-//                    float x3= (ratio * b[0]) + ((1-ratio)* a[0]);
-//                    float y3= (ratio * b[1]) + ((1-ratio)* a[1]);
-//                    float z3= (ratio * b[2]) + ((1-ratio)* a[2]);
-//                    Point c(x3,y3,z3);
+                    //1: using calculations(option 1 working :) )
+                    float distance = std::sqrt(((b[0]-a[0])*(b[0]-a[0]))+((b[1]-a[1])*(b[1]-a[1]))+((b[2]-a[2])*(b[2]-a[2])));
+                    float dist_p3p2= (res/2)+((res/4));//distance from point 2
+                    float ratio = dist_p3p2/distance;
+                    float x3= (ratio * a[0]) + ((1-ratio)* b[0]);
+                    float y3= (ratio * a[1]) + ((1-ratio)* b[1]);
+                    float z3= (ratio * a[2]) + ((1-ratio)* b[2]);
+                    Point c(x3,y3,z3);
+//                    point.x=c.x();point.y=c.y();point.z=c.z();
+//                    lineSegment.push_back(point);
 
-
-//                    //using CGAL
-//                    float dist_p0p3= distance - (res/2)+((res/2)*(res/2)); // distance from a (sensor origin)
+//                    //2: using CGAL (option 2 also working :) )
+//                    float dist_p0p3= distance - (res/3.5) ; // distance from a (sensor origin)
 //                    Vector v = l.to_vector();
 //                    Point c = a + (dist_p0p3 * dist_p0p3 / v.squared_length()) * v;
-
+//                    point.x=c.x();point.y=c.y();point.z=c.z();
+//                    lineSegment.push_back(point);
 
 //                    Ray ray_query(a,b);
-//                    Line l2(a,c);
-//                    intersectionsCount = tree.number_of_intersected_primitives(l2);
-//                    std::cout << "intersections: "<<intersectionsCount<< " intersections(s) with line query" << std::endl;
+                    Line l2(a,c);
+                    intersectionsCount = tree.number_of_intersected_primitives(l2);
+                    std::cout << "intersections: "<<intersectionsCount<< " intersections(s) with line query" << std::endl;
 
-//                    if(intersectionsCount <= 7)
-//                    {
-//                        std::cout<<"NOT OCCLUDED POINTS"<<"\n";
+                    if(intersectionsCount<=6)
+                    {
+                          point.x=T[0];point.y=T[1];point.z=T[2];
+                          lineSegment.push_back(point);
+                          point.x=c.x();point.y=c.y();point.z=c.z();
+                          lineSegment.push_back(point);
+                          std::cout<<"NOT OCCLUDED POINTS"<<"\n";
                           pcl::PointXYZ pt(centroid[0],centroid[1],centroid[2]);
                           occlusionFreeCloud->points.push_back(pt);
-//                     }
-                    for (int r=0; r<16; r++)
-                        triangles.pop_back();
+                     }
+
                 }
             }
+
+    testline =  drawLines(lineSegment,3000,2);
 
 
     //*****************Z buffering test (range_image tool) *****************
@@ -289,6 +389,7 @@ int main(int argc, char **argv)
     //    int top=height, right=-1, bottom=-1, left=width;
     //    visible.doZBuffer(*output, noise_level, min_range, top, right, bottom, left );
     //    visible.recalculate3DPointPositions();
+
 
     //*****************Rviz Visualization ************
     ros::Rate loop_rate(10);
@@ -336,8 +437,54 @@ int main(int argc, char **argv)
         pub1.publish(cloud1);
         pub2.publish(cloud2);
         pub3.publish(cloud3);
+        trianglesPub.publish(testline);
+//        trianglesPub.publish(linesList);
+//        trianglesPub.publish(testline);
         ros::spinOnce();
         loop_rate.sleep();
     }
     return 0;
+}
+
+visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color)
+{
+    visualization_msgs::Marker linksMarkerMsg;
+    linksMarkerMsg.header.frame_id="/base_point_cloud";
+    linksMarkerMsg.header.stamp=ros::Time::now();
+    linksMarkerMsg.ns="link_marker";
+    linksMarkerMsg.id = id;
+    linksMarkerMsg.type = visualization_msgs::Marker::LINE_LIST;
+    linksMarkerMsg.scale.x = 0.001;
+    linksMarkerMsg.action  = visualization_msgs::Marker::ADD;
+    linksMarkerMsg.lifetime  = ros::Duration(1000);
+    std_msgs::ColorRGBA color;
+//    color.r = 1.0f; color.g=.0f; color.b=.0f, color.a=1.0f;
+    if(c_color == 1)
+    {
+        color.r = 1.0;
+        color.g = 0.0;
+        color.b = 0.0;
+        color.a = 1.0;
+    }
+    else if(c_color == 2)
+    {
+        color.r = 0.0;
+        color.g = 1.0;
+        color.b = 0.0;
+        color.a = 1.0;
+    }
+    else
+    {
+        color.r = 0.0;
+        color.g = 0.0;
+        color.b = 1.0;
+        color.a = 1.0;
+    }
+    std::vector<geometry_msgs::Point>::iterator linksIterator;
+    for(linksIterator = links.begin();linksIterator != links.end();linksIterator++)
+    {
+        linksMarkerMsg.points.push_back(*linksIterator);
+        linksMarkerMsg.colors.push_back(color);
+    }
+   return linksMarkerMsg;
 }
