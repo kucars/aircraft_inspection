@@ -342,10 +342,10 @@ pcl::VoxelGridOcclusionEstimationT::rayTraversal (std::vector<Eigen::Vector3i, E
   // reserve space for the ray vector
   int reserve_size = div_b_.maxCoeff () * div_b_.maxCoeff ();
   out_ray.reserve (reserve_size);
-
+  std::cout<<"t_min is x:"<<t_min<<"\n";
   // coordinate of the boundary of the voxel grid
   Eigen::Vector4f start = origin + t_min * direction;
-
+  
   // i,j,k coordinate of the voxel were the ray enters the voxel grid
   Eigen::Vector3i ijk = getGridCoordinatesRound (start[0], start[1], start[2]);
   //Eigen::Vector3i ijk = this->getGridCoordinates (start_x, start_y, start_z);
@@ -355,7 +355,8 @@ pcl::VoxelGridOcclusionEstimationT::rayTraversal (std::vector<Eigen::Vector3i, E
 
   // centroid coordinate of the entry voxel
   Eigen::Vector4f voxel_max = getCentroidCoordinate (ijk);
-
+  std::cout<<"Direction is x:"<<direction[0]<<" y:"<<direction[1]<<" z:"<<direction[2]<<"\n";
+  
   if (direction[0] >= 0)
   {
     voxel_max[0] += leaf_size_[0] * 0.5f;
@@ -403,6 +404,7 @@ pcl::VoxelGridOcclusionEstimationT::rayTraversal (std::vector<Eigen::Vector3i, E
           (ijk[1] < max_b_[1]+1) && (ijk[1] >= min_b_[1]) && 
           (ijk[2] < max_b_[2]+1) && (ijk[2] >= min_b_[2]) )
   {
+      std::cout<<"I am here\n";
     // add voxel to ray
     out_ray.push_back (ijk);
 

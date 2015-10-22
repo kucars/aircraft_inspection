@@ -34,7 +34,7 @@ int main(int argc, char **argv)
     
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeCloud(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr rayCloud(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr rayCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
 
     std::string path = ros::package::getPath("component_test");
     pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/sphere_densed.pcd", *cloud);
@@ -67,7 +67,9 @@ int main(int argc, char **argv)
     int state,ret;
     Eigen::Vector3i t;
     pcl::PointXYZ pt;
-    std::vector< Eigen::Vector3i > & out_ray;
+    pcl::PointXYZRGB point;
+    std::vector<Eigen::Vector3i, Eigen::aligned_allocator<Eigen::Vector3i> > out_ray;
+    int count = 0;
     for ( int i = 0; i < (int)cloud->points.size(); i ++ )
     {
         pt = cloud->points[i];
@@ -76,11 +78,24 @@ int main(int argc, char **argv)
         if ( state != 1 )
         {
           occlusionFreeCloud->points.push_back(pt);
-          for(uint j=0; j< out_ray.size(); j++)
-          {
-              Eigen::Vector4f centroid = voxelFilter.getCentroidCoordinate (out_ray[j]);
-              rayCloud->points.push_back(pcl::PointXYZ(centroid[0], centroid[1], centroid[2]));
-          }
+
+        }
+        if(count++<10)
+        {
+            if ( state == -1 )
+            {
+                std::cout<<"I am -1 negative !\n";
+            }
+            
+            for(uint j=0; j< out_ray.size(); j++)
+            {
+                point = pcl::PointXYZRGB(255,0,0);
+                Eigen::Vector4f centroid = voxelFilter.getCentroidCoordinate (out_ray[j]);
+                point.x = centroid[0];
+                point.y = centroid[1];
+                point.z = centroid[2];
+                rayCloud->points.push_back(point);
+            }
         }
     }
 
@@ -117,17 +132,23 @@ int main(int argc, char **argv)
         sensor_msgs::PointCloud2 cloud1;
         sensor_msgs::PointCloud2 cloud2;
         sensor_msgs::PointCloud2 cloud3;
+        
         pcl::toROSMsg(*cloud, cloud1);
         pcl::toROSMsg(*occlusionFreeCloud, cloud2);
-        pcl::toROSMsg(*occlusionFreeCloud, cloud2);
+        pcl::toROSMsg(*rayCloud, cloud3);
         
         cloud1.header.frame_id = "base_point_cloud";
         cloud2.header.frame_id = "base_point_cloud";
+        cloud3.header.frame_id = "base_point_cloud";
 
         cloud1.header.stamp = ros::Time::now();
         cloud2.header.stamp = ros::Time::now();
+        cloud3.header.stamp = ros::Time::now();
+        
         pub1.publish(cloud1);
         pub2.publish(cloud2);
+        pub3.publish(cloud3);
+        
         ros::spinOnce();
         loop_rate.sleep();
     }
