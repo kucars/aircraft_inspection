@@ -45,7 +45,7 @@ int main(int argc, char **argv)
     std::string path = ros::package::getPath("component_test");
     pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/sphere_densed.pcd", *cloud);
 
-    Eigen::Vector3d a(-3,0,0);
+    Eigen::Vector3d a(3,0,0);
     Eigen::Affine3d pose;
     pose.translation() = a;
     geometry_msgs::Pose output_vector;
@@ -97,7 +97,8 @@ int main(int argc, char **argv)
                 point.x = centroid[0];
                 point.y = centroid[1];
                 point.z = centroid[2];
-                if(index!=-1 )//&& point.x<-1.2 && point.y<0.2 && point.y>-0.2)
+                //if(index!=-1 && point.x>1.2 && point.y<0.2 && point.y>-0.2)
+                if(index!=-1 && point.x<-1.2 && point.y<0.2 && point.y>-0.2)
                 {
                     out_ray.clear();
                     ret = voxelFilter.occlusionEstimation( state,out_ray, ijk);
@@ -105,13 +106,12 @@ int main(int argc, char **argv)
 
                     if(state == 1)
                     {
-                        /*
-                        if(count++>=1)
+                        if(count++>=10)
                         {
                             foundBug = true;
                             break;
                         }
-                        */
+                        cout<<"Number of voxels in ray:"<<out_ray.size()<<"\n";
                         for(uint j=0; j< out_ray.size(); j++)
                         {
                             Eigen::Vector4f centroid = voxelFilter.getCentroidCoordinate (out_ray[j]);
@@ -120,9 +120,10 @@ int main(int argc, char **argv)
                             p.y = centroid[1];
                             p.z = centroid[2];
                             rayCloud->points.push_back(p);
+                            std::cout<<"Ray X:"<<p.x<<" y:"<< p.y<<" z:"<< p.z<<"\n";
                         }
                     }
-                    if(state != 1)
+                    if(state == 1)
                     {
                         // estimate direction to target voxel
                         Eigen::Vector4f direction = centroid - cloud->sensor_origin_;

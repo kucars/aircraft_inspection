@@ -427,6 +427,7 @@ pcl::VoxelGridOcclusionEstimationT::rayTraversal (std::vector<Eigen::Vector3i, E
 
   // steps in which direction we have to travel in the voxel grid
   int step_x, step_y, step_z;
+  int step_x2, step_y2, step_z2;
 
   // centroid coordinate of the entry voxel
   Eigen::Vector4f voxel_max = getCentroidCoordinate (ijk);
@@ -462,6 +463,51 @@ pcl::VoxelGridOcclusionEstimationT::rayTraversal (std::vector<Eigen::Vector3i, E
     voxel_max[2] -= leaf_size_[2] * 0.5f;
     step_z = -1;
   }
+  Eigen::Vector4f target = getCentroidCoordinate (target_voxel);
+  double dist = ((start.array () - target.array ()).abs ().sum ());
+  int numOfSteps = ceil(dist/leaf_size_[0]);
+  std::cout<<"Length of Ray is:"<<dist<<" number of Steps:"<<numOfSteps<<"\n";
+
+  out_ray.push_back(ijk);
+
+  Eigen::Vector4f dir2 = target - start;
+  if (dir2[0] >= 0)
+  {
+    step_x2 = -1;
+  }
+  else
+  {
+    step_x2 = 1;
+  }
+  if (dir2[1] >= 0)
+  {
+    step_y2 = -1;
+  }
+  else
+  {
+    step_y2 = 1;
+  }
+  if (dir2[2] >= 0)
+  {
+    step_z2 = -1;
+  }
+  else
+  {
+    step_z2 = 1;
+  }
+  for(int i=1;i<=numOfSteps;i++)
+  {
+    Eigen::Vector4f nextPose;
+    nextPose[0] = start[0] + i*step_x2*leaf_size_[0]*dir2[0];
+    nextPose[1] = start[1] + i*step_y2*leaf_size_[1]*dir2[1];
+    nextPose[2] = start[2] + i*step_z2*leaf_size_[2]*dir2[2];
+    Eigen::Vector3i voxelIJK = getGridCoordinatesRound (nextPose[0], nextPose[1], nextPose[2]);
+    out_ray.push_back (voxelIJK);
+    std::cout<<"IN - Next Pose X:"<<nextPose[0]<<" y:"<< nextPose[1]<<" z:"<< nextPose[2]<<"\n";
+    if (voxelIJK[0] == target_voxel[0] && voxelIJK[1] == target_voxel[1] && voxelIJK[2] == target_voxel[2])
+      break;
+  }
+
 
   float t_max_x = t_min + (voxel_max[0] - start[0]) / direction[0];
   float t_max_y = t_min + (voxel_max[1] - start[1]) / direction[1];
@@ -486,17 +532,17 @@ pcl::VoxelGridOcclusionEstimationT::rayTraversal (std::vector<Eigen::Vector3i, E
   int index = -1;
   int result = 0;
   bool hereOnce=false;
-  while ( (ijk[0]-2 < max_b_[0]+1) && (ijk[0]+1 >= min_b_[0]) &&
-          (ijk[1]-2 < max_b_[1]+1) && (ijk[1]+1 >= min_b_[1]) &&
-          (ijk[2]-2 < max_b_[2]+1) && (ijk[2]+1 >= min_b_[2]) )
+  while ( (ijk[0]<= max_b_[0]+1) && (ijk[0]+1 >= min_b_[0]) &&
+          (ijk[1]<= max_b_[1]+1) && (ijk[1]+1 >= min_b_[1]) &&
+          (ijk[2]<= max_b_[2]+1) && (ijk[2]+1 >= min_b_[2]) )
   {
-      if(!hereOnce)
-      {
-          std::cout<<"I am here\n";
-          //hereOnce = true;
-      }
+//      if(!hereOnce)
+//      {
+//          //std::cout<<"I am here\n";
+//          //hereOnce = true;
+//      }
     // add voxel to ray
-    out_ray.push_back (ijk);
+    //out_ray.push_back (ijk);
 
     // check if we reached target voxel
     if (ijk[0] == target_voxel[0] && ijk[1] == target_voxel[1] && ijk[2] == target_voxel[2])
