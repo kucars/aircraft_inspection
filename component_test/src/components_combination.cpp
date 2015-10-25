@@ -428,14 +428,14 @@ geometry_msgs::Pose calcOrienation(Vec3f position,Vec3f nearestP)
     tf::poseEigenToMsg(pose1, output_vector);
 
 
-    double roll, pitch, yaw;
-    tf::Matrix3x3(tf_q).getRPY(roll, pitch, yaw);
-    rpy.x = roll;
-    rpy.y = pitch;
-    rpy.z = yaw;
+//    double roll, pitch, yaw;
+//    tf::Matrix3x3(tf_q).getRPY(roll, pitch, yaw);
+//    rpy.x = roll;
+//    rpy.y = pitch;
+//    rpy.z = yaw;
 
-    std::cout<<"roll: "<<roll<<" pitch: "<<pitch<<" yaw: "<<yaw<<std::endl;
-    std::cout<<"Qx: "<<output_vector.orientation.x<<" Qy: "<<output_vector.orientation.y<<" Qz: "<<output_vector.orientation.z<<" Qw: "<<output_vector.orientation.w<<std::endl;
+//    std::cout<<"roll: "<<roll<<" pitch: "<<pitch<<" yaw: "<<yaw<<std::endl;
+//    std::cout<<"Qx: "<<output_vector.orientation.x<<" Qy: "<<output_vector.orientation.y<<" Qz: "<<output_vector.orientation.z<<" Qw: "<<output_vector.orientation.w<<std::endl;
 
     return output_vector;
 
