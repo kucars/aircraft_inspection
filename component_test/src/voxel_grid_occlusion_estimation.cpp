@@ -463,6 +463,7 @@ pcl::VoxelGridOcclusionEstimationT::rayTraversal (std::vector<Eigen::Vector3i, E
     voxel_max[2] -= leaf_size_[2] * 0.5f;
     step_z = -1;
   }
+  /*
   Eigen::Vector4f target = getCentroidCoordinate (target_voxel);
   double dist = ((start.array () - target.array ()).abs ().sum ());
   int numOfSteps = ceil(dist/leaf_size_[0]);
@@ -508,7 +509,7 @@ pcl::VoxelGridOcclusionEstimationT::rayTraversal (std::vector<Eigen::Vector3i, E
       break;
   }
 
-
+*/
   float t_max_x = t_min + (voxel_max[0] - start[0]) / direction[0];
   float t_max_y = t_min + (voxel_max[1] - start[1]) / direction[1];
   float t_max_z = t_min + (voxel_max[2] - start[2]) / direction[2];
@@ -518,6 +519,7 @@ pcl::VoxelGridOcclusionEstimationT::rayTraversal (std::vector<Eigen::Vector3i, E
   float t_delta_z = leaf_size_[2] / static_cast<float> (fabs (direction[2]));
 
   //if(ijk[0] < max_b_[0]+1)
+  /*
   if(ijk[0]!=43)
   {
       std::cout<<"IN - Direction X:"<<direction[0]<<" y:"<< direction[1]<<" z:"<< direction[2]<<"\n";
@@ -528,6 +530,7 @@ pcl::VoxelGridOcclusionEstimationT::rayTraversal (std::vector<Eigen::Vector3i, E
       std::cout<<"IN - MAXb X:"<<max_b_[0]<<" y:"<< max_b_[1]<<" z:"<< max_b_[2]<<"\n";
       std::cout<<"IN - MINb X:"<<min_b_[0]<<" y:"<< min_b_[1]<<" z:"<< min_b_[2]<<"\n";
   }
+  */
   // the index of the cloud (-1 if empty)
   int index = -1;
   int result = 0;
@@ -542,7 +545,7 @@ pcl::VoxelGridOcclusionEstimationT::rayTraversal (std::vector<Eigen::Vector3i, E
 //          //hereOnce = true;
 //      }
     // add voxel to ray
-    //out_ray.push_back (ijk);
+    out_ray.push_back (ijk);
 
     // check if we reached target voxel
     if (ijk[0] == target_voxel[0] && ijk[1] == target_voxel[1] && ijk[2] == target_voxel[2])
