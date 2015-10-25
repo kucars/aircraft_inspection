@@ -21,9 +21,50 @@
 #include <pcl/range_image/range_image.h>
 #include <voxel_grid_occlusion_estimation.h>
 #include "fcl_utility.h"
+//CGAL
+#include <list>
+#include <CGAL/Simple_cartesian.h>
+#include <CGAL/AABB_tree.h>
+#include <CGAL/AABB_traits.h>
+#include <CGAL/AABB_triangle_primitive.h>
+//FCL
+#include "fcl/shape/geometric_shapes.h"
+#include "fcl/narrowphase/narrowphase.h"
+#include "fcl/collision.h"
+#include "fcl/ccd/motion.h"
+#include <stdlib.h>
+#include <boost/foreach.hpp>
+#include <Eigen/Eigen>
+#include "fcl/octree.h"
+#include "fcl/traversal/traversal_node_octree.h"
+#include "fcl/broadphase/broadphase.h"
+#include "fcl/shape/geometric_shape_to_BVH_model.h"
+#include "fcl/math/transform.h"
+#include <boost/filesystem.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/array.hpp>
+#include "fcl/BV/AABB.h"
+#include "fcl/collision_object.h"
+
+using namespace fcl;
 
 
+typedef CGAL::Simple_cartesian<double> K;
+typedef K::FT FT;
+typedef K::Ray_3 Ray;
+typedef K::Line_3 Line;
+typedef K::Point_3 Point;
+typedef K::Triangle_3 CGALTriangle;
+typedef std::list<CGALTriangle>::iterator Iterator;
+typedef CGAL::AABB_triangle_primitive<K, Iterator> Primitive;
+typedef CGAL::AABB_traits<K, Primitive> AABB_triangle_traits;
+typedef CGAL::AABB_tree<AABB_triangle_traits> Tree;
+using namespace fcl;
 
+void loadOBJFile(const char* filename, std::vector<Vec3f>& points, std::list<CGALTriangle>& triangles);
+geometry_msgs::Pose calcOrienation(Vec3f position,Vec3f nearestP);
+visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color);
+visualization_msgs::Marker drawCUBE(Vec3f vec , int id , int c_color);
 
 int main(int argc, char **argv)
 {
@@ -301,4 +342,201 @@ visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, in
         linksMarkerMsg.colors.push_back(color);
     }
    return linksMarkerMsg;
+}
+
+visualization_msgs::Marker drawCUBE(Vec3f vec , int id , int c_color)
+{
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = "base_point_cloud";
+    marker.header.stamp = ros::Time();
+    marker.ns = "my_namespace";
+    marker.id = id;
+    marker.type = visualization_msgs::Marker::CUBE;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose.position.x = vec[0];
+    marker.pose.position.y = vec[1];
+    marker.pose.position.z = vec[2];
+    marker.pose.orientation.x = 0;
+    marker.pose.orientation.y = 0;//poseQ[1];
+    marker.pose.orientation.z = 0;//poseQ[2];
+    marker.pose.orientation.w = 1;//poseQ[3];
+
+    marker.scale.x = 0.05;
+    marker.scale.y = 0.05;
+    marker.scale.z = 0.05;
+    marker.color.a = 1.0;
+    marker.color.r = 0.0;
+    marker.color.g = 0.0;
+    if(c_color == 1)
+    {
+        marker.color.r = 0.0;
+        marker.color.b = 1.0;
+        marker.color.g = 0.0;
+    }
+    else if(c_color == 2)
+    {
+        marker.color.r = 1.0;
+        marker.color.b = 0.0;
+        marker.color.g = 0.0;
+    }
+    else
+    {
+        marker.color.r = 0.0;
+        marker.color.b = 0.0;
+        marker.color.g = 1.0;
+    }
+    marker.lifetime = ros::Duration(120);
+    return marker ;
+}
+
+
+geometry_msgs::Pose calcOrienation(Vec3f position,Vec3f nearestP)
+{
+    geometry_msgs::Pose output_vector;
+    Eigen::Quaterniond q;
+
+    Eigen::Vector3d axis_vector;
+//    axis_vector[0]=position[0]-nearestP[0];
+//    axis_vector[1]=position[1]-nearestP[1];
+//    axis_vector[2]=position[2]-nearestP[2];
+    axis_vector[0]=nearestP[0]-position[0];
+    axis_vector[1]=nearestP[1]-position[1];
+    axis_vector[2]=nearestP[2]-position[2];
+    axis_vector.normalize();
+    Eigen::Vector3d up_vector(0.0, 0.0, -1.0);
+    Eigen::Vector3d right_axis_vector = axis_vector.cross(up_vector);
+    right_axis_vector.normalized();
+    double theta = axis_vector.dot(up_vector);
+    double angle_rotation = -1.0*acos(theta);
+    //-------------------------------------------
+    // Method 1 - TF - works
+    //Convert to TF
+    tf::Vector3 tf_right_axis_vector;
+    tf::vectorEigenToTF(right_axis_vector, tf_right_axis_vector);
+    // Create quaternion
+    tf::Quaternion tf_q(tf_right_axis_vector, angle_rotation);
+    // Convert back to Eigen
+    tf::quaternionTFToEigen(tf_q, q);
+
+    // Rotate so that vector points along line
+    Eigen::Affine3d pose1;
+    q.normalize();
+    Eigen::Vector3d b;
+    b[0]=position[0]; b[1]=position[1]; b[2]=position[2];
+    pose1 = q * Eigen::AngleAxisd(-0.5*M_PI, Eigen::Vector3d::UnitY());
+    pose1.translation() = b;
+    tf::poseEigenToMsg(pose1, output_vector);
+
+
+    double roll, pitch, yaw;
+    tf::Matrix3x3(tf_q).getRPY(roll, pitch, yaw);
+    rpy.x = roll;
+    rpy.y = pitch;
+    rpy.z = yaw;
+
+    std::cout<<"roll: "<<roll<<" pitch: "<<pitch<<" yaw: "<<yaw<<std::endl;
+    std::cout<<"Qx: "<<output_vector.orientation.x<<" Qy: "<<output_vector.orientation.y<<" Qz: "<<output_vector.orientation.z<<" Qw: "<<output_vector.orientation.w<<std::endl;
+
+    return output_vector;
+
+}
+
+void loadOBJFile(const char* filename, std::vector<Vec3f>& points, std::list<CGALTriangle>& triangles)
+{
+
+    FILE* file = fopen(filename, "rb");
+    if(!file)
+    {
+        std::cerr << "file not exist" << std::endl;
+        return;
+    }
+
+    bool has_normal = false;
+    bool has_texture = false;
+    char line_buffer[2000];
+    while(fgets(line_buffer, 2000, file))
+    {
+        char* first_token = strtok(line_buffer, "\r\n\t ");
+        if(!first_token || first_token[0] == '#' || first_token[0] == 0)
+            continue;
+
+        switch(first_token[0])
+        {
+        case 'v':
+        {
+            if(first_token[1] == 'n')
+            {
+                strtok(NULL, "\t ");
+                strtok(NULL, "\t ");
+                strtok(NULL, "\t ");
+                has_normal = true;
+            }
+            else if(first_token[1] == 't')
+            {
+                strtok(NULL, "\t ");
+                strtok(NULL, "\t ");
+                has_texture = true;
+            }
+            else
+            {
+                FCL_REAL x = (FCL_REAL)atof(strtok(NULL, "\t "));
+                FCL_REAL y = (FCL_REAL)atof(strtok(NULL, "\t "));
+                FCL_REAL z = (FCL_REAL)atof(strtok(NULL, "\t "));
+                Vec3f p(x, y, z);
+                points.push_back(p);
+            }
+        }
+            break;
+        case 'f':
+        {
+            CGALTriangle tri;
+            char* data[30];
+            int n = 0;
+            while((data[n] = strtok(NULL, "\t \r\n")) != NULL)
+            {
+                if(strlen(data[n]))
+                    n++;
+            }
+
+            for(int t = 0; t < (n - 2); ++t)
+            {
+                if((!has_texture) && (!has_normal))
+                {
+                    Point p1(points[atoi(data[0]) - 1][0],points[atoi(data[0]) - 1][1],points[atoi(data[0]) - 1][2]);
+                    Point p2(points[atoi(data[1]) - 1][0],points[atoi(data[1]) - 1][1],points[atoi(data[1]) - 1][2]);
+                    Point p3(points[atoi(data[2]) - 1][0],points[atoi(data[2]) - 1][1],points[atoi(data[2]) - 1][2]);
+                    tri = CGALTriangle(p1,p2,p3);
+                    //std::cout<<"1: Yep, I get here p1:"<<atoi(data[0]) - 1<<" p2:"<<atoi(data[1]) - 1<<" p2:"<<atoi(data[2]) - 1;
+                    if(!CGAL::collinear(p1,p2,p3))
+                    {
+                        triangles.push_back(tri);
+                    }
+                }
+                else
+                {
+                    const char *v1;
+                    uint indxs[3];
+                    for(int i = 0; i < 3; i++)
+                    {
+                        // vertex ID
+                        if(i == 0)
+                            v1 = data[0];
+                        else
+                            v1 = data[t + i];
+
+                        indxs[i] = atoi(v1) - 1;
+                    }
+                    Point p1(points[indxs[0]][0],points[indxs[0]][1],points[indxs[0]][2]);
+                    Point p2(points[indxs[1]][0],points[indxs[1]][1],points[indxs[1]][2]);
+                    Point p3(points[indxs[2]][0],points[indxs[2]][1],points[indxs[2]][2]);
+                    tri = CGALTriangle(p1,p2,p3);
+                    if(!CGAL::collinear(p1,p2,p3))
+                    {
+                        triangles.push_back(tri);
+                    }
+                }
+            }
+        }
+        }
+    }
 }

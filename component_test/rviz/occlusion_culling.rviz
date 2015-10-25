@@ -31,7 +31,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: PointCloud2
 Visualization Manager:
   Class: ""
   Displays:
@@ -79,7 +79,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -92,10 +92,10 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.05
       Style: Flat Squares
-      Topic: /point_cloud1
+      Topic: /original_point_cloud
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -119,7 +119,7 @@ Visualization Manager:
       Queue Size: 1
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.05
+      Size (m): 0.1
       Style: Boxes
       Topic: occlusion_free_cloud
       Use Fixed Frame: true
@@ -127,10 +127,10 @@ Visualization Manager:
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /visualization_marker
+      Marker Topic: /sensor_origin
       Name: Marker
       Namespaces:
-        {}
+        basic_shapes: true
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -145,7 +145,7 @@ Visualization Manager:
       Color: 255; 0; 0
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 0; 0
       Max Intensity: 4096
@@ -156,12 +156,12 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.01
-      Style: Flat Squares
-      Topic: /point_cloud2
+      Size (m): 0.1
+      Style: Boxes
+      Topic: frustum_point_cloud
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: triangles
@@ -194,22 +194,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 12.367
+      Distance: 36.5081
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.255534
-        Y: 1.13776
-        Z: 1.00181
+        X: 0.490938
+        Y: -2.71297
+        Z: -13.6108
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.334799
+      Pitch: 0.269796
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.55334
+      Yaw: 2.2634
     Saved: ~
 Window Geometry:
   Displays:
