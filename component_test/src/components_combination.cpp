@@ -72,14 +72,14 @@ typedef CGAL::AABB_tree<AABB_triangle_traits> Tree;
 
 
 void loadOBJFile(const char* filename, std::vector<Vec3f>& points, std::list<CGALTriangle>& triangles);
-geometry_msgs::Pose calcOrienation(Vec3f sensorP,Vec3f nearestP,geometry_msgs::Vector3 rpy);
+geometry_msgs::Pose calcOrienation(Vec3f sensorP,Vec3f nearestP,geometry_msgs::Vector3& rpy);
 visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color);
 visualization_msgs::Marker drawCUBE(Vec3f vec , int id , int c_color, double size);
 
 int main(int argc, char **argv)
 {
 
-    ros::init(argc, argv, "occlusion_culling_test");
+    ros::init(argc, argv, "components_combination");
     ros::NodeHandle n;
 
     ros::Publisher pub1 = n.advertise<sensor_msgs::PointCloud2>("original_point_cloud", 100);
@@ -177,7 +177,9 @@ int main(int argc, char **argv)
                 nearestP[0]= closest_point.x(); nearestP[1]= closest_point.y(); nearestP[2]= closest_point.z();
                 Vec3f position = vec2;
                 geometry_msgs::Vector3 rpy;
-                filtered_vectors.poses.push_back(calcOrienation(position,nearestP,rpy)); //rpy are in radians already!
+                geometry_msgs::Pose out_vector = calcOrienation(position,nearestP,rpy) ;//rpy are in radians already!
+                filtered_vectors.poses.push_back(out_vector);
+                std::cout<<"roll X: "<<rpy.x<<" pitch Y: "<<rpy.y<<" yaw Z: "<<rpy.z<<std::endl;
                 points_rpy.push_back(rpy);
             }
         }
@@ -188,9 +190,9 @@ int main(int argc, char **argv)
 
 
 
-    // 3: *******************Occlusion Culling ***************************
+    // 3: *******************Extracting the visibile surfaces (frustum + occlusion culling) ***************************
     pcl::FrustumCulling<pcl::PointXYZ> fc (true);
-
+    ros::Time frustum_occlusion_begin = ros::Time::now();
     for (int num=0; num < filtered_vectors.poses.size(); num++)
     {
         // 3.1: *****Frustum Culling*******
@@ -205,6 +207,7 @@ int main(int argc, char **argv)
         Eigen::Matrix4f camera_pose;
         Eigen::Matrix3f R;
         camera_pose.setZero ();
+
         Eigen::Vector3f theta_rad(points_rpy[num].x,points_rpy[num].y,points_rpy[num].z);
         R = Eigen::AngleAxisf (theta_rad[0], Eigen::Vector3f::UnitX ()) *
                 Eigen::AngleAxisf (theta_rad[1], Eigen::Vector3f::UnitY ()) *
@@ -222,7 +225,7 @@ int main(int argc, char **argv)
         // the rviz axis is different from the frustum camera axis
         R = Eigen::AngleAxisf (theta_rad[0] , Eigen::Vector3f::UnitX ()) *
                 Eigen::AngleAxisf (-theta_rad[1] , Eigen::Vector3f::UnitY ()) *
-                Eigen::AngleAxisf (-theta_rad[2] , Eigen::Vector3f::UnitZ ());
+                Eigen::AngleAxisf (-theta_rad[2], Eigen::Vector3f::UnitZ ());
         tf::Matrix3x3 rotation;
         Eigen::Matrix3d D;
         D= R.cast<double>();
@@ -243,7 +246,7 @@ int main(int argc, char **argv)
         a[2]= T[2];
         pose1.translation() = a;
         tf::poseEigenToMsg(pose1, output_vector);
-//        visualization_msgs::Marker marker;
+
 
 
         //3.2:****voxel grid occlusion estimation *****
@@ -267,13 +270,12 @@ int main(int argc, char **argv)
         Eigen::Vector3i  min_b = voxelFilter.getMinBoxCoordinates ();
         Eigen::Vector3i  max_b = voxelFilter.getMaxBoxCoordinates ();
 
-        bool foundBug = false;
         // iterate over the entire voxel grid
-        for (int kk = min_b.z (); kk <= max_b.z () && !foundBug; ++kk)
+        for (int kk = min_b.z (); kk <= max_b.z (); ++kk)
         {
-            for (int jj = min_b.y (); jj <= max_b.y () && !foundBug; ++jj)
+            for (int jj = min_b.y (); jj <= max_b.y (); ++jj)
             {
-                for (int ii = min_b.x (); ii <= max_b.x () && !foundBug; ++ii)
+                for (int ii = min_b.x (); ii <= max_b.x (); ++ii)
                 {
                     Eigen::Vector3i ijk (ii, jj, kk);
                     // process all free voxels
@@ -330,17 +332,19 @@ int main(int argc, char **argv)
         }
     }
 
+    ros::Time frustum_occlusion_end = ros::Time::now();
+    elapsed =  frustum_occlusion_end.toSec() - frustum_occlusion_begin.toSec();
+    std::cout<<"frustum + occlusion culling duration (s) = "<<elapsed<<"\n";
 
 
-
-
+    visualization_msgs::Marker marker;
 
     //4: *****************Rviz Visualization ************
     int publishCounter = 0;
     ros::Rate loop_rate(10);
     while (ros::ok())
     {
-        //***marker publishing***
+        //***sensor origin publishing***
 //        uint32_t shape = visualization_msgs::Marker::ARROW;
 //        marker.type = shape;
 //        marker.action = visualization_msgs::Marker::ADD;
@@ -365,14 +369,15 @@ int main(int argc, char **argv)
 //        // Publish the marker
 //        marker_pub.publish(marker);
 
-//        //***frustum cull and occlusion cull publish***
+//        //***original cloud & frustum cull & occlusion cull publish***
         sensor_msgs::PointCloud2 cloud1;
 //        sensor_msgs::PointCloud2 cloud2;
         sensor_msgs::PointCloud2 cloud3;
 
-        pcl::toROSMsg(*cloud, cloud1); //cloud of original (white) using pcl::frustumcull
-//        pcl::toROSMsg(*output, cloud2); //cloud of frustum cull (red) using pcl::frustumcull
-        pcl::toROSMsg(*occlusionFreeCloud, cloud3); //cloud of the Occlusion cull (blue) using pcl::rangeImage
+        pcl::toROSMsg(*cloud, cloud1); //cloud of original (white) using original cloud
+//        pcl::toROSMsg(*output, cloud2); //cloud of frustum cull (red) using pcl::frustum cull
+        pcl::toROSMsg(*occlusionFreeCloud, cloud3); //cloud of the not occluded voxels (blue) using occlusion culling
+
         cloud1.header.frame_id = "base_point_cloud";
 //        cloud2.header.frame_id = "base_point_cloud";
         cloud3.header.frame_id = "base_point_cloud";
@@ -490,20 +495,17 @@ visualization_msgs::Marker drawCUBE(Vec3f vec , int id , int c_color, double siz
 
 
 
-geometry_msgs::Pose calcOrienation(Vec3f sensorP,Vec3f nearestP, geometry_msgs::Vector3 rpy)
+geometry_msgs::Pose calcOrienation(Vec3f sensorP,Vec3f nearestP, geometry_msgs::Vector3& rpy)
 {
     geometry_msgs::Pose output_vector;
     Eigen::Quaterniond q;
 
     Eigen::Vector3d axis_vector;
-    axis_vector[0]=sensorP[0]-nearestP[0];
-    axis_vector[1]=sensorP[1]-nearestP[1];
-    axis_vector[2]=sensorP[2]-nearestP[2];
-//    axis_vector[0]=nearestP[0]-sensorP[0];
-//    axis_vector[1]=nearestP[1]-sensorP[1];
-//    axis_vector[2]=nearestP[2]-sensorP[2];
+    axis_vector[0]=nearestP[0]-sensorP[0];
+    axis_vector[1]=nearestP[1]-sensorP[1];
+    axis_vector[2]=nearestP[2]-sensorP[2];
     axis_vector.normalize();
-    Eigen::Vector3d up_vector(0.0, 0.0, -1.0);
+    Eigen::Vector3d up_vector(0.0, 0.0, 1.0);
     Eigen::Vector3d right_axis_vector = axis_vector.cross(up_vector);
     right_axis_vector.normalized();
     double theta = axis_vector.dot(up_vector);
@@ -527,11 +529,17 @@ geometry_msgs::Pose calcOrienation(Vec3f sensorP,Vec3f nearestP, geometry_msgs::
     pose1.translation() = b;
     tf::poseEigenToMsg(pose1, output_vector);
 
+    tf::Quaternion qt;
+    qt.setX(output_vector.orientation.x);
+    qt.setY(output_vector.orientation.y);
+    qt.setZ(output_vector.orientation.z);
+    qt.setW(output_vector.orientation.w);
     double roll, pitch, yaw;
-    tf::Matrix3x3(tf_q).getRPY(roll, pitch, yaw);
+    tf::Matrix3x3(qt).getRPY(roll, pitch, yaw);
     rpy.x = roll;
     rpy.y = pitch;
     rpy.z = yaw;
+    std::cout<<"roll: "<<rpy.x<<" pitch: "<<rpy.y<<" yaw: "<<rpy.z<<std::endl;
 
     return output_vector;
 
