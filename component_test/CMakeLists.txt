@@ -43,10 +43,15 @@ include_directories(include
   
 add_library(fcl_test src/fcl_utility.cpp )
 add_library(voxel_grid_occlusion_estimation src/voxel_grid_occlusion_estimation.cpp )
+add_library(frustum_culling src/frustum_culling.cpp )
 
 add_executable(frustum_test src/frustum_test.cpp)
 add_dependencies(frustum_test ${catkin_EXPORTED_TARGETS})
 target_link_libraries(frustum_test ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(frustum_test_debug src/frustum_test_debug.cpp)
+add_dependencies(frustum_test_debug ${catkin_EXPORTED_TARGETS})
+target_link_libraries(frustum_test_debug frustum_culling -lgmp -lmpfr ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(occlusion_culling src/occlusion_culling.cpp)
 add_dependencies(occlusion_culling ${catkin_EXPORTED_TARGETS})
