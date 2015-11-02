@@ -9,6 +9,7 @@ Panels:
         - /PointCloud21
         - /PointCloud22
         - /Marker1
+        - /Marker2
       Splitter Ratio: 0.5
     Tree Height: 895
   - Class: rviz/Selection
@@ -29,7 +30,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: PointCloud2
 Visualization Manager:
   Class: ""
   Displays:
@@ -75,7 +76,7 @@ Visualization Manager:
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 255; 255; 255
-      Color Transformer: RGB8
+      Color Transformer: Intensity
       Decay Time: 0
       Enabled: true
       Invert Rainbow: false
@@ -90,7 +91,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.01
       Style: Flat Squares
-      Topic: /point_cloud1
+      Topic: /original_point_cloud
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -118,17 +119,25 @@ Visualization Manager:
       Selectable: true
       Size (Pixels): 3
       Size (m): 0.01
-      Style: Flat Squares
-      Topic: /point_cloud2
+      Style: Boxes
+      Topic: /frustum_point_cloud
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /visualization_marker
+      Marker Topic: /sensor_origin
       Name: Marker
       Namespaces:
         basic_shapes: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: visualization_marker
+      Name: Marker
+      Namespaces:
+        {}
       Queue Size: 100
       Value: true
   Enabled: true
@@ -155,22 +164,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 6.70647
+      Distance: 6.57419
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -8.31822
-        Y: 0.874255
-        Z: 2.11175
+        X: -0.239906
+        Y: -2.08804
+        Z: 0.0678831
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: -0.177241
+      Pitch: 0.267759
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.40803
+      Yaw: 1.66303
     Saved: ~
 Window Geometry:
   Displays:

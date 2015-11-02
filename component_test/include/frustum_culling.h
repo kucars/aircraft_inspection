@@ -189,7 +189,16 @@ namespace pcl
       {
         return (fp_dist_);
       }
-
+      //added part for debuging
+      Eigen::Vector3f fp_tl;
+      Eigen::Vector3f fp_tr;
+      Eigen::Vector3f fp_bl;
+      Eigen::Vector3f fp_br;
+      
+      Eigen::Vector3f np_tr;
+      Eigen::Vector3f np_bl;
+      Eigen::Vector3f np_br;
+      Eigen::Vector3f np_tl;
     protected:
       using PCLBase<pcl::PointXYZ>::input_;
       using PCLBase<pcl::PointXYZ>::indices_;

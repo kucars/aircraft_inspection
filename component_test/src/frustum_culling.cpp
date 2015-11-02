@@ -39,6 +39,7 @@
 #include <pcl/common/io.h>
 #include <vector>
 
+
 ///////////////////////////////////////////////////////////////////////////////
 void pcl::FrustumCullingTT::applyFilter (PointCloud& output)
 {
@@ -94,16 +95,16 @@ void pcl::FrustumCullingTT::applyFilter (std::vector<int> &indices)
   float fp_w = float (2 * tan (hfov_rad / 2) * fp_dist_);    // far plane width
 
   Eigen::Vector3f fp_c (T + view * fp_dist_);                 // far plane center
-  Eigen::Vector3f fp_tl (fp_c + (up * fp_h / 2) - (right * fp_w / 2));  // Top left corner of the far plane
-  Eigen::Vector3f fp_tr (fp_c + (up * fp_h / 2) + (right * fp_w / 2));  // Top right corner of the far plane
-  Eigen::Vector3f fp_bl (fp_c - (up * fp_h / 2) - (right * fp_w / 2));  // Bottom left corner of the far plane
-  Eigen::Vector3f fp_br (fp_c - (up * fp_h / 2) + (right * fp_w / 2));  // Bottom right corner of the far plane
+  fp_tl =(fp_c + (up * fp_h / 2) - (right * fp_w / 2));  // Top left corner of the far plane
+  fp_tr =(fp_c + (up * fp_h / 2) + (right * fp_w / 2));  // Top right corner of the far plane
+  fp_bl =(fp_c - (up * fp_h / 2) - (right * fp_w / 2));  // Bottom left corner of the far plane
+  fp_br =(fp_c - (up * fp_h / 2) + (right * fp_w / 2));  // Bottom right corner of the far plane
 
   Eigen::Vector3f np_c (T + view * np_dist_);                   // near plane center
-  //Eigen::Vector3f np_tl = np_c + (up * np_h/2) - (right * np_w/2); // Top left corner of the near plane
-  Eigen::Vector3f np_tr (np_c + (up * np_h / 2) + (right * np_w / 2));   // Top right corner of the near plane
-  Eigen::Vector3f np_bl (np_c - (up * np_h / 2) - (right * np_w / 2));   // Bottom left corner of the near plane
-  Eigen::Vector3f np_br (np_c - (up * np_h / 2) + (right * np_w / 2));   // Bottom right corner of the near plane
+  np_tl = np_c + (up * np_h/2) - (right * np_w/2); // Top left corner of the near plane
+  np_tr =(np_c + (up * np_h / 2) + (right * np_w / 2));   // Top right corner of the near plane
+  np_bl =(np_c - (up * np_h / 2) - (right * np_w / 2));   // Bottom left corner of the near plane
+  np_br =(np_c - (up * np_h / 2) + (right * np_w / 2));   // Bottom right corner of the near plane
 
   pl_f.block (0, 0, 3, 1).matrix () = (fp_bl - fp_br).cross (fp_tr - fp_br);   // Far plane equation - cross product of the 
   pl_f (3) = -fp_c.dot (pl_f.block (0, 0, 3, 1));                    // perpendicular edges of the far plane
