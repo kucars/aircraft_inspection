@@ -18,12 +18,15 @@
 #include <deque>
 #include <visualization_msgs/MarkerArray.h>
 #include <std_msgs/Bool.h>
+#include <math.h>
+#include <cmath>
 //PCL
 #include <iostream>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <pcl/filters/frustum_culling.h>
+//#include <pcl/filters/frustum_culling.h>
+#include <frustum_culling.h>
 #include <pcl/visualization/cloud_viewer.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/common/eigen.h>
@@ -88,6 +91,9 @@ int main(int argc, char **argv)
     ros::Publisher oriented_point_pub = n.advertise<geometry_msgs::PoseArray>("oriented_poses", 1);
     ros::Publisher poses_pub = n.advertise<visualization_msgs::MarkerArray>("filtered_poses", 1);
     ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("sensor_origin", 1);
+    ros::Publisher lines_pub1 = n.advertise<visualization_msgs::Marker>("fov_far_near", 10);
+    ros::Publisher lines_pub2 = n.advertise<visualization_msgs::Marker>("fov_top", 10);
+    ros::Publisher lines_pub3 = n.advertise<visualization_msgs::Marker>("fov_bottom", 10);
 
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
@@ -179,7 +185,7 @@ int main(int argc, char **argv)
                 geometry_msgs::Vector3 rpy;
                 geometry_msgs::Pose out_vector = calcOrienation(position,nearestP,rpy) ;//rpy are in radians already!
                 filtered_vectors.poses.push_back(out_vector);
-                std::cout<<"roll X: "<<rpy.x<<" pitch Y: "<<rpy.y<<" yaw Z: "<<rpy.z<<std::endl;
+//                std::cout<<"roll X: "<<rpy.x<<" pitch Y: "<<rpy.y<<" yaw Z: "<<rpy.z<<std::endl;
                 points_rpy.push_back(rpy);
             }
         }
@@ -191,41 +197,106 @@ int main(int argc, char **argv)
 
 
     // 3: *******************Extracting the visibile surfaces (frustum + occlusion culling) ***************************
-    pcl::FrustumCulling<pcl::PointXYZ> fc (true);
+
     ros::Time frustum_occlusion_begin = ros::Time::now();
+//    geometry_msgs::Pose output_vector;
+//    geometry_msgs::Quaternion quet;
+//    pcl::PointCloud <pcl::PointXYZ>::Ptr output (new pcl::PointCloud <pcl::PointXYZ>);
+//    visualization_msgs::Marker linesList1;
+//    visualization_msgs::Marker linesList2;
+//    visualization_msgs::Marker linesList3;
     for (int num=0; num < filtered_vectors.poses.size(); num++)
     {
         // 3.1: *****Frustum Culling*******
         pcl::PointCloud <pcl::PointXYZ>::Ptr output (new pcl::PointCloud <pcl::PointXYZ>);
-
+        pcl::FrustumCullingTT fc (true);
         fc.setInputCloud (cloud);
         fc.setVerticalFOV (45);
         fc.setHorizontalFOV (58);
-        fc.setNearPlaneDistance (0.8);
-        fc.setFarPlaneDistance (5.8);
+        fc.setNearPlaneDistance (0.5);
+        fc.setFarPlaneDistance (6.8);
 
         Eigen::Matrix4f camera_pose;
         Eigen::Matrix3f R;
         camera_pose.setZero ();
 
+        // ***********Debugging the orientation of the frustum culling problem*********************
         Eigen::Vector3f theta_rad(points_rpy[num].x,points_rpy[num].y,points_rpy[num].z);
-        R = Eigen::AngleAxisf (theta_rad[0], Eigen::Vector3f::UnitX ()) *
-                Eigen::AngleAxisf (theta_rad[1], Eigen::Vector3f::UnitY ()) *
-                Eigen::AngleAxisf (theta_rad[2], Eigen::Vector3f::UnitZ ());
+        tf::Quaternion quot = tf::createQuaternionFromRPY(points_rpy[num].x, points_rpy[num].y , points_rpy[num].z);
+        std::cout<<"from rpy q x : "<<quot.x()<<"q y: "<<quot.y()<<"q z: "<<quot.z()<<" q w:" <<quot.w()<<"\n";
+        std::cout<<"already  q x : "<<filtered_vectors.poses[num].orientation.x<<"q y: "<<filtered_vectors.poses[num].orientation.y<<"q z: "<<filtered_vectors.poses[num].orientation.z<<" q w:" <<filtered_vectors.poses[num].orientation.w<<"\n";
 
+        Eigen::Vector3f xV(1,0,0) ;//unit vector of X
+        Eigen::Vector3f yV(0,1,0) ;//unit vector of Y
+        Eigen::Vector3f zV(0,0,1) ;//unit vector of Z
+
+        //first rotation around z ,then around the new y, then around the new x
+        // "AngleAxisf" starts the rotation around the defined axis then moves to the next angle and applies
+        //   the rotation around the new axis and continues the same for the third angle
+        R = Eigen::AngleAxisf (theta_rad[2], zV) *
+                Eigen::AngleAxisf (theta_rad[1], yV) *
+                Eigen::AngleAxisf (theta_rad[0], xV);
+        std::cout<<"theta_rad r : "<<theta_rad[0]<<"theta_rad p: "<<theta_rad[1]<<"theta_rad y: "<<theta_rad[2]<<"\n";
         camera_pose.block (0, 0, 3, 3) = R;
         Eigen::Vector3f T;
         T (0) = filtered_vectors.poses[num].position.x; T (1) = filtered_vectors.poses[num].position.y; T (2) = filtered_vectors.poses[num].position.z;
+        std::cout<<"position x : "<<T[0]<<"position y: "<<T[1]<<"position z: "<<T[2]<<"\n";
+
         camera_pose.block (0, 3, 3, 1) = T;
         camera_pose (3, 3) = 1;
-        fc.setCameraPose (camera_pose);
+        //Transformation for the frustum camera ( in to be x forward, z right and y up)
+        Eigen::Matrix4f pose_orig = camera_pose;
+        Eigen::Matrix4f cam2robot;
+        //the transofrmation is rotation by +90 around x axis
+        cam2robot << 1, 0, 0, 0,
+                     0, 0, 1, 0,
+                     0,-1, 0, 0,
+                     0, 0, 0, 1;
+        Eigen::Matrix4f pose_new = pose_orig * cam2robot;
+        fc.setCameraPose (pose_new);
+//        fc.setCameraPose (camera_pose);
         fc.filter (*output);
 
-        //*** Visualization Camera View Vector ****
+        //*** visualization the FOV *****
+//        std::vector<geometry_msgs::Point> fov_points;
+//        geometry_msgs::Point point1;
+//        point1.x=fc.fp_bl[0];point1.y=fc.fp_bl[1];point1.z=fc.fp_bl[2]; fov_points.push_back(point1);//0
+//        point1.x=fc.fp_br[0];point1.y=fc.fp_br[1];point1.z=fc.fp_br[2]; fov_points.push_back(point1);//1
+//        point1.x=fc.fp_tr[0];point1.y=fc.fp_tr[1];point1.z=fc.fp_tr[2]; fov_points.push_back(point1);//2
+//        point1.x=fc.fp_tl[0];point1.y=fc.fp_tl[1];point1.z=fc.fp_tl[2]; fov_points.push_back(point1);//3
+//        point1.x=fc.np_bl[0];point1.y=fc.np_bl[1];point1.z=fc.np_bl[2]; fov_points.push_back(point1);//4
+//        point1.x=fc.np_br[0];point1.y=fc.np_br[1];point1.z=fc.np_br[2]; fov_points.push_back(point1);//5
+//        point1.x=fc.np_tr[0];point1.y=fc.np_tr[1];point1.z=fc.np_tr[2]; fov_points.push_back(point1);//6
+//        point1.x=fc.np_tl[0];point1.y=fc.np_tl[1];point1.z=fc.np_tl[2]; fov_points.push_back(point1);//7
+
+//        std::vector<geometry_msgs::Point> fov_linesNearFar;
+//        fov_linesNearFar.push_back(fov_points[0]);fov_linesNearFar.push_back(fov_points[1]);
+//        fov_linesNearFar.push_back(fov_points[1]);fov_linesNearFar.push_back(fov_points[2]);
+//        fov_linesNearFar.push_back(fov_points[2]);fov_linesNearFar.push_back(fov_points[3]);
+//        fov_linesNearFar.push_back(fov_points[3]);fov_linesNearFar.push_back(fov_points[0]);
+
+//        fov_linesNearFar.push_back(fov_points[4]);fov_linesNearFar.push_back(fov_points[5]);
+//        fov_linesNearFar.push_back(fov_points[5]);fov_linesNearFar.push_back(fov_points[6]);
+//        fov_linesNearFar.push_back(fov_points[6]);fov_linesNearFar.push_back(fov_points[7]);
+//        fov_linesNearFar.push_back(fov_points[7]);fov_linesNearFar.push_back(fov_points[4]);
+//        linesList1 = drawLines(fov_linesNearFar,3333,1);//red
+
+//        std::vector<geometry_msgs::Point> fov_linestop;
+//        fov_linestop.push_back(fov_points[7]);fov_linestop.push_back(fov_points[3]);//top
+//        fov_linestop.push_back(fov_points[6]);fov_linestop.push_back(fov_points[2]);//top
+//        linesList2 = drawLines(fov_linestop,4444,2);//green
+//        std::vector<geometry_msgs::Point> fov_linesbottom;
+//        fov_linesbottom.push_back(fov_points[5]);fov_linesbottom.push_back(fov_points[1]);//bottom
+//        fov_linesbottom.push_back(fov_points[4]);fov_linesbottom.push_back(fov_points[0]);//bottom
+//        linesList3 = drawLines(fov_linesbottom,5555,3);//blue
+
+
+
+        //*** Visualization Camera View Vector (Arrow Marker) ****
         // the rviz axis is different from the frustum camera axis
-        R = Eigen::AngleAxisf (theta_rad[0] , Eigen::Vector3f::UnitX ()) *
-                Eigen::AngleAxisf (-theta_rad[1] , Eigen::Vector3f::UnitY ()) *
-                Eigen::AngleAxisf (-theta_rad[2], Eigen::Vector3f::UnitZ ());
+//        R = Eigen::AngleAxisf (theta_rad[0] , Eigen::Vector3f::UnitX ()) *
+//                Eigen::AngleAxisf (theta_rad[1] , Eigen::Vector3f::UnitY ()) *
+//                Eigen::AngleAxisf (theta_rad[2], Eigen::Vector3f::UnitZ ());
         tf::Matrix3x3 rotation;
         Eigen::Matrix3d D;
         D= R.cast<double>();
@@ -256,7 +327,7 @@ int main(int argc, char **argv)
         pcl::VoxelGridOcclusionEstimationT voxelFilter;
         voxelFilter.setInputCloud (output);
         //voxelFilter.setLeafSize (0.03279f, 0.03279f, 0.03279f);
-        voxelFilter.setLeafSize (0.04f, 0.04f, 0.04f);
+        voxelFilter.setLeafSize (0.5f, 0.5f, 0.5f);
         //voxelFilter.filter(*cloud); // This filter doesn't really work, it introduces points inside the sphere !
         voxelFilter.initializeVoxelGrid();
 
@@ -271,64 +342,61 @@ int main(int argc, char **argv)
         Eigen::Vector3i  max_b = voxelFilter.getMaxBoxCoordinates ();
 
         // iterate over the entire voxel grid
-        for (int kk = min_b.z (); kk <= max_b.z (); ++kk)
+        for ( int i = 0; i < (int)output->points.size(); i ++ )
         {
-            for (int jj = min_b.y (); jj <= max_b.y (); ++jj)
-            {
-                for (int ii = min_b.x (); ii <= max_b.x (); ++ii)
-                {
-                    Eigen::Vector3i ijk (ii, jj, kk);
-                    // process all free voxels
-                    int index = voxelFilter.getCentroidIndexAt (ijk);
-                    Eigen::Vector4f centroid = voxelFilter.getCentroidCoordinate (ijk);
-                    point = pcl::PointXYZRGB(0,244,0);
-                    point.x = centroid[0];
-                    point.y = centroid[1];
-                    point.z = centroid[2];
+            pcl::PointXYZ ptest = output->points[i];
+            Eigen::Vector3i ijk = voxelFilter.getGridCoordinates( ptest.x, ptest.y, ptest.z);
+            // process all free voxels
+            int index = voxelFilter.getCentroidIndexAt (ijk);
+            Eigen::Vector4f centroid = voxelFilter.getCentroidCoordinate (ijk);
+            point = pcl::PointXYZRGB(0,244,0);
+            point.x = centroid[0];
+            point.y = centroid[1];
+            point.z = centroid[2];
 
-                    if(index!=-1 )
-                    {
-                        out_ray.clear();
-                        ret = voxelFilter.occlusionEstimation( state,out_ray, ijk);
+            if(index!=-1 )
+            {
+                out_ray.clear();
+                ret = voxelFilter.occlusionEstimation( state,out_ray, ijk);
 //                        std::cout<<"State is:"<<state<<"\n";
 
-                        if(state != 1)
-                        {
-                            // estimate direction to target voxel
-                            Eigen::Vector4f direction = centroid - cloud->sensor_origin_;
-                            direction.normalize ();
-                            // estimate entry point into the voxel grid
-                            float tmin = voxelFilter.rayBoxIntersection (cloud->sensor_origin_, direction,p1,p2);
-                            if(tmin!=-1)
-                            {
-                                // coordinate of the boundary of the voxel grid
-                                Eigen::Vector4f start = cloud->sensor_origin_ + tmin * direction;
-                                linePoint.x = cloud->sensor_origin_[0]; linePoint.y = cloud->sensor_origin_[1]; linePoint.z = cloud->sensor_origin_[2];
-                                //std::cout<<"Box Min X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
-                                lineSegments.push_back(linePoint);
+                if(state != 1)
+                {
+                    // estimate direction to target voxel
+                    Eigen::Vector4f direction = centroid - cloud->sensor_origin_;
+                    direction.normalize ();
+                    // estimate entry point into the voxel grid
+                    float tmin = voxelFilter.rayBoxIntersection (cloud->sensor_origin_, direction,p1,p2);
+                    if(tmin!=-1)
+                    {
+                        // coordinate of the boundary of the voxel grid
+                        Eigen::Vector4f start = cloud->sensor_origin_ + tmin * direction;
+                        linePoint.x = cloud->sensor_origin_[0]; linePoint.y = cloud->sensor_origin_[1]; linePoint.z = cloud->sensor_origin_[2];
+                        //std::cout<<"Box Min X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
+                        lineSegments.push_back(linePoint);
 
-                                linePoint.x = start[0]; linePoint.y = start[1]; linePoint.z = start[2];
-                                //std::cout<<"Box Max X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
-                                lineSegments.push_back(linePoint);
+                        linePoint.x = start[0]; linePoint.y = start[1]; linePoint.z = start[2];
+                        //std::cout<<"Box Max X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
+                        lineSegments.push_back(linePoint);
 
-                                linePoint.x = start[0]; linePoint.y = start[1]; linePoint.z = start[2];
-                                //std::cout<<"Box Max X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
-                                lineSegments.push_back(linePoint);
+                        linePoint.x = start[0]; linePoint.y = start[1]; linePoint.z = start[2];
+                        //std::cout<<"Box Max X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
+                        lineSegments.push_back(linePoint);
 
-                                linePoint.x = centroid[0]; linePoint.y = centroid[1]; linePoint.z = centroid[2];
-                                //std::cout<<"Box Max X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
-                                lineSegments.push_back(linePoint);
+                        linePoint.x = centroid[0]; linePoint.y = centroid[1]; linePoint.z = centroid[2];
+                        //std::cout<<"Box Max X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
+                        lineSegments.push_back(linePoint);
 
-                                rayCloud->points.push_back(point);
-                                pt.x = centroid[0];
-                                pt.y = centroid[1];
-                                pt.z = centroid[2];
-                                occlusionFreeCloud->points.push_back(pt);
-                            }
-                        }
+                        rayCloud->points.push_back(point);
+//                        pt.x = centroid[0];
+//                        pt.y = centroid[1];
+//                        pt.z = centroid[2];
+                        occlusionFreeCloud->points.push_back(ptest);
                     }
                 }
             }
+
+
         }
     }
 
@@ -371,7 +439,7 @@ int main(int argc, char **argv)
 
 //        //***original cloud & frustum cull & occlusion cull publish***
         sensor_msgs::PointCloud2 cloud1;
-//        sensor_msgs::PointCloud2 cloud2;
+        sensor_msgs::PointCloud2 cloud2;
         sensor_msgs::PointCloud2 cloud3;
 
         pcl::toROSMsg(*cloud, cloud1); //cloud of original (white) using original cloud
@@ -379,15 +447,15 @@ int main(int argc, char **argv)
         pcl::toROSMsg(*occlusionFreeCloud, cloud3); //cloud of the not occluded voxels (blue) using occlusion culling
 
         cloud1.header.frame_id = "base_point_cloud";
-//        cloud2.header.frame_id = "base_point_cloud";
+        cloud2.header.frame_id = "base_point_cloud";
         cloud3.header.frame_id = "base_point_cloud";
 
         cloud1.header.stamp = ros::Time::now();
-//        cloud2.header.stamp = ros::Time::now();
+        cloud2.header.stamp = ros::Time::now();
         cloud3.header.stamp = ros::Time::now();
 
         pub1.publish(cloud1);
-//        pub2.publish(cloud2);
+        pub2.publish(cloud2);
         pub3.publish(cloud3);
 
         //visualize the filtered samples and their orientation
@@ -399,6 +467,10 @@ int main(int argc, char **argv)
         {
             poses_pub.publish(marker_array);
         }
+
+//        lines_pub1.publish(linesList1);
+//        lines_pub2.publish(linesList2);
+//        lines_pub3.publish(linesList3);
         ros::spinOnce();
         loop_rate.sleep();
     }
@@ -413,7 +485,7 @@ visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, in
     linksMarkerMsg.ns="link_marker";
     linksMarkerMsg.id = id;
     linksMarkerMsg.type = visualization_msgs::Marker::LINE_LIST;
-    linksMarkerMsg.scale.x = 0.001;
+    linksMarkerMsg.scale.x = 0.006;
     linksMarkerMsg.action  = visualization_msgs::Marker::ADD;
     linksMarkerMsg.lifetime  = ros::Duration(1000);
     std_msgs::ColorRGBA color;
@@ -535,11 +607,15 @@ geometry_msgs::Pose calcOrienation(Vec3f sensorP,Vec3f nearestP, geometry_msgs::
     qt.setZ(output_vector.orientation.z);
     qt.setW(output_vector.orientation.w);
     double roll, pitch, yaw;
-    tf::Matrix3x3(qt).getRPY(roll, pitch, yaw);
+//    tf::Matrix3x3(qt).getRPY(roll, pitch, yaw);//gets the Roll Pitch Yaw in terms a fixed axis (can't be used by the AngleAxis function of Eigen)
+    tf::Matrix3x3(qt).getEulerZYX(yaw, pitch, roll);//gets the yaw around z then pitch around new y then roll around new x
     rpy.x = roll;
     rpy.y = pitch;
     rpy.z = yaw;
-    std::cout<<"roll: "<<rpy.x<<" pitch: "<<rpy.y<<" yaw: "<<rpy.z<<std::endl;
+
+
+
+//    std::cout<<"roll: "<<rpy.x<<" pitch: "<<rpy.y<<" yaw: "<<rpy.z<<std::endl;
 
     return output_vector;
 

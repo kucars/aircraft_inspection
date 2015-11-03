@@ -10,6 +10,8 @@ Panels:
         - /PointCloud22
         - /Marker1
         - /Marker2
+        - /Marker3
+        - /Marker4
       Splitter Ratio: 0.5
     Tree Height: 895
   - Class: rviz/Selection
@@ -134,7 +136,23 @@ Visualization Manager:
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: field_of_view
+      Marker Topic: fov_far_near
+      Name: Marker
+      Namespaces:
+        link_marker: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: fov_top
+      Name: Marker
+      Namespaces:
+        link_marker: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: fov_bottom
       Name: Marker
       Namespaces:
         link_marker: true
@@ -164,22 +182,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 25.6129
+      Distance: 21.1819
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.239906
-        Y: -2.08804
-        Z: 0.0678831
+        X: -0.337823
+        Y: 0.378315
+        Z: -0.186474
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.017759
+      Pitch: 0.754797
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.72303
+      Yaw: 3.42808
     Saved: ~
 Window Geometry:
   Displays:

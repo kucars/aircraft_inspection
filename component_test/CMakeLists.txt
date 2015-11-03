@@ -51,7 +51,7 @@ target_link_libraries(frustum_test ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(frustum_test_debug src/frustum_test_debug.cpp)
 add_dependencies(frustum_test_debug ${catkin_EXPORTED_TARGETS})
-target_link_libraries(frustum_test_debug frustum_culling -lgmp -lmpfr ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(frustum_test_debug frustum_culling voxel_grid_occlusion_estimation ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
 add_executable(occlusion_culling src/occlusion_culling.cpp)
 add_dependencies(occlusion_culling ${catkin_EXPORTED_TARGETS})
@@ -59,7 +59,7 @@ target_link_libraries(occlusion_culling voxel_grid_occlusion_estimation ${catkin
 
 add_executable(components_combination src/components_combination.cpp)
 add_dependencies(components_combination ${catkin_EXPORTED_TARGETS})
-target_link_libraries(components_combination voxel_grid_occlusion_estimation ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+target_link_libraries(components_combination frustum_culling voxel_grid_occlusion_estimation ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
 add_executable(occlusion_culling_debug src/occlusion_culling_debug.cpp)
 add_dependencies(occlusion_culling_debug ${catkin_EXPORTED_TARGETS})
