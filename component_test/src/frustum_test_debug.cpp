@@ -249,8 +249,8 @@ int main(int argc, char **argv)
         Eigen::Matrix4f cam2robot;
         //the transofrmation is rotation by +90 around x axis
         cam2robot << 1, 0, 0, 0,
-                     0, 0, 1, 0,
-                     0,-1, 0, 0,
+                     0, 0,-1, 0,
+                     0, 1, 0, 0,
                      0, 0, 0, 1;
         Eigen::Matrix4f pose_new = pose_orig * cam2robot;
         fc.setCameraPose (pose_new);
@@ -485,7 +485,7 @@ visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, in
     linksMarkerMsg.ns="link_marker";
     linksMarkerMsg.id = id;
     linksMarkerMsg.type = visualization_msgs::Marker::LINE_LIST;
-    linksMarkerMsg.scale.x = 0.006;
+    linksMarkerMsg.scale.x = 0.04;
     linksMarkerMsg.action  = visualization_msgs::Marker::ADD;
     linksMarkerMsg.lifetime  = ros::Duration(1000);
     std_msgs::ColorRGBA color;

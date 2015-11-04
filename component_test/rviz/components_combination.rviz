@@ -15,6 +15,7 @@ Panels:
         - /Marker2
         - /Marker3
         - /Marker4
+        - /Axes1
       Splitter Ratio: 0.5
     Tree Height: 895
   - Class: rviz/Selection
@@ -138,7 +139,7 @@ Visualization Manager:
       Axis: Z
       Channel Name: intensity
       Class: rviz/PointCloud2
-      Color: 255; 0; 0
+      Color: 255; 255; 0
       Color Transformer: FlatColor
       Decay Time: 0
       Enabled: true
@@ -151,8 +152,8 @@ Visualization Manager:
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.1
+      Size (Pixels): 10
+      Size (m): 0.08
       Style: Boxes
       Topic: frustum_point_cloud
       Use Fixed Frame: true
@@ -205,6 +206,13 @@ Visualization Manager:
         link_marker: true
       Queue Size: 100
       Value: true
+    - Class: rviz/Axes
+      Enabled: true
+      Length: 1
+      Name: Axes
+      Radius: 0.1
+      Reference Frame: <Fixed Frame>
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -229,22 +237,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 12.4731
+      Distance: 17.7338
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 6.7275
-        Y: 1.68981
-        Z: -35.6369
+        X: 0.543338
+        Y: 1.56348
+        Z: -34.8828
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.109797
+      Pitch: 0.0347953
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.308923
+      Yaw: 2.36208
     Saved: ~
 Window Geometry:
   Displays:
