@@ -113,7 +113,7 @@ int main(int argc, char **argv)
     int x_space=16;//put half the length here (32)
     int y_space=11;//put half the length here (18)
     int z_space=37;
-    float res=1;
+    float res=1.0;
     ros::Time disretization_begin = ros::Time::now();
     for (float z=(-1*z_space) ; z < 2; z+=res)//the length of the aircraft
     {
@@ -155,8 +155,8 @@ int main(int argc, char **argv)
     Tree tree(triangles.begin(),triangles.end());
     std::cout<<"traingles size:"<<triangles.size()<<"\n";
 
-//    for (int j=0; j<points.poses.size();j++)
-    for (int j=0; j<5000;j++) //working on part of the viewpoints
+    for (int j=0; j<points.poses.size();j++)
+//    for (int j=0; j<5000;j++) //working on part of the viewpoints
     {
         Point a(points.poses[j].position.x , points.poses[j].position.y  ,points.poses[j].position.z);
         // Some Random point in arbitrary orientation
@@ -213,8 +213,8 @@ int main(int argc, char **argv)
         fc.setInputCloud (cloud);
         fc.setVerticalFOV (45);
         fc.setHorizontalFOV (58);
-        fc.setNearPlaneDistance (0.5);
-        fc.setFarPlaneDistance (6.8);
+        fc.setNearPlaneDistance (0.7);
+        fc.setFarPlaneDistance (6.0);
 
         Eigen::Matrix4f camera_pose;
         Eigen::Matrix3f R;
@@ -223,8 +223,8 @@ int main(int argc, char **argv)
         // ***********Debugging the orientation of the frustum culling problem*********************
         Eigen::Vector3f theta_rad(points_rpy[num].x,points_rpy[num].y,points_rpy[num].z);
         tf::Quaternion quot = tf::createQuaternionFromRPY(points_rpy[num].x, points_rpy[num].y , points_rpy[num].z);
-        std::cout<<"from rpy q x : "<<quot.x()<<"q y: "<<quot.y()<<"q z: "<<quot.z()<<" q w:" <<quot.w()<<"\n";
-        std::cout<<"already  q x : "<<filtered_vectors.poses[num].orientation.x<<"q y: "<<filtered_vectors.poses[num].orientation.y<<"q z: "<<filtered_vectors.poses[num].orientation.z<<" q w:" <<filtered_vectors.poses[num].orientation.w<<"\n";
+//        std::cout<<"from rpy q x : "<<quot.x()<<"q y: "<<quot.y()<<"q z: "<<quot.z()<<" q w:" <<quot.w()<<"\n";
+//        std::cout<<"already  q x : "<<filtered_vectors.poses[num].orientation.x<<"q y: "<<filtered_vectors.poses[num].orientation.y<<"q z: "<<filtered_vectors.poses[num].orientation.z<<" q w:" <<filtered_vectors.poses[num].orientation.w<<"\n";
 
         Eigen::Vector3f xV(1,0,0) ;//unit vector of X
         Eigen::Vector3f yV(0,1,0) ;//unit vector of Y
@@ -236,11 +236,11 @@ int main(int argc, char **argv)
         R = Eigen::AngleAxisf (theta_rad[2], zV) *
                 Eigen::AngleAxisf (theta_rad[1], yV) *
                 Eigen::AngleAxisf (theta_rad[0], xV);
-        std::cout<<"theta_rad r : "<<theta_rad[0]<<"theta_rad p: "<<theta_rad[1]<<"theta_rad y: "<<theta_rad[2]<<"\n";
+//        std::cout<<"theta_rad r : "<<theta_rad[0]<<"theta_rad p: "<<theta_rad[1]<<"theta_rad y: "<<theta_rad[2]<<"\n";
         camera_pose.block (0, 0, 3, 3) = R;
         Eigen::Vector3f T;
         T (0) = filtered_vectors.poses[num].position.x; T (1) = filtered_vectors.poses[num].position.y; T (2) = filtered_vectors.poses[num].position.z;
-        std::cout<<"position x : "<<T[0]<<"position y: "<<T[1]<<"position z: "<<T[2]<<"\n";
+//        std::cout<<"position x : "<<T[0]<<"position y: "<<T[1]<<"position z: "<<T[2]<<"\n";
 
         camera_pose.block (0, 3, 3, 1) = T;
         camera_pose (3, 3) = 1;
@@ -249,8 +249,8 @@ int main(int argc, char **argv)
         Eigen::Matrix4f cam2robot;
         //the transofrmation is rotation by +90 around x axis
         cam2robot << 1, 0, 0, 0,
-                     0, 0, 1, 0,
-                     0,-1, 0, 0,
+                     0, 0,-1, 0,
+                     0, 1, 0, 0,
                      0, 0, 0, 1;
         Eigen::Matrix4f pose_new = pose_orig * cam2robot;
         fc.setCameraPose (pose_new);
@@ -341,7 +341,7 @@ int main(int argc, char **argv)
         Eigen::Vector3i  min_b = voxelFilter.getMinBoxCoordinates ();
         Eigen::Vector3i  max_b = voxelFilter.getMaxBoxCoordinates ();
 
-        // iterate over the entire voxel grid
+        // iterate over the entire frustum points
         for ( int i = 0; i < (int)output->points.size(); i ++ )
         {
             pcl::PointXYZ ptest = output->points[i];
@@ -404,6 +404,13 @@ int main(int argc, char **argv)
     elapsed =  frustum_occlusion_end.toSec() - frustum_occlusion_begin.toSec();
     std::cout<<"frustum + occlusion culling duration (s) = "<<elapsed<<"\n";
 
+    //write the occlusionfreecloud to pcd file used by the coverage_quantification to calculate the percentage
+    occlusionFreeCloud->width = 1;
+    occlusionFreeCloud->height = occlusionFreeCloud->points.size();
+    pcl::PCDWriter writer;
+    std::stringstream ss;
+    ss << res;
+    writer.write<pcl::PointXYZ> (path+"/src/pcd/occlusionFreeCloud_"+ ss.str()+"m).pcd", *occlusionFreeCloud, false);
 
     visualization_msgs::Marker marker;
 
@@ -447,15 +454,15 @@ int main(int argc, char **argv)
         pcl::toROSMsg(*occlusionFreeCloud, cloud3); //cloud of the not occluded voxels (blue) using occlusion culling
 
         cloud1.header.frame_id = "base_point_cloud";
-        cloud2.header.frame_id = "base_point_cloud";
+//        cloud2.header.frame_id = "base_point_cloud";
         cloud3.header.frame_id = "base_point_cloud";
 
         cloud1.header.stamp = ros::Time::now();
-        cloud2.header.stamp = ros::Time::now();
+//        cloud2.header.stamp = ros::Time::now();
         cloud3.header.stamp = ros::Time::now();
 
         pub1.publish(cloud1);
-        pub2.publish(cloud2);
+//        pub2.publish(cloud2);
         pub3.publish(cloud3);
 
         //visualize the filtered samples and their orientation

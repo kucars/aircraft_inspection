@@ -82,7 +82,7 @@ visualization_msgs::Marker drawCUBE(Vec3f vec , int id , int c_color, double siz
 int main(int argc, char **argv)
 {
 
-    ros::init(argc, argv, "components_combination");
+    ros::init(argc, argv, "frustum_test_debug");
     ros::NodeHandle n;
 
     ros::Publisher pub1 = n.advertise<sensor_msgs::PointCloud2>("original_point_cloud", 100);
