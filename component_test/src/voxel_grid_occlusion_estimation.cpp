@@ -57,8 +57,8 @@ pcl::VoxelGridOcclusionEstimationT::initializeVoxelGrid ()
   b_max_[1] = (static_cast<float> ( (max_b_[1]) + 1) * leaf_size_[1]);
   b_max_[2] = (static_cast<float> ( (max_b_[2]) + 1) * leaf_size_[2]);
 
-  std::cout<<"b_min X:"<<b_min_[0]<<" y:"<< b_min_[1]<<" z:"<< b_min_[2]<<"\n";
-  std::cout<<"b_max X:"<<b_max_[0]<<" y:"<< b_max_[1]<<" z:"<< b_max_[2]<<"\n";
+//  std::cout<<"b_min X:"<<b_min_[0]<<" y:"<< b_min_[1]<<" z:"<< b_min_[2]<<"\n";
+//  std::cout<<"b_max X:"<<b_max_[0]<<" y:"<< b_max_[1]<<" z:"<< b_max_[2]<<"\n";
   // set the sensor origin and sensor orientation
   sensor_origin_ = filtered_cloud_.sensor_origin_;
   sensor_orientation_ = filtered_cloud_.sensor_orientation_;

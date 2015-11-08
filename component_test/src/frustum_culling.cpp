@@ -43,7 +43,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 void pcl::FrustumCullingTT::applyFilter (PointCloud& output)
 {
-  std::cout<<"YES, this is a test \n\n";
+//  std::cout<<"YES, this is a test \n\n";
   std::vector<int> indices;
   if (keep_organized_)
   {

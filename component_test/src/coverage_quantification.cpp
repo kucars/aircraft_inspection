@@ -110,15 +110,18 @@ int main(int argc, char **argv)
                 {
 
                     Eigen::Vector3i ijk (ii, jj, kk);
-                    Eigen::Vector4f centroid = voxelFilterOccupied.getCentroidCoordinate (ijk);
-                    Eigen::Vector3i ijk_in_Original= voxelFilterOriginal.getGridCoordinates(centroid[0],centroid[1],centroid[2]) ;
-
-                    int index = voxelFilterOriginal.getCentroidIndexAt (ijk_in_Original);
-//                    int index = voxelFilterFree.getCentroidIndexAt (ijk);
-
-                    if(index!=-1)
+                    int index1 = voxelFilterOccupied.getCentroidIndexAt (ijk);
+                    if(index1!=-1)
                     {
-                        MatchedVoxels++;
+                        Eigen::Vector4f centroid = voxelFilterOccupied.getCentroidCoordinate (ijk);
+                        Eigen::Vector3i ijk_in_Original= voxelFilterOriginal.getGridCoordinates(centroid[0],centroid[1],centroid[2]) ;
+
+                        int index = voxelFilterOriginal.getCentroidIndexAt (ijk_in_Original);
+
+                        if(index!=-1)
+                        {
+                            MatchedVoxels++;
+                        }
                     }
 
                 }
@@ -127,7 +130,7 @@ int main(int argc, char **argv)
 
         ros::Time coverage_end = ros::Time::now();
         double elapsed =  coverage_end.toSec() - coverage_begin.toSec();
-        std::cout<<"discretization duration (s) = "<<elapsed<<"\n";
+        std::cout<<"coverage percentage duration (s) = "<<elapsed<<"\n";
 
         //calculating the coverage percentage
         float coverage_ratio= MatchedVoxels/OriginalVoxelsSize;
@@ -146,7 +149,7 @@ int main(int argc, char **argv)
         {
 
 
-            //        //***original cloud & frustum cull & occlusion cull publish***
+            //***original cloud & frustum cull & occlusion cull publish***
             sensor_msgs::PointCloud2 cloud1;
             sensor_msgs::PointCloud2 cloud2;
 

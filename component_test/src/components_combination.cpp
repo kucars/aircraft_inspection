@@ -405,12 +405,12 @@ int main(int argc, char **argv)
     std::cout<<"frustum + occlusion culling duration (s) = "<<elapsed<<"\n";
 
     //write the occlusionfreecloud to pcd file used by the coverage_quantification to calculate the percentage
-    occlusionFreeCloud->width = 1;
-    occlusionFreeCloud->height = occlusionFreeCloud->points.size();
+    occlusionFreeCloud->width = occlusionFreeCloud->points.size();
+    occlusionFreeCloud->height = 1;
     pcl::PCDWriter writer;
     std::stringstream ss;
     ss << res;
-    writer.write<pcl::PointXYZ> (path+"/src/pcd/occlusionFreeCloud_"+ ss.str()+"m).pcd", *occlusionFreeCloud, false);
+    writer.write<pcl::PointXYZ> (path+"/src/pcd/occlusionFreeCloud_"+ ss.str()+"m.pcd", *occlusionFreeCloud, false);
 
     visualization_msgs::Marker marker;
 
@@ -446,7 +446,7 @@ int main(int argc, char **argv)
 
 //        //***original cloud & frustum cull & occlusion cull publish***
         sensor_msgs::PointCloud2 cloud1;
-        sensor_msgs::PointCloud2 cloud2;
+//        sensor_msgs::PointCloud2 cloud2;
         sensor_msgs::PointCloud2 cloud3;
 
         pcl::toROSMsg(*cloud, cloud1); //cloud of original (white) using original cloud
