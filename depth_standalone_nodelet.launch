@@ -1,0 +1,22 @@
+<launch>
+  <arg name="camera" default="camera" />
+  <arg name="manager" value="$(arg camera)_nodelet_manager_new" />
+  <arg name="points_xyz" default="true" />
+  <arg name="rectify" default="true" />
+  <arg name="respawn" default="false" />
+  <arg     if="$(arg respawn)" name="bond" value="" />
+  <arg unless="$(arg respawn)" name="bond" value="--no-bond" />
+  <arg name="depth"            default="depth" />
+
+  <node if="$(arg points_xyz)"
+        pkg="nodelet" type="nodelet" name="$(arg depth)_points_new_master_of_my_own_bladder"
+        args="standalone depth_image_proc/point_cloud_xyz"
+        respawn="$(arg respawn)"
+        output="screen"
+        ns="$(arg camera)">
+    <remap from="image_rect" to="$(arg depth)/image_raw"/>
+    <remap from="points"     to="$(arg depth)/test/points" />
+  </node>
+</launch>
+
+
