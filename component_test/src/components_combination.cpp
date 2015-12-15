@@ -20,6 +20,7 @@
 #include <std_msgs/Bool.h>
 #include <math.h>
 #include <cmath>
+#include <fstream>
 //PCL
 #include <iostream>
 #include <pcl/io/pcd_io.h>
@@ -110,7 +111,7 @@ int main(int argc, char **argv)
     geometry_msgs::PoseArray points;
     geometry_msgs::Pose pose;
 
-    int x_space=16;//put half the length here (32)
+    int x_space=18;//put half the length here (32)
     int y_space=11;//put half the length here (18)
     int z_space=37;
     float res=1.0;
@@ -140,6 +141,11 @@ int main(int argc, char **argv)
 
 
     // 2: *******************Filtering ***************************
+    ofstream pointfile,rollfile;
+    std::string file_loc = path+"/src/txt/SearchSpaceq.txt";
+    std::string file_loc1 = path+"/src/txt/SearchSpacer.txt";
+    pointfile.open (file_loc.c_str());
+    rollfile.open (file_loc1.c_str());
     geometry_msgs::PoseArray filtered_vectors;
     visualization_msgs::MarkerArray marker_array ;
     visualization_msgs::Marker marker2 ;
@@ -186,6 +192,8 @@ int main(int argc, char **argv)
                 geometry_msgs::Pose out_vector = calcOrienation(position,nearestP,rpy) ;//rpy are in radians already!
                 filtered_vectors.poses.push_back(out_vector);
 //                std::cout<<"roll X: "<<rpy.x<<" pitch Y: "<<rpy.y<<" yaw Z: "<<rpy.z<<std::endl;
+                pointfile << out_vector.position.x<<" "<<out_vector.position.y<<" "<<out_vector.position.z<<" "<<out_vector.orientation.x<<" "<<out_vector.orientation.y<<" "<<out_vector.orientation.z<<" "<<out_vector.orientation.w<<"\n";
+                rollfile << out_vector.position.x<<" "<<out_vector.position.y<<" "<<out_vector.position.z<<" "<<rpy.x<<" "<<rpy.y<<" "<<rpy.z<<"\n";
                 points_rpy.push_back(rpy);
             }
         }
@@ -193,9 +201,9 @@ int main(int argc, char **argv)
     ros::Time filtering_end = ros::Time::now();
     elapsed =  filtering_end.toSec() - filtering_begin.toSec();
     std::cout<<"filtering duration (s) = "<<elapsed<<"\n";
-
-
-
+    std::cout<<"filtered points size = "<<filtered_vectors.poses.size()<<"\n";
+    pointfile.close();
+    rollfile.close();
     // 3: *******************Extracting the visibile surfaces (frustum + occlusion culling) ***************************
 
     ros::Time frustum_occlusion_begin = ros::Time::now();
