@@ -27,6 +27,7 @@
 class OcclusionCulling
 {
   public:
+    //attributes
     ros::NodeHandle  nh;
     std::string model;
 //     ros::Publisher original_pub;
@@ -35,16 +36,21 @@ class OcclusionCulling
 //     ros::Publisher lines_pub2;
 //     ros::Publisher lines_pub3;
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeCloud;
+//    pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeCloud;//I can add it to accumulate cloud if I want to extract visible surface from multiple locations
     pcl::PointCloud<pcl::PointXYZ> FreeCloud;
-
+    float voxelRes, OriginalVoxelsSize;
+    pcl::VoxelGridOcclusionEstimationT voxelFilterOriginal;
+    Eigen::Vector3i  max_b1, min_b1;
 //     visualization_msgs::Marker linesList1,linesList2,linesList3;
 //     pcl::FrustumCullingTT fc;
+
+    //methods
     OcclusionCulling(ros::NodeHandle & n, std::string modelName);
     OcclusionCulling(std::string modelName);
     OcclusionCulling();
     ~OcclusionCulling();
     pcl::PointCloud<pcl::PointXYZ> extractVisibleSurface(geometry_msgs::Pose location);
+    float calcCoveragePercent(geometry_msgs::Pose location);
 //     void visualizeFOV(pcl::FrustumCullingTT& fc);
     visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color);
 
