@@ -50,7 +50,8 @@ class OcclusionCulling
     OcclusionCulling();
     ~OcclusionCulling();
     pcl::PointCloud<pcl::PointXYZ> extractVisibleSurface(geometry_msgs::Pose location);
-    float calcCoveragePercent(geometry_msgs::Pose location);
+//    float calcCoveragePercent(geometry_msgs::Pose location);
+    float calcCoveragePercent(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered);
 //     void visualizeFOV(pcl::FrustumCullingTT& fc);
     visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color);
 

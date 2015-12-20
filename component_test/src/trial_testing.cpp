@@ -22,7 +22,7 @@ int main(int argc, char **argv)
      location.position.x=0.0; location.position.y=2.0; location.position.z=1.0; location.orientation.x=0.649369; location.orientation.y=-0.27985;location.orientation.z=-0.649369;location.orientation.w=0.279856;
 //     test3 = obj.extractVisibleSurface(location);
      vec.poses.push_back(location);
-     float covpercent1 = obj.calcCoveragePercent(location);
+//     float covpercent1 = obj.calcCoveragePercent(location);
 
      //example 2 from searchspace file
      OcclusionCulling obj1(n,"scaled_desktop.pcd");
@@ -32,11 +32,11 @@ int main(int argc, char **argv)
      combined=test3;
      combined+=test4;
 
-     float covpercent = obj.calcCoveragePercent(location);
+//     float covpercent = obj.calcCoveragePercent(location);
 
-     float combinedcoverage = covpercent + covpercent1;
+//     float combinedcoverage = covpercent + covpercent1;
 
-     std::cout<<"coverage percentage: "<<combinedcoverage<<"%\n";
+//     std::cout<<"coverage percentage: "<<combinedcoverage<<"%\n";
      vec.poses.push_back(location);
      ros::Rate loop_rate(10);
      while (ros::ok())

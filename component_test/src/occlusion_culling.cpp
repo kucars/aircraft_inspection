@@ -259,18 +259,9 @@ pcl::PointCloud<pcl::PointXYZ> OcclusionCulling::extractVisibleSurface(geometry_
     FreeCloud.points = occlusionFreeCloud->points;
     return FreeCloud;
 }
-
-float OcclusionCulling::calcCoveragePercent(geometry_msgs::Pose location)
+float OcclusionCulling::calcCoveragePercent(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered)
 {
 
-    pcl::PointCloud<pcl::PointXYZ>::Ptr tempCloud(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ> temp;
-    ros::Time occlusion_begin = ros::Time::now();
-    temp= extractVisibleSurface(location);
-    tempCloud->points = temp.points;
-    ros::Time occlusion_end = ros::Time::now();
-    double elapsed =  occlusion_end.toSec() - occlusion_begin.toSec();
-    std::cout<<"Extract visible surface duration (s) = "<<elapsed<<"\n";
     // *******************original cloud Grid***************************
     //used VoxelGridOcclusionEstimationT since the voxelGrid does not include getcentroid function
 //        pcl::VoxelGridOcclusionEstimationT voxelFilterOriginal;
@@ -282,7 +273,7 @@ float OcclusionCulling::calcCoveragePercent(geometry_msgs::Pose location)
     ros::Time covpercent_begin = ros::Time::now();
     pcl::VoxelGridOcclusionEstimationT voxelFilterOccupied;
 //        voxelFilterOccupied.setInputCloud (occlusionFreeCloud);
-    voxelFilterOccupied.setInputCloud (tempCloud);
+    voxelFilterOccupied.setInputCloud (cloud_filtered);
     voxelFilterOccupied.setLeafSize (voxelRes, voxelRes, voxelRes);
     voxelFilterOccupied.initializeVoxelGrid();
 
@@ -351,11 +342,107 @@ float OcclusionCulling::calcCoveragePercent(geometry_msgs::Pose location)
     std::cout<<" the coverage percentage is = "<<coverage_percentage<<" %"<<"\n";
 
     ros::Time covpercent_end = ros::Time::now();
-    elapsed =  covpercent_end.toSec() - covpercent_begin.toSec();
+    double elapsed =  covpercent_end.toSec() - covpercent_begin.toSec();
     std::cout<<"Coverage Percentage Calculation duration (s) = "<<elapsed<<"\n";
 
     return coverage_percentage;
 }
+//float OcclusionCulling::calcCoveragePercent(geometry_msgs::Pose location)
+//{
+
+//    pcl::PointCloud<pcl::PointXYZ>::Ptr tempCloud(new pcl::PointCloud<pcl::PointXYZ>);
+//    pcl::PointCloud<pcl::PointXYZ> temp;
+//    ros::Time occlusion_begin = ros::Time::now();
+//    temp= extractVisibleSurface(location);
+//    tempCloud->points = temp.points;
+//    ros::Time occlusion_end = ros::Time::now();
+//    double elapsed =  occlusion_end.toSec() - occlusion_begin.toSec();
+//    std::cout<<"Extract visible surface duration (s) = "<<elapsed<<"\n";
+//    // *******************original cloud Grid***************************
+//    //used VoxelGridOcclusionEstimationT since the voxelGrid does not include getcentroid function
+////        pcl::VoxelGridOcclusionEstimationT voxelFilterOriginal;
+////        voxelFilterOriginal.setInputCloud (cloud);
+////        voxelFilterOriginal.setLeafSize (voxelRes, voxelRes, voxelRes);
+////        voxelFilterOriginal.initializeVoxelGrid();
+
+//     //*******************Occupied Cloud Grid***************************
+//    ros::Time covpercent_begin = ros::Time::now();
+//    pcl::VoxelGridOcclusionEstimationT voxelFilterOccupied;
+////        voxelFilterOccupied.setInputCloud (occlusionFreeCloud);
+//    voxelFilterOccupied.setInputCloud (tempCloud);
+//    voxelFilterOccupied.setLeafSize (voxelRes, voxelRes, voxelRes);
+//    voxelFilterOccupied.initializeVoxelGrid();
+
+
+
+//     //*****************************************************************
+//    Eigen::Vector3i  min_b = voxelFilterOccupied.getMinBoxCoordinates ();
+//    Eigen::Vector3i  max_b = voxelFilterOccupied.getMaxBoxCoordinates ();
+////        Eigen::Vector3i  min_b1 = voxelFilterOriginal.getMinBoxCoordinates ();
+////        Eigen::Vector3i  max_b1 = voxelFilterOriginal.getMaxBoxCoordinates ();
+
+//    float MatchedVoxels=0 ;//OriginalVoxelsSize=0, ;
+
+//        // iterate over the entire original voxel grid to get the size of the grid
+////        for (int kk = min_b1.z (); kk <= max_b1.z (); ++kk)
+////        {
+////            for (int jj = min_b1.y (); jj <= max_b1.y (); ++jj)
+////            {
+////                for (int ii = min_b1.x (); ii <= max_b1.x (); ++ii)
+////                {
+////                    Eigen::Vector3i ijk1 (ii, jj, kk);
+////                    int index1 = voxelFilterOriginal.getCentroidIndexAt (ijk1);
+////                    if(index1!=-1)
+////                    {
+////                        OriginalVoxelsSize++;
+////                    }
+
+////                }
+////            }
+////        }
+
+//        //iterate through the entire coverage grid to check the number of matched voxel between the original and the covered ones
+//    for (int kk = min_b.z (); kk <= max_b.z (); ++kk)
+//    {
+//        for (int jj = min_b.y (); jj <= max_b.y (); ++jj)
+//        {
+//            for (int ii = min_b.x (); ii <= max_b.x (); ++ii)
+//            {
+
+//                Eigen::Vector3i ijk (ii, jj, kk);
+//                int index1 = voxelFilterOccupied.getCentroidIndexAt (ijk);
+//                if(index1!=-1)
+//                {
+//                    Eigen::Vector4f centroid = voxelFilterOccupied.getCentroidCoordinate (ijk);
+//                    Eigen::Vector3i ijk_in_Original= voxelFilterOriginal.getGridCoordinates(centroid[0],centroid[1],centroid[2]) ;
+
+//                    int index = voxelFilterOriginal.getCentroidIndexAt (ijk_in_Original);
+
+//                    if(index!=-1)
+//                    {
+//                        MatchedVoxels++;
+//                    }
+//                }
+
+//            }
+//        }
+//    }
+
+//    //calculating the coverage percentage
+//    float coverage_ratio= MatchedVoxels/OriginalVoxelsSize;
+//    float coverage_percentage= coverage_ratio*100;
+
+//    std::cout<<" the coverage ratio is = "<<coverage_ratio<<"\n";
+//    std::cout<<" the number of covered voxels = "<<MatchedVoxels<<" voxel is covered"<<"\n";
+//    std::cout<<" the number of original voxels = "<<OriginalVoxelsSize<<" voxel"<<"\n\n\n";
+//    std::cout<<" the coverage percentage is = "<<coverage_percentage<<" %"<<"\n";
+
+//    ros::Time covpercent_end = ros::Time::now();
+//    elapsed =  covpercent_end.toSec() - covpercent_begin.toSec();
+//    std::cout<<"Coverage Percentage Calculation duration (s) = "<<elapsed<<"\n";
+
+//    return coverage_percentage;
+//}
 
 //void OcclusionCulling::visualizeFOV(pcl::FrustumCullingTT& fc)
 //{
