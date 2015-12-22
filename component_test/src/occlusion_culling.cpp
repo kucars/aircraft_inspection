@@ -49,6 +49,8 @@ OcclusionCulling::OcclusionCulling(std::string modelName):
     model(modelName)
 {
     cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
+    filtered_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
+
 //    occlusionFreeCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
     std::string path = ros::package::getPath("component_test");
     pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/"+model, *cloud);
@@ -75,11 +77,17 @@ OcclusionCulling::OcclusionCulling(std::string modelName):
             }
         }
     }
+    pcl::VoxelGrid<pcl::PointXYZ> voxelgrid;
+    voxelgrid.setInputCloud (cloud);
+    voxelgrid.setLeafSize (0.5f, 0.5f, 0.5f);
+    voxelgrid.filter (*filtered_cloud);
 }
 OcclusionCulling::OcclusionCulling():
     model(NULL)
 {
     cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
+    filtered_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
+
 //    occlusionFreeCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
     std::string path = ros::package::getPath("component_test");
     pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/scaled_desktop.pcd", *cloud);
@@ -106,7 +114,10 @@ OcclusionCulling::OcclusionCulling():
             }
         }
     }
-
+    pcl::VoxelGrid<pcl::PointXYZ> voxelgrid;
+    voxelgrid.setInputCloud (cloud);
+    voxelgrid.setLeafSize (0.5f, 0.5f, 0.5f);
+    voxelgrid.filter (*filtered_cloud);
 }
 OcclusionCulling::~OcclusionCulling()
 {
