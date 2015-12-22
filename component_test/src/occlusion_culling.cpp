@@ -11,6 +11,8 @@ OcclusionCulling::OcclusionCulling(ros::NodeHandle &n, std::string modelName):
 //    lines_pub2 = n.advertise<visualization_msgs::Marker>("fov_top", 100);
 //    lines_pub3 = n.advertise<visualization_msgs::Marker>("fov_bottom", 100);
    cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
+   filtered_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
+
 //   occlusionFreeCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
    std::string path = ros::package::getPath("component_test");
    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/"+model, *cloud);
@@ -37,6 +39,11 @@ OcclusionCulling::OcclusionCulling(ros::NodeHandle &n, std::string modelName):
            }
        }
    }
+
+   pcl::VoxelGrid<pcl::PointXYZ> voxelgrid;
+   voxelgrid.setInputCloud (cloud);
+   voxelgrid.setLeafSize (0.5f, 0.5f, 0.5f);
+   voxelgrid.filter (*filtered_cloud);
 }
 OcclusionCulling::OcclusionCulling(std::string modelName):
     model(modelName)

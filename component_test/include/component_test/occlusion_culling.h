@@ -36,6 +36,7 @@ class OcclusionCulling
 //     ros::Publisher lines_pub2;
 //     ros::Publisher lines_pub3;
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud;
 //    pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeCloud;//I can add it to accumulate cloud if I want to extract visible surface from multiple locations
     pcl::PointCloud<pcl::PointXYZ> FreeCloud;
     float voxelRes, OriginalVoxelsSize;
