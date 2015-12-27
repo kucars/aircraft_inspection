@@ -51,6 +51,10 @@ add_library(frustum_culling src/frustum_culling.cpp )
 add_library(occlusion_culling src/occlusion_culling.cpp)
 target_link_libraries(occlusion_culling frustum_culling voxel_grid_occlusion_estimation ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
+add_executable(filtering src/filtering.cpp)
+add_dependencies(filtering ${catkin_EXPORTED_TARGETS})
+target_link_libraries(filtering frustum_culling ${catkin_LIBRARIES} ${CGAL_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+
 add_executable(frustum_test src/frustum_test.cpp)
 add_dependencies(frustum_test ${catkin_EXPORTED_TARGETS})
 target_link_libraries(frustum_test ${catkin_LIBRARIES} ${PCL_LIBRARIES})
@@ -83,9 +87,9 @@ add_executable(discretization src/discretization.cpp)
 add_dependencies(discretization ${catkin_EXPORTED_TARGETS})
 target_link_libraries(discretization ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(filtering src/filtering.cpp)
-add_dependencies(filtering ${catkin_EXPORTED_TARGETS})
-target_link_libraries(filtering fcl_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+add_executable(filtering_old src/filtering_old.cpp)
+add_dependencies(filtering_old ${catkin_EXPORTED_TARGETS})
+target_link_libraries(filtering_old fcl_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
 add_executable(collision_distance_test src/collision_distance_test.cpp)
 add_dependencies(collision_distance_test ${catkin_EXPORTED_TARGETS})

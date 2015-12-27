@@ -4,27 +4,11 @@
 #include <tf/tf.h>
 #include <tf_conversions/tf_eigen.h>
 #include <geometry_msgs/Pose.h>
-#include <geometry_msgs/PoseArray.h>
 #include <eigen_conversions/eigen_msg.h>
+#include <Eigen/Geometry>
+#include <Eigen/Dense>
 #include <visualization_msgs/Marker.h>
-//PCL
-#include <iostream>
-#include <pcl/io/pcd_io.h>
-#include <pcl/io/io.h>
-#include <pcl/io/obj_io.h>
-#include <pcl/io/file_io.h>
-#include <pcl/io/boost.h>
-#include <pcl/io/ply_io.h>
-#include <pcl/io/vtk_io.h>
-#include <pcl/point_types.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl/filters/frustum_culling.h>
-#include <pcl/visualization/cloud_viewer.h>
-#include <pcl/visualization/pcl_visualizer.h>
-#include <pcl/common/eigen.h>
-#include <pcl/common/transforms.h>
-#include <pcl/io/vtk_lib_io.h>
-
+#include <geometry_msgs/PoseArray.h>
 #include "tf/transform_listener.h"
 #include "sensor_msgs/PointCloud.h"
 #include "tf/message_filter.h"
@@ -34,117 +18,99 @@
 #include <deque>
 #include <visualization_msgs/MarkerArray.h>
 #include <std_msgs/Bool.h>
+#include <math.h>
+#include <cmath>
+#include <fstream>
+#include <tf/transform_datatypes.h>
+//PCL
+#include <iostream>
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
+//#include <pcl/filters/frustum_culling.h>
+#include <frustum_culling.h>
+#include <pcl/visualization/cloud_viewer.h>
+#include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/common/eigen.h>
+#include <pcl/common/transforms.h>
+#include <pcl/range_image/range_image.h>
+#include <voxel_grid_occlusion_estimation.h>
+#include "fcl_utility.h"
+//CGAL
+#include <list>
+#include <CGAL/Simple_cartesian.h>
+#include <CGAL/AABB_tree.h>
+#include <CGAL/AABB_traits.h>
+#include <CGAL/AABB_triangle_primitive.h>
 
-#include "fcl/shape/geometric_shapes.h"
-#include "fcl/narrowphase/narrowphase.h"
-#include "fcl/collision.h"
-#include "fcl/ccd/motion.h"
 #include <stdlib.h>
 #include <boost/foreach.hpp>
 #include <Eigen/Eigen>
-#include "fcl/octree.h"
-#include "fcl/traversal/traversal_node_octree.h"
-#include "fcl/broadphase/broadphase.h"
-#include "fcl/shape/geometric_shape_to_BVH_model.h"
-#include "fcl/math/transform.h"
-
 #include <boost/filesystem.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/array.hpp>
-#include "fcl/BV/AABB.h"
-#include "fcl/collision_object.h"
 
-#include <octomap/octomap.h>
-#include <octomap_msgs/conversions.h>
-#include <octomap_msgs/Octomap.h>
-#include <octomap/ColorOcTree.h>
-#include <octomap/octomap.h>
-#include <octomap/OcTree.h>
+#include <tf/transform_broadcaster.h>
 
-#include "fcl/config.h"
-#include "fcl/broadphase/broadphase.h"
-#include "fcl/shape/geometric_shape_to_BVH_model.h"
-#include "fcl/math/transform.h"
-#include "fcl_utility.h"
-#include "fcl/BVH/BV_fitter.h"
-#include "fcl/BV/BV.h"
-//#include "fcl/traversal/traversal_node_bvhs.h"
-//#include "fcl/traversal/traversal_node_setup.h"
-//#include "fcl/collision_node.h"
-//#include <boost/timer.hpp>
-//#include "fcl_resources/config.h"
-#include "fcl/distance.h"
-
-//VTK
-//VTK
-#include <vtkVersion.h>
-#include <vtkSphereSource.h>
-#include <vtkPolyData.h>
-#include <vtkSmartPointer.h>
-#include <vtkPolyDataMapper.h>
-#include <vtkActor.h>
-#include <vtkRenderWindow.h>
-#include <vtkRenderer.h>
-#include <vtkRenderWindowInteractor.h>
-#include <vtkHardwareSelector.h>
-#include <vtkInteractorStyleTrackballCamera.h>
-#include <vtkObjectFactory.h>
-#include <vtkRendererCollection.h>
-#include <vtkDataSetMapper.h>
-#include <vtkExtractSelection.h>
-#include <vtkSelection.h>
-#include <vtkProperty.h>
-#include <vtkPLYReader.h>
-#include <vtkPLYWriter.h>
-#include <vtkSelectVisiblePoints.h>
-#include <vtkPLYWriter.h>
-#include "vtkCamera.h"
-#include <vtkDelaunay3D.h>
-#include <vtkUnstructuredGrid.h>
-#include <vtkXMLPolyDataWriter.h>
-#include <vtkXMLUnstructuredGridWriter.h>
-#include <vtkCellArray.h>
-#include <vtkDataSetSurfaceFilter.h>
-#include <vtkXMLPolyDataReader.h>
-
-//inline double dist(pcl::PointXYZ &p1, geometry_msgs::Pose &p2)
-//{
-//    return sqrt((p2.position.x - p1.x)*(p2.position.x - p1.x) + (p2.position.y - p1.y)*(p2.position.y - p1.y) + (p2.position.z - p1.z)*(p2.position.z - p1.z));
-//}
 using namespace fcl;
-visualization_msgs::Marker drawCUBE(Vec3f vec , int id , int c_color);
+
+
+typedef CGAL::Simple_cartesian<double> K;
+typedef K::FT FT;
+typedef K::Ray_3 Ray;
+typedef K::Line_3 Line;
+typedef K::Point_3 Point;
+typedef K::Triangle_3 CGALTriangle;
+typedef std::list<CGALTriangle>::iterator Iterator;
+typedef CGAL::AABB_triangle_primitive<K, Iterator> Primitive;
+typedef CGAL::AABB_traits<K, Primitive> AABB_triangle_traits;
+typedef CGAL::AABB_tree<AABB_triangle_traits> Tree;
+
+
+void loadOBJFile(const char* filename, std::vector<Vec3f>& points, std::list<CGALTriangle>& triangles);
+//geometry_msgs::Pose calcOrientation(Vec3f sensorP,Vec3f nearestP,geometry_msgs::Vector3& rpy);//previous option
+visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color);
+visualization_msgs::Marker drawCUBE(Vec3f vec , int id , int c_color, double size);
+void computeOrientations(Vec3f pos,double deg, geometry_msgs::PoseArray& filtered_vectors);
 
 int main(int argc, char **argv)
 {
 
-    ros::init(argc, argv, "discretization");
+    ros::init(argc, argv, "filtering");
     ros::NodeHandle n;
-    ros::Publisher model_pub = n.advertise<sensor_msgs::PointCloud2>("point_cloud", 1);
-    ros::Publisher point_pub = n.advertise<geometry_msgs::PoseArray>("voxel", 1);
-    ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 1);
-    ros::Publisher OctmapPub = n.advertise<octomap_msgs::Octomap>("LaserOctmap", 1);
-    ros::Publisher visCubePub = n.advertise<visualization_msgs::MarkerArray>("filtered_poses", 1);
+
+    ros::Publisher pub1 = n.advertise<sensor_msgs::PointCloud2>("original_point_cloud", 100);
+    ros::Publisher pub2 = n.advertise<sensor_msgs::PointCloud2>("frustum_point_cloud", 100);
+    ros::Publisher oriented_point_pub = n.advertise<geometry_msgs::PoseArray>("oriented_poses", 1);
+    ros::Publisher poses_pub = n.advertise<visualization_msgs::MarkerArray>("filtered_poses", 1);
+    ros::Publisher cam_posespub = n.advertise<geometry_msgs::PoseArray>("cam_poses", 1);
+
+    ros::Publisher lines_pub1 = n.advertise<visualization_msgs::Marker>("fov_far_near", 10);
+    ros::Publisher lines_pub2 = n.advertise<visualization_msgs::Marker>("fov_top", 10);
+    ros::Publisher lines_pub3 = n.advertise<visualization_msgs::Marker>("fov_bottom", 10);
+
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
     std::string path = ros::package::getPath("component_test");
-    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/scaled_desktop.pcd", *cloud);
-    //    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/plane_desktop.pcd", *cloud);
-    //      pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/bun000_Structured.pcd", *cloud);
+    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/etihad.pcd", *cloud);
 
+
+    // 1: *******************discretization ***************************
     geometry_msgs::PoseArray points;
     geometry_msgs::Pose pose;
 
-    int x_space=16;//put half the length here (32)
-    int y_space=11;//put half the length here (18)
-    int z_space=37;
-    double res=1;
-    for (int z=(-1*z_space) ; z < 2; z+=res)//the length of the aircraft
+    int x_space=32;//half wingspan
+    int y_space=43;//half the length
+    int z_space=21;// the height
+    float res=1.0;
+    ros::Time disretization_begin = ros::Time::now();
+    for (float z=(1*z_space) ; z > -2; z-=res)//the length of the aircraft
     {
 
-        for (int y=-1*(y_space-4) ; y< y_space; y+=res)//the hight of the aircraft
+        for (float y=-1*(y_space) ; y< y_space; y+=res)//the hight of the aircraft
         {
 
-            for (int x=-1*x_space ; x< x_space; x+=res)//the width of the aircraft
+            for (float x=-1*x_space ; x< x_space; x+=res)//the width of the aircraft
             {
                 pose.position.z=z;
                 pose.position.y=y;
@@ -156,180 +122,267 @@ int main(int argc, char **argv)
         }
     }
 
-    //filtering
-    //testing the mesh example
-    std::vector<Vec3f> p1;
-    std::vector<Triangle> t1;
-    std::string str = path+"/src/mesh/desktop_scaleddown.obj";
-    loadOBJFile(str.c_str(), p1, t1);
+    ros::Time disretization_end = ros::Time::now();
+    double elapsed =  disretization_end.toSec() - disretization_begin.toSec();
+    std::cout<<"discretization duration (s) = "<<elapsed<<"\n";
+    std::cout<<"discretized points size: "<<points.poses.size()<<"\n";
 
-    BVHModel<OBBRSS>* m1 = new BVHModel<OBBRSS>();
-    boost::shared_ptr<CollisionGeometry> m1_ptr(m1);
 
-    m1->beginModel();
-    m1->addSubModel(p1, t1);
-    m1->endModel();
 
-    Transform3f tf1;
-    tf1.setIdentity();
-    tf1.setTranslation(Vec3f(0,0,0));
-    CollisionObject* obj = new CollisionObject(boost::shared_ptr<CollisionGeometry>(m1), tf1);
-    Transform3f tf0;
-
+    // 2: *******************Filtering ***************************
+    ofstream pointFile,cameraPointFile;
+    std::string file_loc = path+"/src/txt/SearchSpaceUAV.txt";
+    std::string file_loc1 = path+"/src/txt/SearchSpaceCam.txt";
+    pointFile.open (file_loc.c_str());
+    cameraPointFile.open (file_loc1.c_str());
+    geometry_msgs::PoseArray filtered_vectors;
     visualization_msgs::MarkerArray marker_array ;
     visualization_msgs::Marker marker2 ;
+    std::vector<Vec3f> pt1;
+    std::list<CGALTriangle> triangles;
+    int intersectionsCount=0;
+    std::vector<geometry_msgs::Vector3> points_rpy;
+    std::string str = path+"/src/mesh/etihad.obj";
 
-    //filtered_points for creating a mesh of points
-    vtkSmartPointer<vtkPoints> filtered_points = vtkSmartPointer< vtkPoints >::New();
+    ros::Time filtering_begin = ros::Time::now();
+    loadOBJFile(str.c_str(), pt1, triangles);
+    // constructs AABB tree
+    Tree tree(triangles.begin(),triangles.end());
+    std::cout<<"traingles size:"<<triangles.size()<<"\n";
+
     for (int j=0; j<points.poses.size();j++)
+        //    for (int j=100000; j<115000;j++) //working on part of the viewpoints
     {
-        boost::shared_ptr<Box> Sample(new Box(1));
-        tf0.setIdentity();
-        tf0.setTranslation(Vec3f(points.poses[j].position.x , points.poses[j].position.y  ,points.poses[j].position.z ));
-        CollisionObject co0(Sample, tf0);
-        static const int num_max_contacts = std::numeric_limits<int>::max();
-        static const bool enable_contact = true ;
-        fcl::CollisionResult result;
-        fcl::CollisionRequest request(num_max_contacts, enable_contact);
-        fcl::collide(&co0, obj, request, result);
-        AABB a    = co0.getAABB() ;
-        Vec3f vec2 =  a.center() ;
+        Point a(points.poses[j].position.x , points.poses[j].position.y  ,points.poses[j].position.z);
+        // Some Random point in arbitrary orientation
+        Point b(100.0, 10.0, 56.0);
+        Ray ray_query(a,b);
+        // counts #intersections
+        intersectionsCount = tree.number_of_intersected_primitives(ray_query);
+//        std::cout << "intersections: "<<intersectionsCount<< " intersections(s) with ray query" << std::endl;
 
-        //        if (result.isCollision() == true )
-        //        {
-        //////            marker = drawCUBE(vec2,i,2) ;
-        //////            marker_array.markers.push_back(marker);
-        //////            collisionFlag.data = true ;
-        //////            collisionFlagPub.publish(collisionFlag) ;
-        //////            collisionDetected = true;
-        //        }
-        //        else
-        //        {
-        //            marker2 = drawCUBE(vec2, j, 1) ;
-        //            marker_array.markers.push_back(marker2);
-        //        }
-
-        DistanceRequest request2;
-        DistanceResult localResult;
-        distance(&co0, obj, request2, localResult);
-        FCL_REAL min_dist = localResult.min_distance;
-//        std::cout<<"minimum distance: "<<min_dist<<std::endl;
-        if(min_dist <= 2 && min_dist >= 1.0)
+        // Inside if the number of intersections is odd
+        if(intersectionsCount%2 != 1)
         {
-            marker2 = drawCUBE(vec2, j, 1) ;
-            marker_array.markers.push_back(marker2);
-            //filtered_points for creating a mesh of points
-            filtered_points->InsertNextPoint(points.poses[j].position.x, points.poses[j].position.y, points.poses[j].position.z);
-
-            if(min_dist > 1 && min_dist < 1.3)
+            // compute closest point and squared distance
+//            Point closest_point = tree.closest_point(a);
+//            std::cerr << "closest point is: " << closest_point << std::endl;
+            FT sqd = tree.squared_distance(a);
+//            std::cout << "squared distance: " << sqd << std::endl;
+            if (sqd >=1 && sqd <= 4)
             {
-                std::cout<<"minimum distance: "<<min_dist<<std::endl;
-                std::cout<<"points position x: "<<points.poses[j].position.x<<" points position y: "<<points.poses[j].position.y<<" points position z: "<<points.poses[j].position.z<<std::endl;
+                Vec3f vec2(points.poses[j].position.x , points.poses[j].position.y  ,points.poses[j].position.z);
+                marker2 = drawCUBE(vec2, j, 3, 0.2);
+                marker_array.markers.push_back(marker2);
+//                Vec3f nearestP;
+//                nearestP[0]= closest_point.x(); nearestP[1]= closest_point.y(); nearestP[2]= closest_point.z();
+                Vec3f position = vec2;
+//                geometry_msgs::Pose out_vector = calcOrientation(position,nearestP,rpy) ;//the previous way!
+                computeOrientations(position,45,filtered_vectors);
+//                filtered_vectors.poses.push_back(out_vector);
+//                points_rpy.push_back(rpy);
             }
         }
-
     }
-
-    //***************making a mesh (Optional)*******************
-//     vtkSmartPointer< vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
-//     polydata->SetPoints(filtered_points);
-// 
-//     vtkSmartPointer<vtkXMLPolyDataWriter> pointsWriter = vtkSmartPointer<vtkXMLPolyDataWriter>::New();
-//     pointsWriter->SetFileName("points.vtp");
-//     pointsWriter->SetInput(polydata);
-//     pointsWriter->Write();
-// 
-//     //convert vtp to ply mesh
-//     std::string inputFileName = "points.vtp";
-//     std::string outputFileName = "samples.ply";
-// 
-//     vtkSmartPointer<vtkXMLPolyDataReader> reader = vtkSmartPointer<vtkXMLPolyDataReader>::New();
-//     reader->SetFileName(inputFileName.c_str());
-//     reader->Update();
-// 
-//     vtkSmartPointer<vtkPLYWriter> writer = vtkSmartPointer<vtkPLYWriter>::New();
-//     writer->SetFileName(outputFileName.c_str());
-//     writer->SetInputConnection(reader->GetOutputPort());
-//     writer->Update();
-//     ROS_INFO("DONE :) samples mesh is generated");
-    //***********************************************
+    ros::Time filtering_end = ros::Time::now();
+    elapsed =  filtering_end.toSec() - filtering_begin.toSec();
+    std::cout<<"filtering duration (s) = "<<elapsed<<"\n";
+    std::cout<<"filtered points size = "<<filtered_vectors.poses.size()<<"\n";
 
 
+    //3: *************transformation of uav point to cam point***********************
 
-    //my stupid way*****
+    // used frustum culling to visualize the FOV
+    //    pcl::FrustumCullingTT fc (true);
+    //    fc.setInputCloud (cloud);
+    //    fc.setVerticalFOV (45);
+    //    fc.setHorizontalFOV (58);
+    //    fc.setNearPlaneDistance (0.5);
+    //    fc.setFarPlaneDistance (6.8);
+    //    visualization_msgs::Marker linesList1;
+    //    visualization_msgs::Marker linesList2;
+    //    visualization_msgs::Marker linesList3;
+    //    pcl::PointCloud <pcl::PointXYZ>::Ptr output (new pcl::PointCloud <pcl::PointXYZ>);
 
-    // create empty tree with resolution 0.1
-    //    double octMapRes = 1.0;
-    //    octomap::OcTree* octTree = new octomap::OcTree(octMapRes);
-    //    octomap::Pointcloud octPointCloud;
-    //    double distance = 0;
-    //    double minDist= 1.0 ;
-    //    double maxDist= 3.8 ;
-    //    //Filtering the sample views data if needed
+    geometry_msgs::PoseArray camPoses;
 
-    //    for (int j=0; j<points.poses.size();j++)
-    //    {
-    //        for(int i = 0;i<cloud->points.size();i++)
-    //        {
-    //            distance = dist(cloud->points[i],points.poses[j]);
-    //            if(distance>=minDist && distance<=maxDist)
-    //            {
-    //                ROS_INFO("samples filtering using distance");
-    //                octomap::point3d sample((float) points.poses[j].position.x,(float) points.poses[j].position.y,(float) points.poses[j].position.z);
-    //                std::cout<<std::endl<<"position X: "<<points.poses[j].position.x<<" position y: "<<points.poses[j].position.y<<" position z: "<<points.poses[j].position.z<<std::endl;
-    //                octPointCloud.push_back(sample);
-    //                break;
-    //            }
-    //        }
-    //    }
-
-    //    octomap::point3d origin(0.0,0.0,0.0);
-    //    octTree->insertPointCloud(octPointCloud,origin);
-    //    octTree->updateInnerOccupancy();
-    //    //octTree->writeBinary("static_occ.bt");
-
-    visCubePub.publish(marker_array);
-    visualization_msgs::Marker marker;
-
-    while(ros::ok())
+    //    for(int j=10; j< 11; j++)// used to test small set of points
+    for (int j=0; j< filtered_vectors.poses.size(); j++)
     {
-        //mesh points publish
-        sensor_msgs::PointCloud2 cloud1;
-        pcl::toROSMsg(*cloud, cloud1);
-        cloud1.header.frame_id = "base_point_cloud";
-        cloud1.header.stamp = ros::Time::now();
-        model_pub.publish(cloud1);
+        Eigen::Matrix4d uav_pose, uav2cam, cam_pose;
+        //UAV matrix pose
+        Eigen::Matrix3d R; Eigen::Vector3d T1(filtered_vectors.poses[j].position.x,filtered_vectors.poses[j].position.y,filtered_vectors.poses[j].position.z);
+        tf::Quaternion qt(filtered_vectors.poses[j].orientation.x,filtered_vectors.poses[j].orientation.y,filtered_vectors.poses[j].orientation.z,filtered_vectors.poses[j].orientation.w);
+        //write to file uav locations
+        pointFile << filtered_vectors.poses[j].position.x<<" "<<filtered_vectors.poses[j].position.y<<" "<<filtered_vectors.poses[j].position.z<<" "<<filtered_vectors.poses[j].orientation.x<<" "<<filtered_vectors.poses[j].orientation.y<<" "<<filtered_vectors.poses[j].orientation.z<<" "<<filtered_vectors.poses[j].orientation.w<<"\n";
+        tf::Matrix3x3 R1(qt);
+        tf::matrixTFToEigen(R1,R);
+        uav_pose.setZero ();
+        uav_pose.block (0, 0, 3, 3) = R;
+        uav_pose.block (0, 3, 3, 1) = T1;
+        uav_pose (3, 3) = 1;
 
+        //transformation matrix
+        qt = tf::createQuaternionFromRPY(0,0.2,0);
+        tf::Matrix3x3 R2(qt);Eigen::Vector3d T2(0,0,-0.1);
+        tf::matrixTFToEigen(R2,R);
+        uav2cam.setZero ();
+        uav2cam.block (0, 0, 3, 3) = R;
+        uav2cam.block (0, 3, 3, 1) = T2;
+        uav2cam (3, 3) = 1;
 
-        //visualize the points
-        points.header.frame_id= "base_point_cloud";
-        points.header.stamp = ros::Time::now();
-        point_pub.publish(points);
+        //preform the transformation
+        cam_pose = uav_pose * uav2cam;
 
-        //        octomap_msgs::Octomap octomap ;
-        //        octomap.binary = 1 ;
-        //        octomap.id = 1 ;
-        //        octomap.resolution =1.0;
-        //        octomap.header.frame_id = "base_point_cloud";
-        //        octomap.header.stamp = ros::Time::now();
-        //        bool res = octomap_msgs::fullMapToMsg(*octTree, octomap);
-        //        if(res)
-        //        {
-        //            OctmapPub.publish(octomap);
-        //        }
-        //        else
-        //        {
-        //            ROS_WARN("OCT Map serialization failed!");
-        //        }
+        Eigen::Matrix4d cam2cam;
+        //the transofrmation is rotation by +90 around x axis of the camera
+        cam2cam <<   1, 0, 0, 0,
+                     0, 0,-1, 0,
+                     0, 1, 0, 0,
+                     0, 0, 0, 1;
+        Eigen::Matrix4d cam_pose_new = cam_pose * cam2cam;
+        geometry_msgs::Pose p;
+        Eigen::Vector3d T3;Eigen::Matrix3d Rd; tf::Matrix3x3 R3;
+        Rd = cam_pose_new.block (0, 0, 3, 3);
+        tf::matrixEigenToTF(Rd,R3);
+        T3 = cam_pose_new.block (0, 3, 3, 1);
+        p.position.x=T3[0];p.position.y=T3[1];p.position.z=T3[2];
+        R3.getRotation(qt);
+        p.orientation.x = qt.getX(); p.orientation.y = qt.getY();p.orientation.z = qt.getZ();p.orientation.w = qt.getW();
+        camPoses.poses.push_back(p);
+        //write to file camera locations
+        cameraPointFile << camPoses.poses[j].position.x<<" "<<camPoses.poses[j].position.y<<" "<<camPoses.poses[j].position.z<<" "<<camPoses.poses[j].orientation.x<<" "<<camPoses.poses[j].orientation.y<<" "<<camPoses.poses[j].orientation.z<<" "<<camPoses.poses[j].orientation.w<<"\n";
 
-        ros::spinOnce();
+        //        Eigen::Matrix4f cam_pose_newf = cam_pose_new.cast<float>();
+        //        fc.setCameraPose (cam_pose_newf);
+        //        fc.filter (*output);
+
+        //*** visualization the FOV *****
+
+        //        std::vector<geometry_msgs::Point> fov_points;
+        //        geometry_msgs::Point point1;
+        //        point1.x=fc.fp_bl[0];point1.y=fc.fp_bl[1];point1.z=fc.fp_bl[2]; fov_points.push_back(point1);//0
+        //        point1.x=fc.fp_br[0];point1.y=fc.fp_br[1];point1.z=fc.fp_br[2]; fov_points.push_back(point1);//1
+        //        point1.x=fc.fp_tr[0];point1.y=fc.fp_tr[1];point1.z=fc.fp_tr[2]; fov_points.push_back(point1);//2
+        //        point1.x=fc.fp_tl[0];point1.y=fc.fp_tl[1];point1.z=fc.fp_tl[2]; fov_points.push_back(point1);//3
+        //        point1.x=fc.np_bl[0];point1.y=fc.np_bl[1];point1.z=fc.np_bl[2]; fov_points.push_back(point1);//4
+        //        point1.x=fc.np_br[0];point1.y=fc.np_br[1];point1.z=fc.np_br[2]; fov_points.push_back(point1);//5
+        //        point1.x=fc.np_tr[0];point1.y=fc.np_tr[1];point1.z=fc.np_tr[2]; fov_points.push_back(point1);//6
+        //        point1.x=fc.np_tl[0];point1.y=fc.np_tl[1];point1.z=fc.np_tl[2]; fov_points.push_back(point1);//7
+
+        //        std::vector<geometry_msgs::Point> fov_linesNearFar;
+        //        fov_linesNearFar.push_back(fov_points[0]);fov_linesNearFar.push_back(fov_points[1]);
+        //        fov_linesNearFar.push_back(fov_points[1]);fov_linesNearFar.push_back(fov_points[2]);
+        //        fov_linesNearFar.push_back(fov_points[2]);fov_linesNearFar.push_back(fov_points[3]);
+        //        fov_linesNearFar.push_back(fov_points[3]);fov_linesNearFar.push_back(fov_points[0]);
+
+        //        fov_linesNearFar.push_back(fov_points[4]);fov_linesNearFar.push_back(fov_points[5]);
+        //        fov_linesNearFar.push_back(fov_points[5]);fov_linesNearFar.push_back(fov_points[6]);
+        //        fov_linesNearFar.push_back(fov_points[6]);fov_linesNearFar.push_back(fov_points[7]);
+        //        fov_linesNearFar.push_back(fov_points[7]);fov_linesNearFar.push_back(fov_points[4]);
+        //        linesList1 = drawLines(fov_linesNearFar,3333,1);//red
+
+        //        std::vector<geometry_msgs::Point> fov_linestop;
+        //        fov_linestop.push_back(fov_points[7]);fov_linestop.push_back(fov_points[3]);//top
+        //        fov_linestop.push_back(fov_points[6]);fov_linestop.push_back(fov_points[2]);//top
+        //        linesList2 = drawLines(fov_linestop,4444,2);//green
+
+        //        std::vector<geometry_msgs::Point> fov_linesbottom;
+        //        fov_linesbottom.push_back(fov_points[5]);fov_linesbottom.push_back(fov_points[1]);//bottom
+        //        fov_linesbottom.push_back(fov_points[4]);fov_linesbottom.push_back(fov_points[0]);//bottom
+        //        linesList3 = drawLines(fov_linesbottom,5555,3);//blue
+
     }
 
+    pointFile.close();
+    cameraPointFile.close();
+    ros::Rate loop_rate(100);//it was 10
 
+    while (ros::ok())
+    {
+
+
+        //        //***original cloud & frustum cull & occlusion cull publish***
+        sensor_msgs::PointCloud2 cloud1;
+        //        sensor_msgs::PointCloud2 cloud2;
+
+        pcl::toROSMsg(*cloud, cloud1); //cloud of original (white) using original cloud
+        //        pcl::toROSMsg(*output, cloud2); geometry_msgs::PoseArray out =//cloud of frustum cull (red) using pcl::frustum cull
+
+        cloud1.header.frame_id = "base_point_cloud";
+        //        cloud2.header.frame_id = "base_point_cloud";
+
+        cloud1.header.stamp = ros::Time::now();
+        //        cloud2.header.stamp = ros::Time::now();
+
+        pub1.publish(cloud1);
+        //        pub2.publish(cloud2);
+
+        //visualize the filtered samples and their orientation
+        filtered_vectors.header.frame_id= "base_point_cloud";
+        filtered_vectors.header.stamp = ros::Time::now();
+        oriented_point_pub.publish(filtered_vectors);
+
+        camPoses.header.frame_id= "base_point_cloud";
+        camPoses.header.stamp = ros::Time::now();
+        cam_posespub.publish(camPoses);
+
+        poses_pub.publish(marker_array);
+
+        //visualize the FOV
+        //        lines_pub1.publish(linesList1);
+        //        lines_pub2.publish(linesList2);
+        //        lines_pub3.publish(linesList3);
+        ros::spinOnce();
+        loop_rate.sleep();
+    }
     return 0;
 }
 
-visualization_msgs::Marker drawCUBE(Vec3f vec , int id , int c_color)
+visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color)
+{
+    visualization_msgs::Marker linksMarkerMsg;
+    linksMarkerMsg.header.frame_id="base_point_cloud";
+    linksMarkerMsg.header.stamp=ros::Time::now();
+    linksMarkerMsg.ns="link_marker";
+    linksMarkerMsg.id = id;
+    linksMarkerMsg.type = visualization_msgs::Marker::LINE_LIST;
+    linksMarkerMsg.scale.x = 0.04;
+    linksMarkerMsg.action  = visualization_msgs::Marker::ADD;
+    linksMarkerMsg.lifetime  = ros::Duration(1000);
+    std_msgs::ColorRGBA color;
+    //    color.r = 1.0f; color.g=.0f; color.b=.0f, color.a=1.0f;
+    if(c_color == 1)
+    {
+        color.r = 1.0;
+        color.g = 0.0;
+        color.b = 0.0;
+        color.a = 1.0;
+    }
+    else if(c_color == 2)
+    {
+        color.r = 0.0;
+        color.g = 1.0;
+        color.b = 0.0;
+        color.a = 1.0;
+    }
+    else
+    {
+        color.r = 0.0;
+        color.g = 0.0;
+        color.b = 1.0;
+        color.a = 1.0;
+    }
+    std::vector<geometry_msgs::Point>::iterator linksIterator;
+    for(linksIterator = links.begin();linksIterator != links.end();linksIterator++)
+    {
+        linksMarkerMsg.points.push_back(*linksIterator);
+        linksMarkerMsg.colors.push_back(color);
+    }
+    return linksMarkerMsg;
+}
+
+visualization_msgs::Marker drawCUBE(Vec3f vec , int id , int c_color, double size)
 {
     visualization_msgs::Marker marker;
     marker.header.frame_id = "base_point_cloud";
@@ -346,9 +399,9 @@ visualization_msgs::Marker drawCUBE(Vec3f vec , int id , int c_color)
     marker.pose.orientation.z = 0;//poseQ[2];
     marker.pose.orientation.w = 1;//poseQ[3];
 
-    marker.scale.x = 0.05;
-    marker.scale.y = 0.05;
-    marker.scale.z = 0.05;
+    marker.scale.x = size;
+    marker.scale.y = size;
+    marker.scale.z = size;
     marker.color.a = 1.0;
     marker.color.r = 0.0;
     marker.color.g = 0.0;
@@ -374,3 +427,185 @@ visualization_msgs::Marker drawCUBE(Vec3f vec , int id , int c_color)
     return marker ;
 }
 
+void computeOrientations(Vec3f pos,double deg, geometry_msgs::PoseArray& filtered_vectors)
+{
+
+    int orientationsNum= 360/deg;
+    double yaw=0.0;//radians
+    geometry_msgs::PoseArray output_vector;
+    geometry_msgs::Pose vec;
+    tf::Quaternion tf_q ;
+
+    vec.position.x = pos[0];vec.position.y = pos[1];vec.position.z = pos[2];
+    for(int i=0; i<orientationsNum;i++)
+    {
+        tf_q= tf::createQuaternionFromRPY(0.0, 0.0, yaw);
+        vec.orientation.x = tf_q.getX();
+        vec.orientation.y = tf_q.getY();
+        vec.orientation.z = tf_q.getZ();
+        vec.orientation.w = tf_q.getW();
+        std::cout<<"orientation: "<<vec.orientation.x<<" "<<vec.orientation.y<<" "<<vec.orientation.z<<" "<<vec.orientation.w<<"\n";
+        filtered_vectors.poses.push_back(vec);
+        yaw = yaw+(deg*M_PI/180);
+    }
+
+    //    return output_vector;
+
+}
+
+
+
+//Orientation between the viewpoint and the closest point of the mesh
+//geometry_msgs::Pose calcOrientation(Vec3f sensorP,Vec3f nearestP, geometry_msgs::Vector3& rpy)
+//{
+//    geometry_msgs::Pose output_vector;
+//    Eigen::Quaterniond q;
+
+//    Eigen::Vector3d axis_vector;
+//    axis_vector[0]=nearestP[0]-sensorP[0];
+//    axis_vector[1]=nearestP[1]-sensorP[1];
+//    axis_vector[2]=nearestP[2]-sensorP[2];
+//    axis_vector.normalize();
+//    Eigen::Vector3d up_vector(0.0, 0.0, 1.0);
+//    Eigen::Vector3d right_axis_vector = axis_vector.cross(up_vector);
+//    right_axis_vector.normalized();
+//    double theta = axis_vector.dot(up_vector);
+//    double angle_rotation = -1.0*acos(theta);
+//    //-------------------------------------------
+//    // Method 1 - TF - works
+//    //Convert to TF
+//    tf::Vector3 tf_right_axis_vector;
+//    tf::vectorEigenToTF(right_axis_vector, tf_right_axis_vector);
+//    // Create quaternion
+//    tf::Quaternion tf_q(tf_right_axis_vector, angle_rotation);
+//    // Convert back to Eigen
+//    tf::quaternionTFToEigen(tf_q, q);
+
+//    // Rotate so that vector points along line
+//    Eigen::Affine3d pose1;
+//    q.normalize();
+//    Eigen::Vector3d b;
+//    b[0]=sensorP[0]; b[1]=sensorP[1]; b[2]=sensorP[2];
+//    pose1 = q * Eigen::AngleAxisd(-0.5*M_PI, Eigen::Vector3d::UnitY());
+//    pose1.translation() = b;
+//    tf::poseEigenToMsg(pose1, output_vector);
+
+//    tf::Quaternion qt;
+//    qt.setX(output_vector.orientation.x);
+//    qt.setY(output_vector.orientation.y);
+//    qt.setZ(output_vector.orientation.z);
+//    qt.setW(output_vector.orientation.w);
+//    double roll, pitch, yaw;
+////    tf::Matrix3x3(qt).getRPY(roll, pitch, yaw);//gets the Roll Pitch Yaw in terms a fixed axis (can't be used by the AngleAxis function of Eigen)
+//    tf::Matrix3x3(qt).getEulerZYX(yaw, pitch, roll);//gets the yaw around z then pitch around new y then roll around new x
+//    rpy.x = roll;
+//    rpy.y = pitch;
+//    rpy.z = yaw;
+
+
+
+////    std::cout<<"roll: "<<rpy.x<<" pitch: "<<rpy.y<<" yaw: "<<rpy.z<<std::endl;
+
+//    return output_vector;
+
+//}
+
+void loadOBJFile(const char* filename, std::vector<Vec3f>& points, std::list<CGALTriangle>& triangles)
+{
+
+    FILE* file = fopen(filename, "rb");
+    if(!file)
+    {
+        std::cerr << "file not exist" << std::endl;
+        return;
+    }
+
+    bool has_normal = false;
+    bool has_texture = false;
+    char line_buffer[2000];
+    while(fgets(line_buffer, 2000, file))
+    {
+        char* first_token = strtok(line_buffer, "\r\n\t ");
+        if(!first_token || first_token[0] == '#' || first_token[0] == 0)
+            continue;
+
+        switch(first_token[0])
+        {
+        case 'v':
+        {
+            if(first_token[1] == 'n')
+            {
+                strtok(NULL, "\t ");
+                strtok(NULL, "\t ");
+                strtok(NULL, "\t ");
+                has_normal = true;
+            }
+            else if(first_token[1] == 't')
+            {
+                strtok(NULL, "\t ");
+                strtok(NULL, "\t ");
+                has_texture = true;
+            }
+            else
+            {
+                FCL_REAL x = (FCL_REAL)atof(strtok(NULL, "\t "));
+                FCL_REAL y = (FCL_REAL)atof(strtok(NULL, "\t "));
+                FCL_REAL z = (FCL_REAL)atof(strtok(NULL, "\t "));
+                Vec3f p(x, y, z);
+                points.push_back(p);
+            }
+        }
+            break;
+        case 'f':
+        {
+            CGALTriangle tri;
+            char* data[30];
+            int n = 0;
+            while((data[n] = strtok(NULL, "\t \r\n")) != NULL)
+            {
+                if(strlen(data[n]))
+                    n++;
+            }
+
+            for(int t = 0; t < (n - 2); ++t)
+            {
+                if((!has_texture) && (!has_normal))
+                {
+                    Point p1(points[atoi(data[0]) - 1][0],points[atoi(data[0]) - 1][1],points[atoi(data[0]) - 1][2]);
+                    Point p2(points[atoi(data[1]) - 1][0],points[atoi(data[1]) - 1][1],points[atoi(data[1]) - 1][2]);
+                    Point p3(points[atoi(data[2]) - 1][0],points[atoi(data[2]) - 1][1],points[atoi(data[2]) - 1][2]);
+                    tri = CGALTriangle(p1,p2,p3);
+                    //std::cout<<"1: Yep, I get here p1:"<<atoi(data[0]) - 1<<" p2:"<<atoi(data[1]) - 1<<" p2:"<<atoi(data[2]) - 1;
+                    if(!CGAL::collinear(p1,p2,p3))
+                    {
+                        triangles.push_back(tri);
+                    }
+                }
+                else
+                {
+                    const char *v1;
+                    uint indxs[3];
+                    for(int i = 0; i < 3; i++)
+                    {
+                        // vertex ID
+                        if(i == 0)
+                            v1 = data[0];
+                        else
+                            v1 = data[t + i];
+
+                        indxs[i] = atoi(v1) - 1;
+                    }
+                    Point p1(points[indxs[0]][0],points[indxs[0]][1],points[indxs[0]][2]);
+                    Point p2(points[indxs[1]][0],points[indxs[1]][1],points[indxs[1]][2]);
+                    Point p3(points[indxs[2]][0],points[indxs[2]][1],points[indxs[2]][2]);
+                    tri = CGALTriangle(p1,p2,p3);
+                    if(!CGAL::collinear(p1,p2,p3))
+                    {
+                        triangles.push_back(tri);
+                    }
+                }
+            }
+        }
+        }
+    }
+}
