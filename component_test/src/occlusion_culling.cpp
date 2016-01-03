@@ -7,9 +7,8 @@ OcclusionCulling::OcclusionCulling(ros::NodeHandle &n, std::string modelName):
 {
 //   original_pub = nh.advertise<sensor_msgs::PointCloud2>("original_point_cloud", 10);
 //   visible_pub = nh.advertise<sensor_msgs::PointCloud2>("occlusion_free_cloud", 100);
-//    lines_pub1 = n.advertise<visualization_msgs::Marker>("fov_far_near", 100);
-//    lines_pub2 = n.advertise<visualization_msgs::Marker>("fov_top", 100);
-//    lines_pub3 = n.advertise<visualization_msgs::Marker>("fov_bottom", 100);
+
+   fov_pub = n.advertise<visualization_msgs::MarkerArray>("fov", 10);
    cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
    filtered_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
 
@@ -18,6 +17,7 @@ OcclusionCulling::OcclusionCulling(ros::NodeHandle &n, std::string modelName):
    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/"+model, *cloud);
    voxelRes = 0.5;
    OriginalVoxelsSize=0.0;
+   id=0.0;
    voxelFilterOriginal.setInputCloud (cloud);
    voxelFilterOriginal.setLeafSize (voxelRes, voxelRes, voxelRes);
    voxelFilterOriginal.initializeVoxelGrid();
@@ -56,6 +56,7 @@ OcclusionCulling::OcclusionCulling(std::string modelName):
     pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/"+model, *cloud);
     voxelRes = 0.5;
     OriginalVoxelsSize=0.0;
+    id=0.0;
     voxelFilterOriginal.setInputCloud (cloud);
     voxelFilterOriginal.setLeafSize (voxelRes, voxelRes, voxelRes);
     voxelFilterOriginal.initializeVoxelGrid();
@@ -93,6 +94,7 @@ OcclusionCulling::OcclusionCulling():
     pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/scaled_desktop.pcd", *cloud);
     voxelRes = 0.5;
     OriginalVoxelsSize=0.0;
+    id=0.0;
     voxelFilterOriginal.setInputCloud (cloud);
     voxelFilterOriginal.setLeafSize (voxelRes, voxelRes, voxelRes);
     voxelFilterOriginal.initializeVoxelGrid();
@@ -135,77 +137,33 @@ pcl::PointCloud<pcl::PointXYZ> OcclusionCulling::extractVisibleSurface(geometry_
     fc.setNearPlaneDistance (0.7);
     fc.setFarPlaneDistance (6.0);
 
+
     Eigen::Matrix4f camera_pose;
-    Eigen::Matrix3f R;
+    Eigen::Matrix3d Rd;
+    Eigen::Matrix3f Rf;
+
     camera_pose.setZero ();
 
-    //calculating the rpy out of the location quetrenion
     tf::Quaternion qt;
     qt.setX(location.orientation.x);
     qt.setY(location.orientation.y);
     qt.setZ(location.orientation.z);
     qt.setW(location.orientation.w);
-    double roll, pitch, yaw;
-    tf::Matrix3x3(qt).getEulerZYX(yaw, pitch, roll);//gets the yaw around z then pitch around new y then roll around new x
-    Eigen::Vector3f theta_rad(roll,pitch,yaw);
-    Eigen::Vector3f xV(1,0,0) ;//unit vector of X
-    Eigen::Vector3f yV(0,1,0) ;//unit vector of Y
-    Eigen::Vector3f zV(0,0,1) ;//unit vector of Z
-
-    //first rotation around z ,then around the new y, then around the new x
-    // "AngleAxisf" starts the rotation around the defined axis then moves to the next angle and applies
-    //   the rotation around the new axis and continues the same for the third angle
-    R = Eigen::AngleAxisf (theta_rad[2], zV) *
-            Eigen::AngleAxisf (theta_rad[1], yV) *
-            Eigen::AngleAxisf (theta_rad[0], xV);
-    //        std::cout<<"theta_rad r : "<<theta_rad[0]<<"theta_rad p: "<<theta_rad[1]<<"theta_rad y: "<<theta_rad[2]<<"\n";
-    camera_pose.block (0, 0, 3, 3) = R;
+    tf::Matrix3x3 R_tf(qt);
+    tf::matrixTFToEigen(R_tf,Rd);
+    Rf = Rd.cast<float>();
+    camera_pose.block (0, 0, 3, 3) = Rf;
     Eigen::Vector3f T;
     T (0) = location.position.x; T (1) = location.position.y; T (2) = location.position.z;
-    //        std::cout<<"position x : "<<T[0]<<"position y: "<<T[1]<<"position z: "<<T[2]<<"\n";
-
     camera_pose.block (0, 3, 3, 1) = T;
     camera_pose (3, 3) = 1;
-    //Transformation for the frustum camera ( in to be x forward, z right and y up)
-    Eigen::Matrix4f pose_orig = camera_pose;
-    Eigen::Matrix4f cam2robot;
-    //the transofrmation is rotation by +90 around x axis
-    cam2robot << 1, 0, 0, 0,
-            0, 0,-1, 0,
-            0, 1, 0, 0,
-            0, 0, 0, 1;
-    Eigen::Matrix4f pose_new = pose_orig * cam2robot;
-    fc.setCameraPose (pose_new);
+    fc.setCameraPose (camera_pose);
     fc.filter (*output);
 
 
-    //*** Camera View Vector ****
-    tf::Matrix3x3 rotation;
-    Eigen::Matrix3d D;
-    D= R.cast<double>();
-    tf::matrixEigenToTF(D,rotation);
-    rotation = rotation.transpose();
-    tf::Quaternion orientation;
-    rotation.getRotation(orientation);
-
-    geometry_msgs::Pose output_vector;
-    Eigen::Quaterniond q;
-    geometry_msgs::Quaternion quet;
-    tf::quaternionTFToEigen(orientation, q);
-    tf::quaternionTFToMsg(orientation,quet);
-    Eigen::Affine3d pose1;
-    Eigen::Vector3d a;
-    a[0]= T[0];
-    a[1]= T[1];
-    a[2]= T[2];
-    pose1.translation() = a;
-    tf::poseEigenToMsg(pose1, output_vector);
-
-//    visualizeFOV(fc);
-
     //2:****voxel grid occlusion estimation *****
-    Eigen::Quaternionf quat(q.w(),q.x(),q.y(),q.z());
-    output->sensor_origin_  = Eigen::Vector4f(a[0],a[1],a[2],0);
+    Eigen::Quaternionf quat(qt.w(),qt.x(),qt.y(),qt.z());
+    output->sensor_origin_  = Eigen::Vector4f(T[0],T[1],T[2],0);
     output->sensor_orientation_= quat;
     pcl::VoxelGridOcclusionEstimationT voxelFilter;
     voxelFilter.setInputCloud (output);
@@ -354,14 +312,14 @@ float OcclusionCulling::calcCoveragePercent(pcl::PointCloud<pcl::PointXYZ>::Ptr 
     float coverage_ratio= MatchedVoxels/OriginalVoxelsSize;
     float coverage_percentage= coverage_ratio*100;
 
-    std::cout<<" the coverage ratio is = "<<coverage_ratio<<"\n";
-    std::cout<<" the number of covered voxels = "<<MatchedVoxels<<" voxel is covered"<<"\n";
-    std::cout<<" the number of original voxels = "<<OriginalVoxelsSize<<" voxel"<<"\n\n\n";
-    std::cout<<" the coverage percentage is = "<<coverage_percentage<<" %"<<"\n";
+//    std::cout<<" the coverage ratio is = "<<coverage_ratio<<"\n";
+//    std::cout<<" the number of covered voxels = "<<MatchedVoxels<<" voxel is covered"<<"\n";
+//    std::cout<<" the number of original voxels = "<<OriginalVoxelsSize<<" voxel"<<"\n\n\n";
+//    std::cout<<" the coverage percentage is = "<<coverage_percentage<<" %"<<"\n";
 
     ros::Time covpercent_end = ros::Time::now();
     double elapsed =  covpercent_end.toSec() - covpercent_begin.toSec();
-    std::cout<<"Coverage Percentage Calculation duration (s) = "<<elapsed<<"\n";
+//    std::cout<<"Coverage Percentage Calculation duration (s) = "<<elapsed<<"\n";
 
     return coverage_percentage;
 }
@@ -462,55 +420,89 @@ float OcclusionCulling::calcCoveragePercent(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 //    return coverage_percentage;
 //}
 
-//void OcclusionCulling::visualizeFOV(pcl::FrustumCullingTT& fc)
-//{
-////*** visualization the FOV *****
-//    std::vector<geometry_msgs::Point> fov_points;
-//    geometry_msgs::Point point1;
-//    point1.x=fc.fp_bl[0];point1.y=fc.fp_bl[1];point1.z=fc.fp_bl[2]; fov_points.push_back(point1);//0
-//    point1.x=fc.fp_br[0];point1.y=fc.fp_br[1];point1.z=fc.fp_br[2]; fov_points.push_back(point1);//1
-//    point1.x=fc.fp_tr[0];point1.y=fc.fp_tr[1];point1.z=fc.fp_tr[2]; fov_points.push_back(point1);//2
-//    point1.x=fc.fp_tl[0];point1.y=fc.fp_tl[1];point1.z=fc.fp_tl[2]; fov_points.push_back(point1);//3
-//    point1.x=fc.np_bl[0];point1.y=fc.np_bl[1];point1.z=fc.np_bl[2]; fov_points.push_back(point1);//4
-//    point1.x=fc.np_br[0];point1.y=fc.np_br[1];point1.z=fc.np_br[2]; fov_points.push_back(point1);//5
-//    point1.x=fc.np_tr[0];point1.y=fc.np_tr[1];point1.z=fc.np_tr[2]; fov_points.push_back(point1);//6
-//    point1.x=fc.np_tl[0];point1.y=fc.np_tl[1];point1.z=fc.np_tl[2]; fov_points.push_back(point1);//7
+void OcclusionCulling::visualizeFOV(geometry_msgs::Pose location)
+{
 
-//    std::vector<geometry_msgs::Point> fov_linesNearFar;
-//    fov_linesNearFar.push_back(fov_points[0]);fov_linesNearFar.push_back(fov_points[1]);
-//    fov_linesNearFar.push_back(fov_points[1]);fov_linesNearFar.push_back(fov_points[2]);
-//    fov_linesNearFar.push_back(fov_points[2]);fov_linesNearFar.push_back(fov_points[3]);
-//    fov_linesNearFar.push_back(fov_points[3]);fov_linesNearFar.push_back(fov_points[0]);
+    pcl::PointCloud <pcl::PointXYZ>::Ptr output (new pcl::PointCloud <pcl::PointXYZ>);
 
-//    fov_linesNearFar.push_back(fov_points[4]);fov_linesNearFar.push_back(fov_points[5]);
-//    fov_linesNearFar.push_back(fov_points[5]);fov_linesNearFar.push_back(fov_points[6]);
-//    fov_linesNearFar.push_back(fov_points[6]);fov_linesNearFar.push_back(fov_points[7]);
-//    fov_linesNearFar.push_back(fov_points[7]);fov_linesNearFar.push_back(fov_points[4]);
-//    linesList1 = drawLines(fov_linesNearFar,3333,1);//red
+    pcl::FrustumCullingTT fc (true);
+    fc.setInputCloud (cloud);
+    fc.setVerticalFOV (45);
+    fc.setHorizontalFOV (58);
+    fc.setNearPlaneDistance (0.7);
+    fc.setFarPlaneDistance (6.0);
 
-//    std::vector<geometry_msgs::Point> fov_linestop;
-//    fov_linestop.push_back(fov_points[7]);fov_linestop.push_back(fov_points[3]);//top
-//    fov_linestop.push_back(fov_points[6]);fov_linestop.push_back(fov_points[2]);//top
-//    linesList2 = drawLines(fov_linestop,4444,2);//green
-//    std::vector<geometry_msgs::Point> fov_linesbottom;
-//    fov_linesbottom.push_back(fov_points[5]);fov_linesbottom.push_back(fov_points[1]);//bottom
-//    fov_linesbottom.push_back(fov_points[4]);fov_linesbottom.push_back(fov_points[0]);//bottom
-//    linesList3 = drawLines(fov_linesbottom,5555,3);//blue
+    Eigen::Matrix4f camera_pose;
+    Eigen::Matrix3d Rd;
+    Eigen::Matrix3f Rf;
 
-//    lines_pub1.publish(linesList1);
-//    lines_pub2.publish(linesList2);
-//    lines_pub3.publish(linesList3);
+    camera_pose.setZero ();
 
-//}
+    tf::Quaternion qt;
+    qt.setX(location.orientation.x);
+    qt.setY(location.orientation.y);
+    qt.setZ(location.orientation.z);
+    qt.setW(location.orientation.w);
+    tf::Matrix3x3 R_tf(qt);
+    tf::matrixTFToEigen(R_tf,Rd);
+    Rf = Rd.cast<float>();
+    camera_pose.block (0, 0, 3, 3) = Rf;
+    Eigen::Vector3f T;
+    T (0) = location.position.x; T (1) = location.position.y; T (2) = location.position.z;
+    camera_pose.block (0, 3, 3, 1) = T;
+    camera_pose (3, 3) = 1;
+    fc.setCameraPose (camera_pose);
+    fc.filter (*output);
+
+    //*** visualization the FOV *****
+    std::vector<geometry_msgs::Point> fov_points;
+    geometry_msgs::Point point1;
+    point1.x=fc.fp_bl[0];point1.y=fc.fp_bl[1];point1.z=fc.fp_bl[2]; fov_points.push_back(point1);//0
+    point1.x=fc.fp_br[0];point1.y=fc.fp_br[1];point1.z=fc.fp_br[2]; fov_points.push_back(point1);//1
+    point1.x=fc.fp_tr[0];point1.y=fc.fp_tr[1];point1.z=fc.fp_tr[2]; fov_points.push_back(point1);//2
+    point1.x=fc.fp_tl[0];point1.y=fc.fp_tl[1];point1.z=fc.fp_tl[2]; fov_points.push_back(point1);//3
+    point1.x=fc.np_bl[0];point1.y=fc.np_bl[1];point1.z=fc.np_bl[2]; fov_points.push_back(point1);//4
+    point1.x=fc.np_br[0];point1.y=fc.np_br[1];point1.z=fc.np_br[2]; fov_points.push_back(point1);//5
+    point1.x=fc.np_tr[0];point1.y=fc.np_tr[1];point1.z=fc.np_tr[2]; fov_points.push_back(point1);//6
+    point1.x=fc.np_tl[0];point1.y=fc.np_tl[1];point1.z=fc.np_tl[2]; fov_points.push_back(point1);//7
+
+    std::vector<geometry_msgs::Point> fov_linesNearFar;
+    fov_linesNearFar.push_back(fov_points[0]);fov_linesNearFar.push_back(fov_points[1]);
+    fov_linesNearFar.push_back(fov_points[1]);fov_linesNearFar.push_back(fov_points[2]);
+    fov_linesNearFar.push_back(fov_points[2]);fov_linesNearFar.push_back(fov_points[3]);
+    fov_linesNearFar.push_back(fov_points[3]);fov_linesNearFar.push_back(fov_points[0]);
+
+    fov_linesNearFar.push_back(fov_points[4]);fov_linesNearFar.push_back(fov_points[5]);
+    fov_linesNearFar.push_back(fov_points[5]);fov_linesNearFar.push_back(fov_points[6]);
+    fov_linesNearFar.push_back(fov_points[6]);fov_linesNearFar.push_back(fov_points[7]);
+    fov_linesNearFar.push_back(fov_points[7]);fov_linesNearFar.push_back(fov_points[4]);
+    linesList1 = drawLines(fov_linesNearFar,id++,1);//red
+
+
+    std::vector<geometry_msgs::Point> fov_linestop;
+    fov_linestop.push_back(fov_points[7]);fov_linestop.push_back(fov_points[3]);//top
+    fov_linestop.push_back(fov_points[6]);fov_linestop.push_back(fov_points[2]);//top
+    linesList2 = drawLines(fov_linestop,id++,2);//green
+
+    std::vector<geometry_msgs::Point> fov_linesbottom;
+    fov_linesbottom.push_back(fov_points[5]);fov_linesbottom.push_back(fov_points[1]);//bottom
+    fov_linesbottom.push_back(fov_points[4]);fov_linesbottom.push_back(fov_points[0]);//bottom
+    linesList3 = drawLines(fov_linesbottom,id++,3);//blue
+
+    marker_array.markers.push_back(linesList1);
+    marker_array.markers.push_back(linesList2);
+    marker_array.markers.push_back(linesList3);
+    fov_pub.publish(marker_array);
+}
 visualization_msgs::Marker OcclusionCulling::drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color)
 {
     visualization_msgs::Marker linksMarkerMsg;
-    linksMarkerMsg.header.frame_id="/base_point_cloud";
+    linksMarkerMsg.header.frame_id="base_point_cloud"; //change to "base_point_cloud" if it is used in component test package
     linksMarkerMsg.header.stamp=ros::Time::now();
     linksMarkerMsg.ns="link_marker";
     linksMarkerMsg.id = id;
     linksMarkerMsg.type = visualization_msgs::Marker::LINE_LIST;
-    linksMarkerMsg.scale.x = 0.006;
+    linksMarkerMsg.scale.x = 0.03;
     linksMarkerMsg.action  = visualization_msgs::Marker::ADD;
     linksMarkerMsg.lifetime  = ros::Duration(1000);
     std_msgs::ColorRGBA color;

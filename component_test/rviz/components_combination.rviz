@@ -18,6 +18,7 @@ Panels:
         - /Axes1
         - /PoseArray2
         - /PoseArray3
+        - /MarkerArray2
       Splitter Ratio: 0.5
     Tree Height: 895
   - Class: rviz/Selection
@@ -229,6 +230,14 @@ Visualization Manager:
       Name: PoseArray
       Topic: cam_poses
       Value: true
+    - Class: rviz/MarkerArray
+      Enabled: false
+      Marker Topic: fov
+      Name: MarkerArray
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -253,22 +262,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 83.7914
+      Distance: 73.766
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 5.56673
-        Y: -3.76798
-        Z: 5.99345
+        X: 0.208181
+        Y: -9.32525
+        Z: 11.3294
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.0247972
+      Pitch: 0.714797
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.94788
+      Yaw: 5.3465
     Saved: ~
 Window Geometry:
   Displays:

@@ -11,14 +11,14 @@
 #include <Eigen/Geometry>
 #include <Eigen/Dense>
 #include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
+
 //PCL
 #include <iostream>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <frustum_culling.h>
-// #include <pcl/visualization/cloud_viewer.h>
-// #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/common/eigen.h>
 #include <pcl/common/transforms.h>
 #include <pcl/range_image/range_image.h>
@@ -26,24 +26,24 @@
 
 class OcclusionCulling
 {
-  public:
+public:
     //attributes
     ros::NodeHandle  nh;
     std::string model;
-//     ros::Publisher original_pub;
-//     ros::Publisher visible_pub;
-//     ros::Publisher lines_pub1;
-//     ros::Publisher lines_pub2;
-//     ros::Publisher lines_pub3;
+    //     ros::Publisher original_pub;
+    //     ros::Publisher visible_pub;
+    ros::Publisher fov_pub;
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
     pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud;
-//    pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeCloud;//I can add it to accumulate cloud if I want to extract visible surface from multiple locations
+    //    pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeCloud;//I can add it to accumulate cloud if I want to extract visible surface from multiple locations
     pcl::PointCloud<pcl::PointXYZ> FreeCloud;
     float voxelRes, OriginalVoxelsSize;
+    double id;
     pcl::VoxelGridOcclusionEstimationT voxelFilterOriginal;
     Eigen::Vector3i  max_b1, min_b1;
-//     visualization_msgs::Marker linesList1,linesList2,linesList3;
-//     pcl::FrustumCullingTT fc;
+    visualization_msgs::Marker linesList1,linesList2,linesList3;
+    visualization_msgs::MarkerArray marker_array;
+
 
     //methods
     OcclusionCulling(ros::NodeHandle & n, std::string modelName);
@@ -51,12 +51,12 @@ class OcclusionCulling
     OcclusionCulling();
     ~OcclusionCulling();
     pcl::PointCloud<pcl::PointXYZ> extractVisibleSurface(geometry_msgs::Pose location);
-//    float calcCoveragePercent(geometry_msgs::Pose location);
+    //    float calcCoveragePercent(geometry_msgs::Pose location);
     float calcCoveragePercent(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered);
-//     void visualizeFOV(pcl::FrustumCullingTT& fc);
+    void visualizeFOV(geometry_msgs::Pose location);
     visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color);
 
-  
+
 };
 
 #endif 
