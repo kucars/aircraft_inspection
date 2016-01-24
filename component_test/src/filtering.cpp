@@ -85,7 +85,7 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
 
     ros::Publisher pub1 = n.advertise<sensor_msgs::PointCloud2>("original_point_cloud", 100);
-    ros::Publisher pub2 = n.advertise<sensor_msgs::PointCloud2>("frustum_point_cloud", 100);
+    ros::Publisher pub3 = n.advertise<sensor_msgs::PointCloud2>("occlusion_free_cloud", 100);
     ros::Publisher oriented_point_pub = n.advertise<geometry_msgs::PoseArray>("oriented_poses", 1);
     ros::Publisher poses_pub = n.advertise<visualization_msgs::MarkerArray>("filtered_poses", 1);
     ros::Publisher fov_pub = n.advertise<visualization_msgs::MarkerArray>("fov", 10);
@@ -106,10 +106,10 @@ int main(int argc, char **argv)
     geometry_msgs::PoseArray points;
     geometry_msgs::Pose pose;
 
-    int x_space=32;//half wingspan
-    int y_space=43;//half the length
+    int x_space=36;//half wingspan
+    int y_space=45;//half the length
     int z_space=21;// the height
-    float res=2.0;
+    float res=1.5;
     ros::Time disretization_begin = ros::Time::now();
     for (float z=(1*z_space) ; z > -2; z-=res)//the length of the aircraft
     {
@@ -168,7 +168,7 @@ int main(int argc, char **argv)
         geometry_msgs::PoseArray vectors;
         if(intersectionsCount%2 != 1)
         {
-            distanceFiltering(4,16,j,vectors, tree, a, marker_array);
+            distanceFiltering(9,16,j,vectors, tree, a, marker_array);
             coverageFiltering(vectors,filtered_vectors,camPoses,obj);
             std::cout << "filtered Vectors #"<<filtered_vectors.poses.size()<< std::endl;
         }
@@ -180,8 +180,8 @@ int main(int argc, char **argv)
 
     //....write to file.....
     ofstream pointFile,cameraPointFile;
-    std::string file_loc = path+"/src/txt/SearchSpaceUAV_2to4.txt";
-    std::string file_loc1 = path+"/src/txt/SearchSpaceCam_2to4.txt";
+    std::string file_loc = path+"/src/txt/SearchSpaceUAV_1.5m_3to4_NEW.txt";
+    std::string file_loc1 = path+"/src/txt/SearchSpaceCam_1.5m_3to4_NEW.txt";
     pointFile.open (file_loc.c_str());
     cameraPointFile.open (file_loc1.c_str());
 
@@ -192,6 +192,15 @@ int main(int argc, char **argv)
     }
     pointFile.close();
     cameraPointFile.close();
+
+    //PCD file writing
+    //write the occlusionfreecloud to pcd file used by the coverage_quantification to calculate the percentage
+    obj.occlusionFreeCloud->width = obj.occlusionFreeCloud->points.size();
+    obj.occlusionFreeCloud->height = 1;
+    pcl::PCDWriter writer;
+    std::stringstream ss;
+    ss << res;
+    writer.write<pcl::PointXYZ> (path+"/src/pcd/occlusionFreeCloud_"+ ss.str()+"m_3to4.pcd", *(obj.occlusionFreeCloud), false);
     std::cout<<" DONE writing files"<<"\n";
 
 
@@ -203,19 +212,19 @@ int main(int argc, char **argv)
 
         //        //***original cloud & frustum cull & occlusion cull publish***
         sensor_msgs::PointCloud2 cloud1;
-        //        sensor_msgs::PointCloud2 cloud2;
+        sensor_msgs::PointCloud2 cloud2;
 
         pcl::toROSMsg(*obj.cloud, cloud1); //cloud of original (white) using original cloud
-        //        pcl::toROSMsg(*output, cloud2); geometry_msgs::PoseArray out =//cloud of frustum cull (red) using pcl::frustum cull
+        pcl::toROSMsg(*obj.occlusionFreeCloud, cloud2); //cloud of frustum cull (red) using pcl::frustum cull
 
         cloud1.header.frame_id = "base_point_cloud";
-        //        cloud2.header.frame_id = "base_point_cloud";
+        cloud2.header.frame_id = "base_point_cloud";
 
         cloud1.header.stamp = ros::Time::now();
-        //        cloud2.header.stamp = ros::Time::now();
+        cloud2.header.stamp = ros::Time::now();
 
         pub1.publish(cloud1);
-        //        pub2.publish(cloud2);
+        pub3.publish(cloud2);
 
         //visualize the filtered samples and their orientation
         filtered_vectors.header.frame_id= "base_point_cloud";

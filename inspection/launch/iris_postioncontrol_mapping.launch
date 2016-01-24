@@ -48,7 +48,10 @@
     
 <!--    /iris/odometry_sensor1/odometry-->
 <!-- static transformation  -->
- <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0 0 0.0 0 0 0 1 /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link /iris/xtion_sensor/camera_depth_optical_frame 500" />
+<!--  <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0 0 0.0 0 0 0 1 /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link /iris/xtion_sensor/camera_depth_optical_frame 500" /> -->
+ <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0 0 0.0 -0.5 0.5 -0.5 0.5 /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link /iris/xtion_sensor/camera_depth_optical_frame 500" />
+
+    
 <!-- <node pkg="tf" type="static_transform_publisher" name="link2_broadcaster" args="0 0 0.01 0 0 0 1 /iris/ground_truth/iris/ground_truth/odometry_sensorgt_link map 1000" />  -->
 <!-- <node pkg="tf" type="static_transform_publisher" name="link2_broadcaster" args="0 0 0.0 0 0 0 1 world map 1000" /> -->
 <!-- <node pkg="tf" type="static_transform_publisher" name="link3_broadcaster" args="0 0 15.04 0 0 0 1 map /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link 1000" />  -->
@@ -58,7 +61,7 @@
     
  <node name="rtabmap" pkg="rtabmap_ros" type="rtabmap" output="screen" args="$(arg args)">
 	  <param name="database_path"       type="string" value="$(arg database_path)"/>
-	  <param name="frame_id"            type="string" value="base_link"/>
+	  <param name="frame_id"            type="string" value="/iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link"/>
 	  <param name="odom_frame_id"       type="string" value="world"/>
 <!--	  <param name="wait_for_transform"  type="bool"   value="true"/>-->
 	  <param name="subscribe_depth"     type="bool"   value="true"/>
@@ -94,7 +97,7 @@
      <node if="$(arg rtabmapviz)" pkg="rtabmap_ros" type="rtabmapviz" name="rtabmapviz" args="-d $(find rtabmap_ros)/launch/config/rgbd_gui.ini" output="screen">
       <param name="subscribe_depth"     type="bool"   value="true"/>
 <!--      <param name="subscribe_odom_info" type="bool"   value="$(arg odom_info_data)"/>-->
-      <param name="frame_id"            type="string" value="base_link"/>
+      <param name="frame_id"            type="string" value="/iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link"/>
       <param name="wait_for_transform"  type="bool"   value="true"/>
     
       <remap from="rgb/image"       to="/iris/xtion_sensor/iris/xtion_sensor_camera/rgb/image_raw"/>

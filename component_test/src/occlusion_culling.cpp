@@ -12,7 +12,7 @@ OcclusionCulling::OcclusionCulling(ros::NodeHandle &n, std::string modelName):
    cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
    filtered_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
 
-//   occlusionFreeCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
+   occlusionFreeCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
    std::string path = ros::package::getPath("component_test");
    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/"+model, *cloud);
    voxelRes = 0.5;
@@ -128,7 +128,7 @@ pcl::PointCloud<pcl::PointXYZ> OcclusionCulling::extractVisibleSurface(geometry_
 {
     // 1 *****Frustum Culling*******
     pcl::PointCloud <pcl::PointXYZ>::Ptr output (new pcl::PointCloud <pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeCloud(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeCloud_local(new pcl::PointCloud<pcl::PointXYZ>);
 
     pcl::FrustumCullingTT fc (true);
     fc.setInputCloud (cloud);
@@ -225,14 +225,16 @@ pcl::PointCloud<pcl::PointXYZ> OcclusionCulling::extractVisibleSurface(geometry_
                     //std::cout<<"Box Max X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
                     lineSegments.push_back(linePoint);
 
+                    occlusionFreeCloud_local->points.push_back(ptest);
                     occlusionFreeCloud->points.push_back(ptest);
+
                 }
             }
         }
 
 
     }
-    FreeCloud.points = occlusionFreeCloud->points;
+    FreeCloud.points = occlusionFreeCloud_local->points;
     return FreeCloud;
 }
 float OcclusionCulling::calcCoveragePercent(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered)
@@ -497,7 +499,7 @@ void OcclusionCulling::visualizeFOV(geometry_msgs::Pose location)
 visualization_msgs::Marker OcclusionCulling::drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color)
 {
     visualization_msgs::Marker linksMarkerMsg;
-    linksMarkerMsg.header.frame_id="base_point_cloud"; //change to "base_point_cloud" if it is used in component test package
+    linksMarkerMsg.header.frame_id="map"; //change to "base_point_cloud" if it is used in component test package
     linksMarkerMsg.header.stamp=ros::Time::now();
     linksMarkerMsg.ns="link_marker";
     linksMarkerMsg.id = id;

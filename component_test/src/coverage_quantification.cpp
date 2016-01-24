@@ -52,8 +52,8 @@ int main(int argc, char **argv)
 
 
     std::string path = ros::package::getPath("component_test");
-    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/scaled_desktop.pcd", *originalCloud);
-    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/occlusionFreeCloud_1m.pcd", *occlusionFreeCloud);
+    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/etihad.pcd", *originalCloud);
+    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/occlusionFreeCloud_1.5m_3to4.pcd", *occlusionFreeCloud);
 
     // *******************original cloud Grid***************************
     //used VoxelGridOcclusionEstimationT since the voxelGrid does not include getcentroid function
