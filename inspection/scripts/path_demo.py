@@ -101,14 +101,14 @@ class SetpointPosition:
         def is_near(msg, x, y):
             rospy.logdebug("Position %s: local: %d, target: %d, abs diff: %d",
                            msg, x, y, abs(x - y))
-	    rospy.loginfo("Position %s: local: %d, target: %d, abs diff: %d",
-                           msg, x, y, abs(x - y))
+	    #rospy.loginfo("Position %s: local: %d, target: %d, abs diff: %d",
+                           #msg, x, y, abs(x - y))
             return abs(x - y) < 0.5
 	  #I added is_near_quet since it rotates sometimes with abs diff of 1 (I will fix it later )
         def is_near_quet(msg, x, y):
-	    rospy.loginfo("Position %s: local: %d, target: %d, abs diff: %d",
+	    rospy.logdebug("orientation %s: local: %d, target: %d, abs diff: %d",
                            msg, x, y, abs(x - y))
-            return abs(x - y) <= 1	
+            return abs(x - y) <= 2.0	
 	quaternionf = quaternion_from_euler(0, 0, self.yaw)
         if is_near('X', topic.pose.position.x, self.x) and \
            is_near('Y', topic.pose.position.y, self.y) and \
@@ -120,7 +120,14 @@ class SetpointPosition:
 	   
             self.done = True
             self.done_evt.set()
-
+            
+#def my_range(start, end, step, num):
+    #while start <= end:
+        #yield start
+        #if num < 0:
+	  #start -= step
+	#else:
+	  #start += step
 
 def setpoint_demo():
     rospy.init_node('setpoint_position_demo')
@@ -131,24 +138,52 @@ def setpoint_demo():
     setpoint = SetpointPosition()
     
     #read from a file
-    theFile = open("/home/randa/workspace/catkin_ws/src/aircraft_inspection/inspection/scripts/path.txt", "r")
+    theFile = open("/home/randa/workspace/catkin_ws/src/aircraft_inspection/inspection/scripts/50_path.txt", "r")
     
     rospy.loginfo("File Open")
 
     rospy.loginfo("TAKEOFF 1")
-    setpoint.set(4.0, -30.0, 4.0, 3.14, 3)
+    #setpoint.set(4.0, -30.0, 4.0, 3.14, 3)
+    setpoint.set(4.0, -30.0, 5.0, 3.14, 5)
     rospy.loginfo("TAKEOFF 2")
-    setpoint.set(4.0, -30.0, 9.0, 3.14, 6)
+    #setpoint.set(4.0, -30.0, 9.0, 3.14, 6)
+    setpoint.set(4.0, -30.0, 10.5, 3.14, 6)
     rospy.loginfo("MOVING using data from the file")
     #setpoint.set(4.0, -29.0, 9.0, -2.3562, 8)
     data = theFile.readlines()
+    temp_vals = []
+    temp_vals.append(10.5)
+    index=0
     for line in data:
+      index = index+1
       poses = line.split()
       print float(poses[0])
       print float(poses[1])
       print float(poses[2])
       print float(poses[3])
-      setpoint.set(float(poses[0]), float(poses[1]), float(poses[2]), float(poses[3]), 12)
+      temp_vals.append(float(poses[2]))
+      diff = temp_vals[index]-temp_vals[index-1]
+      setpoint.set(float(poses[0]), float(poses[1]), temp_vals[index-1], float(poses[3]), 6)
+      print diff
+      if diff>1.5:
+	print "diff>1"
+	start = temp_vals[index-1]
+	end = float(poses[2])
+	step = 1.5
+	while start < end:
+	    start += step
+	    setpoint.set(float(poses[0]), float(poses[1]), start, float(poses[3]), 6)
+      elif diff<-1.5:
+	print "diff<-1"
+	start = temp_vals[index-1]
+	end = float(poses[2])
+	step = 1.5
+	while start > end:
+	    start -= step
+	    setpoint.set(float(poses[0]), float(poses[1]), start, float(poses[3]), 6)
+      else:
+	print "nothing"
+	setpoint.set(float(poses[0]), float(poses[1]), float(poses[2]), float(poses[3]), 6)#12
 
     ######testing###
     #setpoint.set(4.0, -29.0, 9.0, -2.3562, 8)
