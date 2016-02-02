@@ -37,6 +37,50 @@
 #include <component_test/occlusion_culling.h>
 pcl::PointCloud<pcl::PointXYZ>::Ptr tempCloud(new pcl::PointCloud<pcl::PointXYZ>);
 
+
+//pcl::PointCloud<pcl::PointXYZ> global_cloud;
+//int count;
+//void callback(const sensor_msgs::PointCloud2::ConstPtr& recent_cloud)
+//{
+//    pcl::PointCloud<pcl::PointXYZ>::Ptr temp(new pcl::PointCloud<pcl::PointXYZ>);
+//    std::cout<<"I'm in callback"<<std::endl;
+//    OcclusionCulling obj("etihad.pcd");
+//    pcl::PointCloud<pcl::PointXYZ> temp_cloud;
+//    pcl::fromROSMsg(*recent_cloud,temp_cloud);
+//    pcl::PointCloud<pcl::PointXYZ> test;
+
+//    std::vector<int> indices;
+//    pcl::removeNaNFromPointCloud(temp_cloud, temp_cloud,indices);
+////    std::cout<< "cloud hieght & width: "<<recent_cloud->height<<" "<<recent_cloud->width<<std::endl;
+////    std::cout<< "cloud hieght & width: "<<temp_cloud.height<<" "<<temp_cloud.width<<std::endl;
+//    pcl::PointXYZ loc = temp_cloud.points.at(0);
+
+////    if (std::isnan(loc.data[0]))
+////    {
+//        std::cout<<"aaa points "<<loc.data[0]<<" " <<loc.data[1]<<" "<< loc.data[2]<<"\n";
+//        global_cloud += temp_cloud;
+//        tempCloud->points = global_cloud.points;
+//        float cov;
+//        cov = obj.calcCoveragePercent(tempCloud);
+//        std::cout<<"******* coverage percentage: "<<cov<<" % *******" <<std::endl;
+
+
+////    }
+////    else {
+////        std::cout<<"xxx points "<<loc.data[0]<<" " <<loc.data[1]<<" "<< loc.data[2]<<"\n";
+
+
+////    }
+////    std::cout<<count;
+////    if(count==0)
+////    {
+////        global_cloud = temp_cloud;
+////        count++;
+////    }
+
+
+
+//}
 void callback(const sensor_msgs::PointCloud2::ConstPtr& recent_cloud)
 {
 
@@ -59,7 +103,7 @@ int main(int argc, char **argv)
     ros::Publisher pub1 = n.advertise<sensor_msgs::PointCloud2>("originalPointCloud", 100);
     ros::Publisher pub2 = n.advertise<sensor_msgs::PointCloud2>("CoverageCloud", 100);
     std::string topic = n.resolveName("/iris/cloud_map");
-
+//    std::string topic = n.resolveName("/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points");
     ros::Subscriber sub = n.subscribe<sensor_msgs::PointCloud2>(topic, 1, callback);
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr originalCloud(new pcl::PointCloud<pcl::PointXYZ>);
@@ -98,4 +142,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-

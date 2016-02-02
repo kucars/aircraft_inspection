@@ -5,16 +5,16 @@
   <arg name="rviz"                    default="true" />
   <arg name="rtabmapviz"              default="false" /> 
 <!-- Odometry parameters: -->
-<!--  <arg name="strategy"            default="1" />  -->     <!-- Strategy: 0=BOW (bag-of-words) 1=Optical Flow -->
- <!-- <arg name="feature"             default="6" />     -->  <!-- Feature type: 0=SURF 1=SIFT 2=ORB 3=FAST/FREAK 4=FAST/BRIEF 5=GFTT/FREAK 6=GFTT/BRIEF 7=BRISK -->
- <!-- <arg name="nn"                  default="3" />   -->    <!-- Nearest neighbor strategy : 0=Linear, 1=FLANN_KDTREE (SIFT, SURF), 2=FLANN_LSH, 3=BRUTEFORCE (ORB/FREAK/BRIEF/BRISK) -->
-<!--  <arg name="max_depth"           default="4.5" />-->     <!-- Maximum features depth (m) -->
-<!--  <arg name="min_inliers"         default="20" />   -->   <!-- Minimum visual correspondences to accept a transformation (m) -->
- <!-- <arg name="inlier_distance"     default="0.02" />  -->  <!-- RANSAC maximum inliers distance (m) -->
- <!-- <arg name="local_map"           default="1000" /> -->   <!-- Local map size: number of unique features to keep track -->
- <!-- <arg name="odom_info_data"      default="true" /> -->   <!-- Fill odometry info messages with inliers/outliers data. -->
-<!--  <arg name="time_threshold"          default="0"/> -->            <!-- (ms) If not 0 ms, memory management is used to keep processing time on this fixed limit. -->
-<!--  <arg name="optimize_from_last_node" default="true"/>   -->      <!-- Optimize the map from the last node. Should be true on multi-session mapping and when time threshold is set -->
+  <arg name="strategy"            default="1" />       <!-- Strategy: 0=BOW (bag-of-words) 1=Optical Flow -->
+  <arg name="feature"             default="6" />       <!-- Feature type: 0=SURF 1=SIFT 2=ORB 3=FAST/FREAK 4=FAST/BRIEF 5=GFTT/FREAK 6=GFTT/BRIEF 7=BRISK -->
+  <arg name="nn"                  default="3" />       <!-- Nearest neighbor strategy : 0=Linear, 1=FLANN_KDTREE (SIFT, SURF), 2=FLANN_LSH, 3=BRUTEFORCE (ORB/FREAK/BRIEF/BRISK) -->
+  <arg name="max_depth"           default="4.5" />     <!-- Maximum features depth (m) -->
+  <arg name="min_inliers"         default="10" />      <!-- Minimum visual correspondences to accept a transformation (m) -->
+  <arg name="inlier_distance"     default="0.1" />    <!-- RANSAC maximum inliers distance (m) -->
+  <arg name="local_map"           default="10000" />    <!-- Local map size: number of unique features to keep track -->
+  <arg name="odom_info_data"      default="true" />    <!-- Fill odometry info messages with inliers/outliers data. -->
+  <arg name="time_threshold"          default="0"/>             <!-- (ms) If not 0 ms, memory management is used to keep processing time on this fixed limit. -->
+  <arg name="optimize_from_last_node" default="true"/>         <!-- Optimize the map from the last node. Should be true on multi-session mapping and when time threshold is set -->
 
   
   <arg name="database_path"     default="rtabmap.db"/>

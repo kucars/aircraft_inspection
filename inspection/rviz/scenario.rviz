@@ -96,7 +96,7 @@ Visualization Manager:
       Class: rviz/PointCloud2
       Color: 255; 255; 255
       Color Transformer: RGB8
-      Decay Time: 100
+      Decay Time: 0
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
@@ -182,22 +182,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 80.5337
+      Distance: 23.491
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 33.8532
-        Y: 7.30607
-        Z: 17.5243
+        X: 20.2057
+        Y: -25.263
+        Z: 18.0964
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.17874
+      Pitch: 0.93374
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.81119
+      Yaw: 6.10619
     Saved: ~
 Window Geometry:
   Camera:

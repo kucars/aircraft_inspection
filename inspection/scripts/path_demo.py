@@ -138,7 +138,7 @@ def setpoint_demo():
     setpoint = SetpointPosition()
     
     #read from a file
-    theFile = open("/home/randa/workspace/catkin_ws/src/aircraft_inspection/inspection/scripts/50_path.txt", "r")
+    theFile = open("/home/randa/workspace/catkin_ws/src/aircraft_inspection/inspection/scripts/3_20path.txt", "r")
     
     rospy.loginfo("File Open")
 
@@ -163,27 +163,28 @@ def setpoint_demo():
       print float(poses[3])
       temp_vals.append(float(poses[2]))
       diff = temp_vals[index]-temp_vals[index-1]
-      setpoint.set(float(poses[0]), float(poses[1]), temp_vals[index-1], float(poses[3]), 6)
+      setpoint.set(float(poses[0]), float(poses[1]), temp_vals[index-1], float(poses[3]), 10)
       print diff
-      if diff>1.5:
+      if diff>1.5 and temp_vals[index]>1.5:
 	print "diff>1"
 	start = temp_vals[index-1]
 	end = float(poses[2])
 	step = 1.5
-	while start < end:
+	while start < end and temp_vals[index]>1.5:
 	    start += step
-	    setpoint.set(float(poses[0]), float(poses[1]), start, float(poses[3]), 6)
-      elif diff<-1.5:
+	    setpoint.set(float(poses[0]), float(poses[1]), start, float(poses[3]), 4)
+      elif diff<-1.5 and temp_vals[index]>1.5:
 	print "diff<-1"
 	start = temp_vals[index-1]
 	end = float(poses[2])
 	step = 1.5
 	while start > end:
 	    start -= step
-	    setpoint.set(float(poses[0]), float(poses[1]), start, float(poses[3]), 6)
+	    setpoint.set(float(poses[0]), float(poses[1]), start, float(poses[3]), 4)
       else:
 	print "nothing"
-	setpoint.set(float(poses[0]), float(poses[1]), float(poses[2]), float(poses[3]), 6)#12
+	if temp_vals[index]>1.5:
+	  setpoint.set(float(poses[0]), float(poses[1]), float(poses[2]), float(poses[3]), 4)#12
 
     ######testing###
     #setpoint.set(4.0, -29.0, 9.0, -2.3562, 8)
