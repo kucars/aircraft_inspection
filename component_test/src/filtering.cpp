@@ -95,7 +95,7 @@ int main(int argc, char **argv)
     ros::Publisher lines_pub2 = n.advertise<visualization_msgs::Marker>("fov_top", 10);
     ros::Publisher lines_pub3 = n.advertise<visualization_msgs::Marker>("fov_bottom", 10);
 
-    OcclusionCulling obj(n,"etihad.pcd");
+    OcclusionCulling obj(n,"etihad_nowheels_densed.pcd");
 
 //    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
     std::string path = ros::package::getPath("component_test");
@@ -145,7 +145,7 @@ int main(int argc, char **argv)
     std::list<CGALTriangle> triangles;
     int intersectionsCount=0;
     std::vector<geometry_msgs::Vector3> points_rpy;
-    std::string str = path+"/src/mesh/etihad.obj";
+    std::string str = path+"/src/mesh/etihad_nowheels.obj";
 
     ros::Time filtering_begin = ros::Time::now();
     loadOBJFile(str.c_str(), pt1, triangles);
@@ -168,7 +168,7 @@ int main(int argc, char **argv)
         geometry_msgs::PoseArray vectors;
         if(intersectionsCount%2 != 1)
         {
-            distanceFiltering(9,16,j,vectors, tree, a, marker_array);
+            distanceFiltering(4,16,j,vectors, tree, a, marker_array);
             coverageFiltering(vectors,filtered_vectors,camPoses,obj);
             std::cout << "filtered Vectors #"<<filtered_vectors.poses.size()<< std::endl;
         }
@@ -180,8 +180,8 @@ int main(int argc, char **argv)
 
     //....write to file.....
     ofstream pointFile,cameraPointFile;
-    std::string file_loc = path+"/src/txt/SearchSpaceUAV_1.5m_3to4_NEW.txt";
-    std::string file_loc1 = path+"/src/txt/SearchSpaceCam_1.5m_3to4_NEW.txt";
+    std::string file_loc = path+"/src/txt/SearchSpaceUAV_1.5m_2to4_NEW_etihadNoWheels.txt";
+    std::string file_loc1 = path+"/src/txt/SearchSpaceCam_1.5m_2to4_NEW_etihadNoWheels.txt";
     pointFile.open (file_loc.c_str());
     cameraPointFile.open (file_loc1.c_str());
 
@@ -200,7 +200,7 @@ int main(int argc, char **argv)
     pcl::PCDWriter writer;
     std::stringstream ss;
     ss << res;
-    writer.write<pcl::PointXYZ> (path+"/src/pcd/occlusionFreeCloud_"+ ss.str()+"m_3to4.pcd", *(obj.occlusionFreeCloud), false);
+    writer.write<pcl::PointXYZ> (path+"/src/pcd/occlusionFreeCloud_"+ ss.str()+"m_2to4_etihadNoWheels.pcd", *(obj.occlusionFreeCloud), false);
     std::cout<<" DONE writing files"<<"\n";
 
 

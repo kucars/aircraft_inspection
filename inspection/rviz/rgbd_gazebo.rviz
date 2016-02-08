@@ -10,7 +10,7 @@ Panels:
         - /Image1
         - /MapCloud1
         - /Info1
-      Splitter Ratio: 0.411058
+      Splitter Ratio: 0.708683
     Tree Height: 645
   - Class: rviz/Selection
     Name: Selection
@@ -54,8 +54,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 2.02684
-        Min Value: -1.12646
+        Max Value: 7.68439
+        Min Value: -0.0945946
         Value: true
       Axis: Z
       Channel Name: rgb
@@ -66,7 +66,7 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 1.25382e-38
+      Max Intensity: 1.28148e-38
       Min Color: 0; 0; 0
       Min Intensity: 0
       Name: PointCloud2
@@ -128,14 +128,14 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
+        Max Value: 2.05638
+        Min Value: -2.07878
         Value: true
       Axis: Z
       Channel Name: intensity
       Class: rtabmap_ros/MapCloud
       Cloud decimation: 4
-      Cloud max depth (m): 4
+      Cloud max depth (m): 8.5
       Cloud voxel size (m): 0.01
       Color: 255; 255; 255
       Color Transformer: RGB8
@@ -155,7 +155,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.01
       Style: Points
-      Topic: /rtabmap/mapData
+      Topic: /iris/mapData
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -184,22 +184,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 55.2226
+      Distance: 85.1553
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.18239
-        Y: -12.8688
-        Z: 1.24832
+        X: -0.68332
+        Y: 29.9755
+        Z: 0.966969
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.205204
+      Pitch: 0.305205
       Target Frame: base_link
       Value: Orbit (rviz)
-      Yaw: 5.66872
+      Yaw: 5.63375
     Saved: ~
 Window Geometry:
   Displays:

@@ -102,7 +102,8 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
     ros::Publisher pub1 = n.advertise<sensor_msgs::PointCloud2>("originalPointCloud", 100);
     ros::Publisher pub2 = n.advertise<sensor_msgs::PointCloud2>("CoverageCloud", 100);
-    std::string topic = n.resolveName("/iris/cloud_map");
+//    std::string topic = n.resolveName("/iris/cloud_map");
+    std::string topic = n.resolveName("/octomap_point_cloud_centers");
 //    std::string topic = n.resolveName("/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points");
     ros::Subscriber sub = n.subscribe<sensor_msgs::PointCloud2>(topic, 1, callback);
 
