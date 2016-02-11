@@ -103,7 +103,7 @@ class SetpointPosition:
                            msg, x, y, abs(x - y))
 	    #rospy.loginfo("Position %s: local: %d, target: %d, abs diff: %d",
                            #msg, x, y, abs(x - y))
-            return abs(x - y) < 0.5
+            return abs(x - y) < 0.2
 	  #I added is_near_quet since it rotates sometimes with abs diff of 1 (I will fix it later )
         def is_near_quet(msg, x, y):
 	    rospy.logdebug("orientation %s: local: %d, target: %d, abs diff: %d",
@@ -143,17 +143,20 @@ def setpoint_demo():
     rospy.loginfo("File Open")
     
     begin= rospy.get_time()    # stamp should update
+    
     rospy.loginfo("TAKEOFF 1")
-    #setpoint.set(4.0, -30.0, 4.0, 3.14, 3)
-    setpoint.set(4.0, -30.0, 5.0, 3.14, 5)
+    setpoint.set(4.5, 24.0, 5.0, 3.14, 5)
     rospy.loginfo("TAKEOFF 2")
-    #setpoint.set(4.0, -30.0, 9.0, 3.14, 6)
-    setpoint.set(4.0, -30.0, 10.5, 3.14, 6)  
+    setpoint.set(4.5, 24.0, 7.0, 3.14, 6)
+    rospy.loginfo("TAKEOFF 4")
+    setpoint.set(4.5, 24.0, 7.0, 2.3562, 6)
+    
+    
     rospy.loginfo("MOVING using data from the file")
     #setpoint.set(4.0, -29.0, 9.0, -2.3562, 8)
     data = theFile.readlines()
     temp_vals = []
-    temp_vals.append(10.5)
+    temp_vals.append(7.0)
     index=0
     for line in data:
       index = index+1

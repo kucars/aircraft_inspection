@@ -72,19 +72,21 @@
 	  <remap from="rgb/image"       to="/iris/xtion_sensor/iris/xtion_sensor_camera/rgb/image_raw"/>
   	  <remap from="depth/image"     to="/iris/xtion_sensor/iris/xtion_sensor_camera/depth/image_raw"/>
   	  <remap from="rgb/camera_info" to="/iris/xtion_sensor/iris/xtion_sensor_camera/rgb/camera_info"/>
-  	  
+  	  <remap from="rtabmap/get_map" to="/iris/get_map"/>
+
  
 	
 	  <!-- RTAB-Map's parameters: do "rosrun rtabmap rtabmap (double-dash)params" to see the list of available parameters. -->
-	  <param name="RGBD/LocalLoopDetectionSpace" type="string" value="true"/>   <!-- Local loop closure detection (using estimated position) with locations in WM -->
+	  <param name="RGBD/LocalLoopDetectionSpace" type="string" value="false"/>   <!-- Local loop closure detection (using estimated position) with locations in WM -->
 	  <param name="RGBD/OptimizeFromGraphEnd"    type="string" value="false"/>  <!-- Set to false to generate map correction between /map and /odom -->
-	  <param name="Kp/MaxDepth"                  type="string" value="5.0"/>
-	  <param name="LccIcp/Type"                  type="string" value="2"/>      <!-- Loop closure transformation refining with ICP: 0=No ICP, 1=ICP 3D, 2=ICP 2D -->
+	  <param name="Kp/MaxDepth"                  type="string" value="8.5"/>
+	  <param name="LccIcp/Type"                  type="string" value="1"/>      <!-- Loop closure transformation refining with ICP: 0=No ICP, 1=ICP 3D, 2=ICP 2D -->
 	  <param name="LccIcp2/CorrespondenceRatio"  type="string" value="0.05"/>
 	  <param name="LccBow/MinInliers"            type="string" value="10"/>      <!-- 3D visual words minimum inliers to accept loop closure -->
 	  <param name="LccBow/InlierDistance"        type="string" value="0.1"/>    <!-- 3D visual words correspondence distance -->
 	  <param name="RGBD/AngularUpdate"           type="string" value="0.1"/>    <!-- Update map only if the robot is moving -->
 	  <param name="RGBD/LinearUpdate"            type="string" value="0.1"/>    <!-- Update map only if the robot is moving -->
+	  <param name="RGBD/LocalImmunizationRatio"  type="string" value="0.50"/>    
 	  <param name="Rtabmap/TimeThr"              type="string" value="700"/>
 	  <param name="Mem/RehearsalSimilarity"      type="string" value="0.30"/>   
 	  
@@ -113,9 +115,12 @@
     <remap from="depth/image"     to="/iris/xtion_sensor/iris/xtion_sensor_camera/depth/image_raw"/>
     <remap from="rgb/camera_info" to="/iris/xtion_sensor/iris/xtion_sensor_camera/rgb/camera_info"/>
     <remap from="cloud"           to="voxel_cloud" />
+    <remap from="rtabmap/get_map" to="/iris/get_map"/>
 
     <param name="decimation" type="double" value="2"/>
     <param name="voxel_size" type="double" value="0.02"/>
+    <param name="RGBD/LocalImmunizationRatio"  type="string" value="0.5"/>    
+
   </node>
   </group>
  

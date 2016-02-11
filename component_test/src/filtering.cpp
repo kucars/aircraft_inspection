@@ -111,7 +111,7 @@ int main(int argc, char **argv)
     int z_space=21;// the height
     float res=1.5;
     ros::Time disretization_begin = ros::Time::now();
-    for (float z=(1*z_space) ; z > -2; z-=res)//the length of the aircraft
+    for (float z=(1*z_space) ; z > 0; z-=res)//the length of the aircraft (it was >-2 because of the wheels)
     {
 
         for (float y=-1*(y_space) ; y< y_space; y+=res)//the hight of the aircraft
@@ -168,7 +168,7 @@ int main(int argc, char **argv)
         geometry_msgs::PoseArray vectors;
         if(intersectionsCount%2 != 1)
         {
-            distanceFiltering(4,16,j,vectors, tree, a, marker_array);
+            distanceFiltering(1,16,j,vectors, tree, a, marker_array);
             coverageFiltering(vectors,filtered_vectors,camPoses,obj);
             std::cout << "filtered Vectors #"<<filtered_vectors.poses.size()<< std::endl;
         }
@@ -180,8 +180,8 @@ int main(int argc, char **argv)
 
     //....write to file.....
     ofstream pointFile,cameraPointFile;
-    std::string file_loc = path+"/src/txt/SearchSpaceUAV_1.5m_2to4_NEW_etihadNoWheels.txt";
-    std::string file_loc1 = path+"/src/txt/SearchSpaceCam_1.5m_2to4_NEW_etihadNoWheels.txt";
+    std::string file_loc = path+"/src/txt/SearchSpaceUAV_1.5m_1to4_NEW_etihadNoWheels.txt";
+    std::string file_loc1 = path+"/src/txt/SearchSpaceCam_1.5m_1to4_NEW_etihadNoWheels.txt";
     pointFile.open (file_loc.c_str());
     cameraPointFile.open (file_loc1.c_str());
 
@@ -200,7 +200,7 @@ int main(int argc, char **argv)
     pcl::PCDWriter writer;
     std::stringstream ss;
     ss << res;
-    writer.write<pcl::PointXYZ> (path+"/src/pcd/occlusionFreeCloud_"+ ss.str()+"m_2to4_etihadNoWheels.pcd", *(obj.occlusionFreeCloud), false);
+    writer.write<pcl::PointXYZ> (path+"/src/pcd/occlusionFreeCloud_"+ ss.str()+"m_1to4_etihadNoWheels.pcd", *(obj.occlusionFreeCloud), false);
     std::cout<<" DONE writing files"<<"\n";
 
 
