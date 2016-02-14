@@ -458,6 +458,7 @@ void OcclusionCulling::visualizeFOV(geometry_msgs::Pose location)
 
     //*** visualization the FOV *****
     std::vector<geometry_msgs::Point> fov_points;
+    int c_color[3];
     geometry_msgs::Point point1;
     point1.x=fc.fp_bl[0];point1.y=fc.fp_bl[1];point1.z=fc.fp_bl[2]; fov_points.push_back(point1);//0
     point1.x=fc.fp_br[0];point1.y=fc.fp_br[1];point1.z=fc.fp_br[2]; fov_points.push_back(point1);//1
@@ -468,35 +469,42 @@ void OcclusionCulling::visualizeFOV(geometry_msgs::Pose location)
     point1.x=fc.np_tr[0];point1.y=fc.np_tr[1];point1.z=fc.np_tr[2]; fov_points.push_back(point1);//6
     point1.x=fc.np_tl[0];point1.y=fc.np_tl[1];point1.z=fc.np_tl[2]; fov_points.push_back(point1);//7
 
-    std::vector<geometry_msgs::Point> fov_linesNearFar;
-    fov_linesNearFar.push_back(fov_points[0]);fov_linesNearFar.push_back(fov_points[1]);
-    fov_linesNearFar.push_back(fov_points[1]);fov_linesNearFar.push_back(fov_points[2]);
-    fov_linesNearFar.push_back(fov_points[2]);fov_linesNearFar.push_back(fov_points[3]);
-    fov_linesNearFar.push_back(fov_points[3]);fov_linesNearFar.push_back(fov_points[0]);
+    std::vector<geometry_msgs::Point> fov_linesNear;
+    fov_linesNear.push_back(fov_points[0]);fov_linesNear.push_back(fov_points[1]);
+    fov_linesNear.push_back(fov_points[1]);fov_linesNear.push_back(fov_points[2]);
+    fov_linesNear.push_back(fov_points[2]);fov_linesNear.push_back(fov_points[3]);
+    fov_linesNear.push_back(fov_points[3]);fov_linesNear.push_back(fov_points[0]);
+    c_color[0]=1; c_color[1]=1; c_color[2]=0;
+    linesList1 = drawLines(fov_linesNear,id++,c_color);//red
 
-    fov_linesNearFar.push_back(fov_points[4]);fov_linesNearFar.push_back(fov_points[5]);
-    fov_linesNearFar.push_back(fov_points[5]);fov_linesNearFar.push_back(fov_points[6]);
-    fov_linesNearFar.push_back(fov_points[6]);fov_linesNearFar.push_back(fov_points[7]);
-    fov_linesNearFar.push_back(fov_points[7]);fov_linesNearFar.push_back(fov_points[4]);
-    linesList1 = drawLines(fov_linesNearFar,id++,1);//red
+    std::vector<geometry_msgs::Point> fov_linesFar;
+    fov_linesFar.push_back(fov_points[4]);fov_linesFar.push_back(fov_points[5]);
+    fov_linesFar.push_back(fov_points[5]);fov_linesFar.push_back(fov_points[6]);
+    fov_linesFar.push_back(fov_points[6]);fov_linesFar.push_back(fov_points[7]);
+    fov_linesFar.push_back(fov_points[7]);fov_linesFar.push_back(fov_points[4]);
+    c_color[0]=1; c_color[1]=0; c_color[2]=0;
+    linesList2 = drawLines(fov_linesFar,id++,c_color);//red
 
 
     std::vector<geometry_msgs::Point> fov_linestop;
     fov_linestop.push_back(fov_points[7]);fov_linestop.push_back(fov_points[3]);//top
     fov_linestop.push_back(fov_points[6]);fov_linestop.push_back(fov_points[2]);//top
-    linesList2 = drawLines(fov_linestop,id++,2);//green
+    c_color[0]=0; c_color[1]=1; c_color[2]=0;
+    linesList3 = drawLines(fov_linestop,id++,c_color);//green
 
     std::vector<geometry_msgs::Point> fov_linesbottom;
     fov_linesbottom.push_back(fov_points[5]);fov_linesbottom.push_back(fov_points[1]);//bottom
     fov_linesbottom.push_back(fov_points[4]);fov_linesbottom.push_back(fov_points[0]);//bottom
-    linesList3 = drawLines(fov_linesbottom,id++,3);//blue
+    c_color[0]=0; c_color[1]=0; c_color[2]=1;
+    linesList4 = drawLines(fov_linesbottom,id++,c_color);//blue
 
     marker_array.markers.push_back(linesList1);
     marker_array.markers.push_back(linesList2);
     marker_array.markers.push_back(linesList3);
+    marker_array.markers.push_back(linesList4);
     fov_pub.publish(marker_array);
 }
-visualization_msgs::Marker OcclusionCulling::drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color)
+visualization_msgs::Marker OcclusionCulling::drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color[])
 {
     visualization_msgs::Marker linksMarkerMsg;
     linksMarkerMsg.header.frame_id="map"; //change to "base_point_cloud" if it is used in component test package
@@ -504,32 +512,32 @@ visualization_msgs::Marker OcclusionCulling::drawLines(std::vector<geometry_msgs
     linksMarkerMsg.ns="link_marker";
     linksMarkerMsg.id = id;
     linksMarkerMsg.type = visualization_msgs::Marker::LINE_LIST;
-    linksMarkerMsg.scale.x = 0.03;
+    linksMarkerMsg.scale.x = 0.08;//0.03
     linksMarkerMsg.action  = visualization_msgs::Marker::ADD;
     linksMarkerMsg.lifetime  = ros::Duration(1000);
     std_msgs::ColorRGBA color;
-//    color.r = 1.0f; color.g=.0f; color.b=.0f, color.a=1.0f;
-    if(c_color == 1)
-    {
-        color.r = 1.0;
-        color.g = 0.0;
-        color.b = 0.0;
-        color.a = 1.0;
-    }
-    else if(c_color == 2)
-    {
-        color.r = 0.0;
-        color.g = 1.0;
-        color.b = 0.0;
-        color.a = 1.0;
-    }
-    else
-    {
-        color.r = 0.0;
-        color.g = 0.0;
-        color.b = 1.0;
-        color.a = 1.0;
-    }
+    color.r = (float)c_color[0]; color.g=(float)c_color[1]; color.b=(float)c_color[2], color.a=1.0f;
+//    if(c_color == 1)
+//    {
+//        color.r = 1.0;
+//        color.g = 0.0;
+//        color.b = 0.0;
+//        color.a = 1.0;
+//    }
+//    else if(c_color == 2)
+//    {
+//        color.r = 0.0;
+//        color.g = 1.0;
+//        color.b = 0.0;
+//        color.a = 1.0;
+//    }
+//    else
+//    {
+//        color.r = 0.0;
+//        color.g = 0.0;
+//        color.b = 1.0;
+//        color.a = 1.0;
+//    }
     std::vector<geometry_msgs::Point>::iterator linksIterator;
     for(linksIterator = links.begin();linksIterator != links.end();linksIterator++)
     {

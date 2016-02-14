@@ -41,7 +41,7 @@ public:
     double id;
     pcl::VoxelGridOcclusionEstimationT voxelFilterOriginal;
     Eigen::Vector3i  max_b1, min_b1;
-    visualization_msgs::Marker linesList1,linesList2,linesList3;
+    visualization_msgs::Marker linesList1,linesList2,linesList3,linesList4;
     visualization_msgs::MarkerArray marker_array;
 
 
@@ -54,7 +54,7 @@ public:
     //    float calcCoveragePercent(geometry_msgs::Pose location);
     float calcCoveragePercent(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered);
     void visualizeFOV(geometry_msgs::Pose location);
-    visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color);
+    visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color[]);
 
 
 };
