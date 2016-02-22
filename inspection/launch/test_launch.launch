@@ -1,0 +1,80 @@
+<?xml version="1.0" ?>
+<launch>
+  
+<arg name="ns" default="rtabmap"/>
+  <arg name="rviz"                    default="true" />
+  <arg name="args"              default="--delete_db_on_start"/>
+  <arg name="database_path"     default="rtabmap.db"/>
+  <arg name="localization"      default="false"/>
+  <arg name="rtabmapviz"              default="true" /> 
+
+
+
+<group ns="$(arg ns)">
+<!--    <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0 0 0.0 -0.5 0.5 -0.5 0.5 /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link /iris/xtion_sensor/camera_depth_optical_frame 500" /> -->
+    
+ <node name="rtabmap" pkg="rtabmap_ros" type="rtabmap" output="screen">
+	  <param name="database_path"       type="string" value="$(arg database_path)"/>
+	  <param name="frame_id"            type="string" value="/iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link"/>
+	  <param name="odom_frame_id"       type="string" value="world"/>
+<!--	  <param name="wait_for_transform"  type="bool"   value="true"/>-->
+	  <param name="subscribe_depth"     type="bool"   value="true"/>
+<!--	  <param name="subscribe_laserScan" type="bool"   value="true"/>-->
+	  <remap from="odom" to="/iris/ground_truth/odometry"/>
+	  <!-- inputs -->
+<!--	  <remap from="scan" to="/scan"/>-->
+	  <remap from="rgb/image"       to="/iris/xtion_sensor/iris/xtion_sensor_camera/rgb/image_raw"/>
+  	  <remap from="depth/image"     to="/iris/xtion_sensor/iris/xtion_sensor_camera/depth/image_raw"/>
+  	  <remap from="rgb/camera_info" to="/iris/xtion_sensor/iris/xtion_sensor_camera/rgb/camera_info"/>
+<!--  	  <remap from="rtabmap/get_map" to="/iris/get_map"/>-->
+
+ 
+	
+	  <!-- RTAB-Map's parameters: do "rosrun rtabmap rtabmap (double-dash)params" to see the list of available parameters. -->
+	<!--  <param name="RGBD/LocalLoopDetectionSpace" type="string" value="false"/> -->  <!-- Local loop closure detection (using estimated position) with locations in WM -->
+<!--	  <param name="RGBD/OptimizeFromGraphEnd"    type="string" value="false"/>-->  <!-- Set to false to generate map correction between /map and /odom -->
+	  <!--<param name="cloud_max_depth"                  type="string" value="8.5"/>-->
+	  <!--<param name="LccIcp/Type"                  type="string" value="1"/> -->     <!-- Loop closure transformation refining with ICP: 0=No ICP, 1=ICP 3D, 2=ICP 2D -->
+<!--	  <param name="LccIcp2/CorrespondenceRatio"  type="string" value="0.05"/>-->
+	<!--  <param name="LccBow/MinInliers"            type="string" value="10"/> -->     <!-- 3D visual words minimum inliers to accept loop closure -->
+	<!--  <param name="LccBow/InlierDistance"        type="string" value="0.1"/>-->    <!-- 3D visual words correspondence distance -->
+	 <!-- <param name="RGBD/AngularUpdate"           type="string" value="0.1"/> -->   <!-- Update map only if the robot is moving -->
+	  <!--<param name="RGBD/LinearUpdate"            type="string" value="0.1"/>  -->  <!-- Update map only if the robot is moving -->
+<!-- 	  <param name="RGBD/LocalImmunizationRatio"  type="string" value="0.50"/>     -->
+<!-- 	  <param name="Rtabmap/TimeThr"              type="string" value="700"/> -->
+<!-- 	  <param name="Mem/RehearsalSimilarity"      type="string" value="0.30"/>    -->
+<!-- 	  <param name="Mem/SaveDepth16Format"      type="string" value="false"/>    -->
+	  <param name="Kp/WordsPerImage" type="string" value="-1"/>
+	  <!-- localization mode -->
+	  <param     if="$(arg localization)" name="Mem/IncrementalMemory" type="string" value="false"/>
+	  <param unless="$(arg localization)" name="Mem/IncrementalMemory" type="string" value="true"/>
+	  <param name="Mem/InitWMWithAllNodes" type="string" value="$(arg localization)"/> 
+    </node>
+    <node if="$(arg rtabmapviz)" pkg="rtabmap_ros" type="rtabmapviz" name="rtabmapviz" args="-d $(find rtabmap_ros)/launch/config/rgbd_gui.ini" output="screen">
+      <param name="subscribe_depth"     type="bool"   value="true"/>
+<!--      <param name="subscribe_odom_info" type="bool"   value="$(arg odom_info_data)"/>-->
+      <param name="frame_id"            type="string" value="/iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link"/>
+      <param name="wait_for_transform"  type="bool"   value="true"/>
+    
+      <remap from="rgb/image"       to="/iris/xtion_sensor/iris/xtion_sensor_camera/rgb/image_raw"/>
+      <remap from="depth/image"     to="/iris/xtion_sensor/iris/xtion_sensor_camera/depth/image_raw"/>
+      <remap from="rgb/camera_info" to="/iris/xtion_sensor/iris/xtion_sensor_camera/rgb/camera_info"/>
+    </node>
+  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="rviz" args="-d $(find aircraft_inspection)/rviz/rgbd_gazebo.rviz"/>
+  <!-- sync cloud with odometry and voxelize the point cloud (for fast visualization in rviz) -->
+  <node if="$(arg rviz)" pkg="nodelet" type="nodelet" name="points_xyzrgb" args="load rtabmap_ros/point_cloud_xyzrgb standalone_nodelet">
+    <remap from="rgb/image"       to="/iris/xtion_sensor/iris/xtion_sensor_camera/rgb/image_raw"/>
+    <remap from="depth/image"     to="/iris/xtion_sensor/iris/xtion_sensor_camera/depth/image_raw"/>
+    <remap from="rgb/camera_info" to="/iris/xtion_sensor/iris/xtion_sensor_camera/rgb/camera_info"/>
+    <remap from="cloud"           to="voxel_cloud" />
+   <!-- <remap from="rtabmap/get_map" to="/iris/get_map"/>-->
+
+ <!--   <param name="decimation" type="double" value="2"/>
+    <param name="voxel_size" type="double" value="0.02"/>
+    <param name="RGBD/LocalImmunizationRatio"  type="string" value="0.5"/>   --> 
+
+  </node>
+  
+</group>
+
+</launch>

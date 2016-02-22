@@ -38,9 +38,10 @@
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr tempCloud(new pcl::PointCloud<pcl::PointXYZ>);
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr tempCloud2(new pcl::PointCloud<pcl::PointXYZRGB>);
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr globalCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
 
 
-//pcl::PointCloud<pcl::PointXYZ> global_cloud;
+pcl::PointCloud<pcl::PointXYZRGB> global_cloud;
 //int count;
 //void callback(const sensor_msgs::PointCloud2::ConstPtr& recent_cloud)
 //{
@@ -87,23 +88,28 @@ void callback(const sensor_msgs::PointCloud2::ConstPtr& recent_cloud)
 {
 
     std::cout<<"I'm in callback"<<std::endl;
-    OcclusionCulling obj("etihad.pcd");
+    OcclusionCulling obj("etihad_nowheels_densed.pcd");//%%%%%RANDA CHECK IMP %%%%
     pcl::PointCloud<pcl::PointXYZ> temp_cloud;
     pcl::PointCloud<pcl::PointXYZRGB> temp_cloud2;
     pcl::fromROSMsg(*recent_cloud,temp_cloud);
     pcl::fromROSMsg(*recent_cloud,temp_cloud2);
-
+    global_cloud += temp_cloud2;
     tempCloud->points = temp_cloud.points;
     tempCloud2->points = temp_cloud2.points;
+    globalCloud->points = global_cloud.points;
     float cov;
     cov = obj.calcCoveragePercent(tempCloud);
     std::cout<<"******* coverage percentage: "<<cov<<" % *******" <<std::endl;
 
     tempCloud2->width = tempCloud2->points.size();
     tempCloud2->height = 1;
+    globalCloud->width = globalCloud->points.size();
+    globalCloud->height = 1;
     std::string path = ros::package::getPath("component_test");
-    pcl::PCDWriter writer;
-    writer.write<pcl::PointXYZRGB> (path+"/src/pcd/trial.pcd", *(tempCloud2), false);
+    pcl::PCDWriter writer,writer1;
+//    writer.write<pcl::PointXYZRGB> (path+"/src/pcd/trial.pcd", *(tempCloud2), false);
+//   writer1.write<pcl::PointXYZRGB> (path+"/src/pcd/trial2.pcd", *(globalCloud), false);
+
     std::cout<<" DONE writing files"<<"\n";
 }
 
@@ -114,7 +120,8 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
     ros::Publisher pub1 = n.advertise<sensor_msgs::PointCloud2>("originalPointCloud", 100);
     ros::Publisher pub2 = n.advertise<sensor_msgs::PointCloud2>("CoverageCloud", 100);
-   std::string topic = n.resolveName("/iris/cloud_map");
+   std::string topic = n.resolveName("/rtabmap/cloud_map");
+//   std::string topic = n.resolveName("/iris/cloud_map");
 //     std::string topic = n.resolveName("/octomap_point_cloud_centers");
 //    std::string topic = n.resolveName("/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points");
     ros::Subscriber sub = n.subscribe<sensor_msgs::PointCloud2>(topic, 1, callback);
@@ -122,7 +129,7 @@ int main(int argc, char **argv)
     pcl::PointCloud<pcl::PointXYZ>::Ptr originalCloud(new pcl::PointCloud<pcl::PointXYZ>);
 
     std::string path = ros::package::getPath("component_test");
-    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/etihad.pcd", *originalCloud);
+    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/etihad_nowheels_densed.pcd", *originalCloud);
 
 
     // *****************Rviz Visualization ************
@@ -138,7 +145,7 @@ int main(int argc, char **argv)
 
 
         pcl::toROSMsg(*originalCloud, cloud1); //cloud of original (white) using original cloud
-        pcl::toROSMsg(*tempCloud, cloud2); //cloud of the not occluded voxels (blue) using occlusion culling
+        pcl::toROSMsg(*globalCloud, cloud2); //cloud of the not occluded voxels (blue) using occlusion culling
 
         cloud1.header.frame_id = "map";
         cloud2.header.frame_id = "map";

@@ -2,8 +2,8 @@
 <launch>
   
   <arg name="ns" default="iris"/>
-  <arg name="rviz"                    default="true" />
-  <arg name="rtabmapviz"              default="false" /> 
+  <arg name="rviz"                    default="false" />
+  <arg name="rtabmapviz"              default="true" /> 
 <!-- Odometry parameters: -->
   <arg name="strategy"            default="1" />       <!-- Strategy: 0=BOW (bag-of-words) 1=Optical Flow -->
   <arg name="feature"             default="6" />       <!-- Feature type: 0=SURF 1=SIFT 2=ORB 3=FAST/FREAK 4=FAST/BRIEF 5=GFTT/FREAK 6=GFTT/BRIEF 7=BRISK -->
@@ -37,14 +37,14 @@
 </group>
 <group ns="$(arg ns)">
    <!-- Odometry : ONLY for testing without the actual robot! /odom TF should not be already published. -->
-    <node if="$(arg rgbd_odometry)" pkg="rtabmap_ros" type="rgbd_odometry" name="rgbd_odometry" output="screen">
+<!--    <node if="$(arg rgbd_odometry)" pkg="rtabmap_ros" type="rgbd_odometry" name="rgbd_odometry" output="screen">
       <param name="frame_id"           type="string" value="iris/xtion_sensor/camera_depth_optical_frame"/>
       <param name="wait_for_transform" type="bool"   value="true"/>
       <param name="Odom/Force2D"       type="string"   value="true"/>
       <remap from="rgb/image"       to="/iris/xtion_sensor/iris/xtion_sensor_camera/rgb/image_raw"/>
       <remap from="depth/image"     to="/iris/xtion_sensor/iris/xtion_sensor_camera/depth/image_raw"/>
       <remap from="rgb/camera_info" to="/iris/xtion_sensor/iris/xtion_sensor_camera/rgb/camera_info"/>
-    </node>
+    </node>-->
     
 <!--    /iris/odometry_sensor1/odometry-->
 <!-- static transformation  -->
@@ -89,7 +89,8 @@
 	  <param name="RGBD/LocalImmunizationRatio"  type="string" value="0.50"/>    
 	  <param name="Rtabmap/TimeThr"              type="string" value="700"/>
 	  <param name="Mem/RehearsalSimilarity"      type="string" value="0.30"/>   
-	  
+	  <param name="Mem/SaveDepth16Format"      type="string" value="false"/>   
+
 	  <!-- localization mode -->
 	  <param     if="$(arg localization)" name="Mem/IncrementalMemory" type="string" value="false"/>
 	  <param unless="$(arg localization)" name="Mem/IncrementalMemory" type="string" value="true"/>
