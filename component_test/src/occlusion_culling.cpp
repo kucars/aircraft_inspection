@@ -13,6 +13,7 @@ OcclusionCulling::OcclusionCulling(ros::NodeHandle &n, std::string modelName):
    filtered_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
 
    occlusionFreeCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
+   FrustumCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
    std::string path = ros::package::getPath("component_test");
    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/"+model, *cloud);
    voxelRes = 0.5;
@@ -50,6 +51,7 @@ OcclusionCulling::OcclusionCulling(std::string modelName):
 {
     cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
     filtered_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
+    FrustumCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
 
 //    occlusionFreeCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
     std::string path = ros::package::getPath("component_test");
@@ -88,6 +90,7 @@ OcclusionCulling::OcclusionCulling():
 {
     cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
     filtered_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
+    FrustumCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
 
 //    occlusionFreeCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
     std::string path = ros::package::getPath("component_test");
@@ -159,7 +162,7 @@ pcl::PointCloud<pcl::PointXYZ> OcclusionCulling::extractVisibleSurface(geometry_
     camera_pose (3, 3) = 1;
     fc.setCameraPose (camera_pose);
     fc.filter (*output);
-
+    FrustumCloud->points= output->points;
 
     //2:****voxel grid occlusion estimation *****
     Eigen::Quaternionf quat(qt.w(),qt.x(),qt.y(),qt.z());
@@ -470,20 +473,20 @@ void OcclusionCulling::visualizeFOV(geometry_msgs::Pose location)
     point1.x=fc.np_tl[0];point1.y=fc.np_tl[1];point1.z=fc.np_tl[2]; fov_points.push_back(point1);//7
 
     std::vector<geometry_msgs::Point> fov_linesNear;
-    fov_linesNear.push_back(fov_points[0]);fov_linesNear.push_back(fov_points[1]);
-    fov_linesNear.push_back(fov_points[1]);fov_linesNear.push_back(fov_points[2]);
-    fov_linesNear.push_back(fov_points[2]);fov_linesNear.push_back(fov_points[3]);
-    fov_linesNear.push_back(fov_points[3]);fov_linesNear.push_back(fov_points[0]);
-    c_color[0]=1; c_color[1]=1; c_color[2]=0;
-    linesList1 = drawLines(fov_linesNear,id++,c_color);//red
+    fov_linesNear.push_back(fov_points[4]);fov_linesNear.push_back(fov_points[5]);
+    fov_linesNear.push_back(fov_points[5]);fov_linesNear.push_back(fov_points[6]);
+    fov_linesNear.push_back(fov_points[6]);fov_linesNear.push_back(fov_points[7]);
+    fov_linesNear.push_back(fov_points[7]);fov_linesNear.push_back(fov_points[4]);
+    c_color[0]=1; c_color[1]=0; c_color[2]=1;
+    linesList1 = drawLines(fov_linesNear,id++,c_color);//purple
 
     std::vector<geometry_msgs::Point> fov_linesFar;
-    fov_linesFar.push_back(fov_points[4]);fov_linesFar.push_back(fov_points[5]);
-    fov_linesFar.push_back(fov_points[5]);fov_linesFar.push_back(fov_points[6]);
-    fov_linesFar.push_back(fov_points[6]);fov_linesFar.push_back(fov_points[7]);
-    fov_linesFar.push_back(fov_points[7]);fov_linesFar.push_back(fov_points[4]);
-    c_color[0]=1; c_color[1]=0; c_color[2]=0;
-    linesList2 = drawLines(fov_linesFar,id++,c_color);//red
+    fov_linesFar.push_back(fov_points[0]);fov_linesFar.push_back(fov_points[1]);
+    fov_linesFar.push_back(fov_points[1]);fov_linesFar.push_back(fov_points[2]);
+    fov_linesFar.push_back(fov_points[2]);fov_linesFar.push_back(fov_points[3]);
+    fov_linesFar.push_back(fov_points[3]);fov_linesFar.push_back(fov_points[0]);
+    c_color[0]=1; c_color[1]=1; c_color[2]=0;
+    linesList2 = drawLines(fov_linesFar,id++,c_color);//yellow
 
 
     std::vector<geometry_msgs::Point> fov_linestop;

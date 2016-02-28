@@ -37,7 +37,7 @@ int main(int argc, char **argv)
     ros::Publisher pub4 = n.advertise<visualization_msgs::Marker>("box_line_intersection", 10);
     ros::Publisher pub5 = n.advertise<visualization_msgs::Marker>("sensor_origin", 1);
 
-    
+
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeCloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr rayCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -50,7 +50,7 @@ int main(int argc, char **argv)
     pose.translation() = a;
     geometry_msgs::Pose output_vector;
     tf::poseEigenToMsg(pose, output_vector);
-    
+
     tf::Quaternion orientation = tf::createQuaternionFromRPY(0,0,0);;
     Eigen::Quaterniond q;
     geometry_msgs::Quaternion quet;
@@ -69,8 +69,8 @@ int main(int argc, char **argv)
     //voxelFilter.setLeafSize (0.03279f, 0.03279f, 0.03279f);
     voxelFilter.setLeafSize (0.04f, 0.04f, 0.04f);
     //voxelFilter.filter(*cloud); // This filter doesn't really work, it introduces points inside the sphere !
-    voxelFilter.initializeVoxelGrid(); 
-    
+    voxelFilter.initializeVoxelGrid();
+
     int state,ret;
     Eigen::Vector3i t;
     pcl::PointXYZ pt,p1,p2;
@@ -313,11 +313,11 @@ int main(int argc, char **argv)
         sensor_msgs::PointCloud2 cloud1;
         sensor_msgs::PointCloud2 cloud2;
         sensor_msgs::PointCloud2 cloud3;
-        
+
         pcl::toROSMsg(*cloud, cloud1);
         pcl::toROSMsg(*occlusionFreeCloud, cloud2);
         pcl::toROSMsg(*rayCloud, cloud3);
-        
+
         cloud1.header.frame_id = "base_point_cloud";
         cloud2.header.frame_id = "base_point_cloud";
         cloud3.header.frame_id = "base_point_cloud";
@@ -325,7 +325,7 @@ int main(int argc, char **argv)
         cloud1.header.stamp = ros::Time::now();
         cloud2.header.stamp = ros::Time::now();
         cloud3.header.stamp = ros::Time::now();
-        
+
         pub1.publish(cloud1);
         pub2.publish(cloud2);
         pub3.publish(cloud3);

@@ -10,6 +10,7 @@ Panels:
         - /MarkerArray1
         - /PointCloud22
         - /PoseArray1
+        - /Axes1
       Splitter Ratio: 0.5
     Tree Height: 895
   - Class: rviz/Selection
@@ -30,7 +31,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: PointCloud2
 Visualization Manager:
   Class: ""
   Displays:
@@ -75,10 +76,10 @@ Visualization Manager:
       Axis: Z
       Channel Name: intensity
       Class: rviz/PointCloud2
-      Color: 255; 255; 255
-      Color Transformer: ""
+      Color: 255; 0; 255
+      Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -94,7 +95,7 @@ Visualization Manager:
       Topic: originalPointCloud
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: fov
@@ -113,7 +114,7 @@ Visualization Manager:
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 255; 255; 255
-      Color Transformer: ""
+      Color Transformer: RGB8
       Decay Time: 0
       Enabled: true
       Invert Rainbow: false
@@ -122,12 +123,12 @@ Visualization Manager:
       Min Color: 0; 0; 0
       Min Intensity: 0
       Name: PointCloud2
-      Position Transformer: ""
+      Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.01
-      Style: Flat Squares
+      Size (Pixels): 5
+      Size (m): 0.2
+      Style: Points
       Topic: accuracyCloud
       Use Fixed Frame: true
       Use rainbow: true
@@ -139,9 +140,16 @@ Visualization Manager:
       Name: PoseArray
       Topic: ""
       Value: true
+    - Class: rviz/Axes
+      Enabled: true
+      Length: 1
+      Name: Axes
+      Radius: 0.1
+      Reference Frame: <Fixed Frame>
+      Value: true
   Enabled: true
   Global Options:
-    Background Color: 255; 255; 255
+    Background Color: 98; 98; 98
     Fixed Frame: map
     Frame Rate: 30
   Name: root
@@ -163,22 +171,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 35.9741
+      Distance: 91.3019
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.333352
-        Y: -0.353698
-        Z: -0.913982
+        X: -6.35653
+        Y: 2.15316
+        Z: 3.53848
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.5098
+      Pitch: 0.644801
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.46166
+      Yaw: 5.49983
     Saved: ~
 Window Geometry:
   Displays:

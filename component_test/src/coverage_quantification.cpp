@@ -42,18 +42,27 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
     ros::Publisher pub1 = n.advertise<sensor_msgs::PointCloud2>("original_point_cloud", 100);
     ros::Publisher pub2 = n.advertise<sensor_msgs::PointCloud2>("occlusion_free_cloud", 100);
+    ros::Publisher pub3 = n.advertise<sensor_msgs::PointCloud2>("original_filtered", 100);
+    ros::Publisher pub4 = n.advertise<sensor_msgs::PointCloud2>("occlusion_filtered", 100);
+    ros::Publisher pub5 = n.advertise<sensor_msgs::PointCloud2>("matched", 100);
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr originalCloud(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr originalFiltered(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr matchedCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+
 //    pcl::PointCloud<pcl::PointXYZ>::Ptr originalCloudGrid(new pcl::PointCloud<pcl::PointXYZ>);
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeCloud(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFiltered(new pcl::PointCloud<pcl::PointXYZ>);
+
 //    pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeGrid(new pcl::PointCloud<pcl::PointXYZ>);
 
 
 
     std::string path = ros::package::getPath("component_test");
     pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/etihad_nowheels_densed.pcd", *originalCloud);
-    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/occlusionFreeCloud_1.5m_1to4_etihadNoWheels.pcd", *occlusionFreeCloud);
+    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/trial2.pcd", *occlusionFreeCloud);
+
 
     // *******************original cloud Grid***************************
     //used VoxelGridOcclusionEstimationT since the voxelGrid does not include getcentroid function
@@ -62,16 +71,19 @@ int main(int argc, char **argv)
         float res = 0.5;
         voxelFilterOriginal.setLeafSize (res, res, res);
         voxelFilterOriginal.initializeVoxelGrid();
-//        voxelFilterOriginal.filter(*originalCloudGrid);
+        voxelFilterOriginal.filter(*originalFiltered);
+        std::cout<<"original filtered "<<originalFiltered->points.size()<<"\n";
 
      //*******************Occupied Cloud Grid***************************
         pcl::VoxelGridOcclusionEstimationT voxelFilterOccupied;
         voxelFilterOccupied.setInputCloud (occlusionFreeCloud);
         voxelFilterOccupied.setLeafSize (res, res, res);
         voxelFilterOccupied.initializeVoxelGrid();
-//        voxelFilterFree.filter(*occlusionFreeGrid);
+        voxelFilterOccupied.filter(*occlusionFiltered);
+        std::cout<<"covered filtered "<<occlusionFiltered->points.size()<<"\n";
 
-
+        float test = (float)occlusionFiltered->points.size()/(float)originalFiltered->points.size() *100;
+        std::cout<<" TEST coverage percentage : "<<test<<"\n";
 
      //*****************************************************************
 
@@ -120,6 +132,12 @@ int main(int argc, char **argv)
 
                         if(index!=-1)
                         {
+                            pcl::PointXYZRGB point = pcl::PointXYZRGB(0,244,0);
+                            point.x = centroid[0];
+                            point.y = centroid[1];
+                            point.z = centroid[2];
+                            matchedCloud->points.push_back(point);
+
                             MatchedVoxels++;
                         }
                     }
@@ -152,19 +170,33 @@ int main(int argc, char **argv)
             //***original cloud & frustum cull & occlusion cull publish***
             sensor_msgs::PointCloud2 cloud1;
             sensor_msgs::PointCloud2 cloud2;
-
+            sensor_msgs::PointCloud2 cloud3;
+            sensor_msgs::PointCloud2 cloud4;
+            sensor_msgs::PointCloud2 cloud5;
 
             pcl::toROSMsg(*originalCloud, cloud1); //cloud of original (white) using original cloud
             pcl::toROSMsg(*occlusionFreeCloud, cloud2); //cloud of the not occluded voxels (blue) using occlusion culling
+            pcl::toROSMsg(*originalFiltered, cloud3); //cloud of original (white) using original cloud
+            pcl::toROSMsg(*occlusionFiltered, cloud4); //cloud of the not occluded voxels (blue) using occlusion culling
+            pcl::toROSMsg(*matchedCloud, cloud5); //cloud of the not occluded voxels (blue) using occlusion culling
 
             cloud1.header.frame_id = "base_point_cloud";
             cloud2.header.frame_id = "base_point_cloud";
+            cloud3.header.frame_id = "base_point_cloud";
+            cloud4.header.frame_id = "base_point_cloud";
+            cloud5.header.frame_id = "base_point_cloud";
 
             cloud1.header.stamp = ros::Time::now();
             cloud2.header.stamp = ros::Time::now();
+            cloud3.header.stamp = ros::Time::now();
+            cloud4.header.stamp = ros::Time::now();
+            cloud5.header.stamp = ros::Time::now();
 
             pub1.publish(cloud1);
             pub2.publish(cloud2);
+            pub3.publish(cloud3);
+            pub4.publish(cloud4);
+            pub5.publish(cloud5);
 
             ros::spinOnce();
             loop_rate.sleep();

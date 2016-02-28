@@ -51,7 +51,7 @@ int main(int argc, char **argv)
     pcl::PointCloud<pcl::PointXYZ>::Ptr originalCloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr accuracyCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     OcclusionCulling obj(n,"etihad_nowheels_densed.pcd");
-    double locationx,locationy,locationz,yaw,max=0, EMax;
+    double locationx,locationy,locationz,yaw,max=0, EMax,min=1,EMin;
 
     //reading the original cloud
     std::string path = ros::package::getPath("component_test");
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 
 
     //1: reading the path from a file
-    std::string str1 = path+"/src/txt/3_90path.txt";
+    std::string str1 = path+"/src/txt/3_90path_new.txt";
     const char * filename1 = str1.c_str();
     assert(filename1 != NULL);
     filename1 = strdup(filename1);
@@ -99,12 +99,17 @@ int main(int argc, char **argv)
             double temp = visible.at(i).z;//depth
             if(max<temp)
                max=temp;
+            if(min>temp)
+               min=temp;
         }
     }
 
     //2: calculate the Maximum Error
     EMax = 0.0000285 * max*max;
+    EMin = 0.0000285 * min*min;
+
     std::cout<<"Maximum error: "<<EMax<<" for the depth of: "<<max<<"\n";
+    std::cout<<"Minimum error: "<<EMin<<" for the depth of: "<<min<<"\n";
     std::cout<<"Size of the global cloud: "<<global.size()<<" points \n";
 
     //3: calculate the Error
@@ -116,7 +121,7 @@ int main(int argc, char **argv)
         double val = global.at(j).z;//depth
         double valx = global.at(j).x;
         double valy = global.at(j).y;
-        std::cout<<"global cloud "<<j<<": x "<< valx<<" y "<<valy<<" z "<<val<<"\n";
+//        std::cout<<"global cloud "<<j<<": x "<< valx<<" y "<<valy<<" z "<<val<<"\n";
 
         err= 0.0000285 * val * val;
         ErrCal.push_back(err);
@@ -140,7 +145,7 @@ int main(int argc, char **argv)
         {
             if (globalColored.at(k).x==global.at(j).x && globalColored.at(k).y==global.at(j).y)
             {
-                std::cout<<"found a match!!"<<std::endl;
+//                std::cout<<"found a match!!"<<std::endl;
                 if(color<globalColored.at(k).g)
                 {
 //                    globalColored.at(k).r = color;
