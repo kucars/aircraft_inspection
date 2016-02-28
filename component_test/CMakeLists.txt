@@ -85,7 +85,7 @@ target_link_libraries(trial_testing ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Boost
 
 add_executable(coverage_quantification src/coverage_quantification.cpp)
 add_dependencies(coverage_quantification ${catkin_EXPORTED_TARGETS})
-target_link_libraries(coverage_quantification frustum_culling voxel_grid_occlusion_estimation ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+target_link_libraries(coverage_quantification occlusion_culling ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
 add_executable(occlusion_culling_debug src/occlusion_culling_debug.cpp)
 add_dependencies(occlusion_culling_debug ${catkin_EXPORTED_TARGETS})
