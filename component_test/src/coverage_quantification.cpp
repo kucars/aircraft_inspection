@@ -43,19 +43,23 @@ int main(int argc, char **argv)
 
     ros::init(argc, argv, "coverge_quantification");
     ros::NodeHandle n;
-    ros::Publisher pub1 = n.advertise<sensor_msgs::PointCloud2>("original_point_cloud", 100);
+    ros::Publisher originalPointCloudPub    = n.advertise<sensor_msgs::PointCloud2>("original_point_cloud", 100);
     ros::Publisher pub2 = n.advertise<sensor_msgs::PointCloud2>("occlusion_free_cloud", 100);
-    ros::Publisher pub3 = n.advertise<sensor_msgs::PointCloud2>("original_filtered", 100);
-    ros::Publisher pub4 = n.advertise<sensor_msgs::PointCloud2>("occlusion_filtered", 100);
-    ros::Publisher pub5 = n.advertise<sensor_msgs::PointCloud2>("matched", 100);
+    ros::Publisher originalFilteredCloudPub = n.advertise<sensor_msgs::PointCloud2>("original_filtered", 100);
+    ros::Publisher pub4   = n.advertise<sensor_msgs::PointCloud2>("occlusion_filtered", 100);
+    ros::Publisher matchedCloudPub          = n.advertise<sensor_msgs::PointCloud2>("matched", 100);
+    ros::Publisher predictedCloudPub = n.advertise<sensor_msgs::PointCloud2>("predicted_coverage", 100);
+    ros::Publisher generagedPathPub  = n.advertise<visualization_msgs::Marker>("generated_path", 10);
+    ros::Publisher sensorPosePub     = n.advertise<geometry_msgs::PoseArray>("sensor_pose", 10);
 
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr originalCloud(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr originalFiltered(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr originalCloudFiltered(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr matchedCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-
     pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeCloud(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFiltered(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr predictedCloudFiltered(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr predictedCloudPtr(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ> predictedCloud;
 
 
     std::string path = ros::package::getPath("component_test");
@@ -63,22 +67,15 @@ int main(int argc, char **argv)
     pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/trial2.pcd", *occlusionFreeCloud);
 
     //******************************needed for debugging the predicted vs the constructed
-    ros::Publisher predicted_pub = n.advertise<sensor_msgs::PointCloud2>("predicted_coverage", 100);
-    ros::Publisher path_pub = n.advertise<visualization_msgs::Marker>("generated_path", 10);
-    ros::Publisher sen_vector_pub = n.advertise<geometry_msgs::PoseArray>("sensor_pose", 10);
-
-    pcl::PointCloud<pcl::PointXYZ>::Ptr predictedCloud(new pcl::PointCloud<pcl::PointXYZ>);
-//    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/3_5percent.pcd", *predictedCloud);//option 1:loading the predicted from a file
-
+    //    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/3_5percent.pcd", *predictedCloud);//option 1:loading the predicted from a file
     //Option 2: extract the visible surface at each viewpoint
-    OcclusionCulling obj(n,"etihad_nowheels_densed.pcd");
-    pcl::PointCloud<pcl::PointXYZ> predicted_cloud;
 
+    OcclusionCulling occlusionCulling(n,"etihad_nowheels_densed.pcd");
     double locationx,locationy,locationz,yaw;
     geometry_msgs::PoseArray viewpoints;
     geometry_msgs::Pose pt,loc;
 
-    std::string str1 = path+"/src/txt/3_5path.txt";
+    std::string str1 = path+"/src/txt/3_10path.txt";
     const char * filename1 = str1.c_str();
     assert(filename1 != NULL);
     filename1 = strdup(filename1);
@@ -88,22 +85,30 @@ int main(int argc, char **argv)
         std::cout<<"\nCan not open the File";
         fclose(file1);
     }
+
     Vec3f rpy(0,0.093,0);
     Vec3f xyz(0,0.0,-0.055);
     while (!feof(file1))
     {
         fscanf(file1,"%lf %lf %lf %lf\n",&locationx,&locationy,&locationz,&yaw);
-        pt.position.x=locationx; pt.position.y=locationy; pt.position.z=locationz;
+        pt.position.x = locationx; pt.position.y = locationy; pt.position.z = locationz;
         tf::Quaternion tf_q ;
-        tf_q= tf::createQuaternionFromYaw(yaw);
-        pt.orientation.x=tf_q.getX();pt.orientation.y=tf_q.getY();pt.orientation.z=tf_q.getZ();pt.orientation.w=tf_q.getW();
+        tf_q = tf::createQuaternionFromYaw(yaw);
+        pt.orientation.x = tf_q.getX();
+        pt.orientation.y = tf_q.getY();
+        pt.orientation.z = tf_q.getZ();
+        pt.orientation.w = tf_q.getW();
+
         loc= uav2camTransformation(pt,rpy,xyz);
+
         viewpoints.poses.push_back(loc);
-        pcl::PointCloud<pcl::PointXYZ> temp_cloud;
-        temp_cloud=obj.extractVisibleSurface(loc);
-        predicted_cloud += temp_cloud;
+        pcl::PointCloud<pcl::PointXYZ> tempCloud;
+        tempCloud = occlusionCulling.extractVisibleSurface(loc);
+        predictedCloud += tempCloud;
     }
-    predictedCloud->points = predicted_cloud.points;
+    predictedCloudPtr->points = predictedCloud.points;
+
+    // Draw Path
     std::vector<geometry_msgs::Point> lineSegments;
     geometry_msgs::Point p;
     for (int i =0; i<viewpoints.poses.size(); i++)
@@ -123,159 +128,157 @@ int main(int argc, char **argv)
     }
     visualization_msgs::Marker linesList = drawLines(lineSegments,1,0.15);
 
-    //*******************************************************
-
-
-
     // *******************original cloud Grid***************************
     //used VoxelGridOcclusionEstimationT since the voxelGrid does not include getcentroid function
-        pcl::VoxelGridOcclusionEstimationT voxelFilterOriginal;
-        voxelFilterOriginal.setInputCloud (originalCloud);
-        float res = 0.5;
-        voxelFilterOriginal.setLeafSize (res, res, res);
-        voxelFilterOriginal.initializeVoxelGrid();
-        voxelFilterOriginal.filter(*originalFiltered);
-        std::cout<<"original filtered "<<originalFiltered->points.size()<<"\n";
+    pcl::VoxelGridOcclusionEstimationT originalCloudFilteredVoxels;
+    originalCloudFilteredVoxels.setInputCloud (originalCloud);
+    float res = 0.5;
+    originalCloudFilteredVoxels.setLeafSize (res, res, res);
+    originalCloudFilteredVoxels.initializeVoxelGrid();
+    originalCloudFilteredVoxels.filter(*originalCloudFiltered);
+    std::cout<<"original filtered "<<originalCloudFiltered->points.size()<<"\n";
 
-     //*******************Occupied Cloud Grid***************************
-        pcl::VoxelGridOcclusionEstimationT voxelFilterOccupied;
-        voxelFilterOccupied.setInputCloud (predictedCloud);
-        voxelFilterOccupied.setLeafSize (res, res, res);
-        voxelFilterOccupied.initializeVoxelGrid();
-        voxelFilterOccupied.filter(*occlusionFiltered);
-        std::cout<<"covered filtered "<<occlusionFiltered->points.size()<<"\n";
+    //*******************Occupied Cloud Grid***************************
+    pcl::VoxelGridOcclusionEstimationT predictedCloudFilteredVoxels;
+    predictedCloudFilteredVoxels.setInputCloud (predictedCloudPtr);
+    predictedCloudFilteredVoxels.setLeafSize (res, res, res);
+    predictedCloudFilteredVoxels.initializeVoxelGrid();
+    predictedCloudFilteredVoxels.filter(*predictedCloudFiltered);
+    std::cout<<"covered filtered "<<predictedCloudFiltered->points.size()<<"\n";
 
-        float test = (float)occlusionFiltered->points.size()/(float)originalFiltered->points.size() *100;
-        std::cout<<" TEST coverage percentage : "<<test<<"\n";
+    float test = (float)predictedCloudFiltered->points.size()/(float)originalCloudFiltered->points.size() *100;
+    std::cout<<" TEST coverage percentage : "<<test<<"\n";
 
-     //*****************************************************************
+    //*****************************************************************
 
-        Eigen::Vector3i  min_b = voxelFilterOccupied.getMinBoxCoordinates ();
-        Eigen::Vector3i  max_b = voxelFilterOccupied.getMaxBoxCoordinates ();
-        Eigen::Vector3i  min_b1 = voxelFilterOriginal.getMinBoxCoordinates ();
-        Eigen::Vector3i  max_b1 = voxelFilterOriginal.getMaxBoxCoordinates ();
+    float originalVoxelsSize=0, matchedVoxels=0;
 
-        float OriginalVoxelsSize=0, MatchedVoxels=0;
-
-        // iterate over the entire original voxel grid to get the size of the grid
-        ros::Time coverage_begin = ros::Time::now();
-        for (int kk = min_b1.z (); kk <= max_b1.z (); ++kk)
+    // iterate over the entire original voxel grid to get the size of the grid
+    //Note: no need for this because at the end  OriginalVoxelsSize = originalCloudFiltered->points.size()
+    ros::Time coverage_begin = ros::Time::now();
+    /*
+    Eigen::Vector3i  min_b1 = voxelFilterOriginal.getMinBoxCoordinates ();
+    Eigen::Vector3i  max_b1 = voxelFilterOriginal.getMaxBoxCoordinates ();
+    for (int kk = min_b1.z (); kk <= max_b1.z (); ++kk)
+    {
+        for (int jj = min_b1.y (); jj <= max_b1.y (); ++jj)
         {
-            for (int jj = min_b1.y (); jj <= max_b1.y (); ++jj)
+            for (int ii = min_b1.x (); ii <= max_b1.x (); ++ii)
             {
-                for (int ii = min_b1.x (); ii <= max_b1.x (); ++ii)
+                Eigen::Vector3i ijk1 (ii, jj, kk);
+                int index1 = voxelFilterOriginal.getCentroidIndexAt (ijk1);
+                if(index1!=-1)
                 {
-                    Eigen::Vector3i ijk1 (ii, jj, kk);
-                    int index1 = voxelFilterOriginal.getCentroidIndexAt (ijk1);
-                    if(index1!=-1)
-                    {
-                        OriginalVoxelsSize++;
-                    }
-
+                    originalVoxelsSize++;
                 }
+
             }
         }
+    }
+    std::cout<<"The calculated size is:"<<originalVoxelsSize <<" the direct size is:"<<originalCloudFiltered->points.size();
+    */
 
-        //iterate through the entire coverage grid to check the number of matched voxel between the original and the covered ones
-        for (int kk = min_b.z (); kk <= max_b.z (); ++kk)
+    originalVoxelsSize = originalCloudFiltered->points.size();
+    //iterate through the entire coverage grid to check the number of matched voxel between the original and the covered ones
+    Eigen::Vector3i  min_b = predictedCloudFilteredVoxels.getMinBoxCoordinates ();
+    Eigen::Vector3i  max_b = predictedCloudFilteredVoxels.getMaxBoxCoordinates ();
+    for (int kk = min_b.z (); kk <= max_b.z (); ++kk)
+    {
+        for (int jj = min_b.y (); jj <= max_b.y (); ++jj)
         {
-            for (int jj = min_b.y (); jj <= max_b.y (); ++jj)
+            for (int ii = min_b.x (); ii <= max_b.x (); ++ii)
             {
-                for (int ii = min_b.x (); ii <= max_b.x (); ++ii)
+
+                Eigen::Vector3i ijk (ii, jj, kk);
+                int index1 = predictedCloudFilteredVoxels.getCentroidIndexAt (ijk);
+                if(index1!=-1)
                 {
+                    Eigen::Vector4f centroid = predictedCloudFilteredVoxels.getCentroidCoordinate (ijk);
+                    Eigen::Vector3i ijk_in_Original= originalCloudFilteredVoxels.getGridCoordinates(centroid[0],centroid[1],centroid[2]) ;
 
-                    Eigen::Vector3i ijk (ii, jj, kk);
-                    int index1 = voxelFilterOccupied.getCentroidIndexAt (ijk);
-                    if(index1!=-1)
+                    int index = originalCloudFilteredVoxels.getCentroidIndexAt (ijk_in_Original);
+
+                    if(index!=-1)
                     {
-                        Eigen::Vector4f centroid = voxelFilterOccupied.getCentroidCoordinate (ijk);
-                        Eigen::Vector3i ijk_in_Original= voxelFilterOriginal.getGridCoordinates(centroid[0],centroid[1],centroid[2]) ;
+                        pcl::PointXYZRGB point = pcl::PointXYZRGB(0,244,0);
+                        point.x = centroid[0];
+                        point.y = centroid[1];
+                        point.z = centroid[2];
+                        matchedCloud->points.push_back(point);
 
-                        int index = voxelFilterOriginal.getCentroidIndexAt (ijk_in_Original);
-
-                        if(index!=-1)
-                        {
-                            pcl::PointXYZRGB point = pcl::PointXYZRGB(0,244,0);
-                            point.x = centroid[0];
-                            point.y = centroid[1];
-                            point.z = centroid[2];
-                            matchedCloud->points.push_back(point);
-
-                            MatchedVoxels++;
-                        }
+                        matchedVoxels++;
                     }
-
                 }
+
             }
         }
+    }
 
-        ros::Time coverage_end = ros::Time::now();
-        double elapsed =  coverage_end.toSec() - coverage_begin.toSec();
-        std::cout<<"coverage percentage duration (s) = "<<elapsed<<"\n";
+    ros::Time coverage_end = ros::Time::now();
+    double elapsed =  coverage_end.toSec() - coverage_begin.toSec();
+    std::cout<<"coverage percentage duration (s) = "<<elapsed<<"\n";
 
-        //calculating the coverage percentage
-        float coverage_ratio= MatchedVoxels/OriginalVoxelsSize;
-        float coverage_percentage= coverage_ratio*100;
+    //calculating the coverage percentage
+    float coverage_ratio= matchedVoxels/originalVoxelsSize;
+    float coverage_percentage= coverage_ratio*100;
 
-        std::cout<<" the coverage ratio is = "<<coverage_ratio<<"\n";
-        std::cout<<" the number of covered voxels = "<<MatchedVoxels<<" voxel is covered"<<"\n";
-        std::cout<<" the number of original voxels = "<<OriginalVoxelsSize<<" voxel"<<"\n\n\n";
-        std::cout<<" the coverage percentage is = "<<coverage_percentage<<" %"<<"\n";
-
-
-        // *****************Rviz Visualization ************
-
-        ros::Rate loop_rate(10);
-        while (ros::ok())
-        {
+    std::cout<<" the coverage ratio is = "<<coverage_ratio<<"\n";
+    std::cout<<" the number of covered voxels = "<<matchedVoxels<<" voxel is covered"<<"\n";
+    std::cout<<" the number of original voxels = "<<originalVoxelsSize<<" voxel"<<"\n\n\n";
+    std::cout<<" the coverage percentage is = "<<coverage_percentage<<" %"<<"\n";
 
 
-            //***original cloud & frustum cull & occlusion cull publish***
-            sensor_msgs::PointCloud2 cloud1;
-            sensor_msgs::PointCloud2 cloud2;
-            sensor_msgs::PointCloud2 cloud3;
-            sensor_msgs::PointCloud2 cloud4;
-            sensor_msgs::PointCloud2 cloud5;
-            sensor_msgs::PointCloud2 cloud6;
+    // *****************Rviz Visualization ************
 
-            pcl::toROSMsg(*originalCloud, cloud1); //cloud of original (white) using original cloud
-            pcl::toROSMsg(*occlusionFreeCloud, cloud2); //cloud of the not occluded voxels (blue) using occlusion culling
-            pcl::toROSMsg(*originalFiltered, cloud3); //cloud of original (white) using original cloud
-            pcl::toROSMsg(*occlusionFiltered, cloud4); //cloud of the not occluded voxels (blue) using occlusion culling
-            pcl::toROSMsg(*matchedCloud, cloud5); //cloud of the not occluded voxels (blue) using occlusion culling
-            pcl::toROSMsg(*predictedCloud, cloud6); //cloud of the not occluded voxels (blue) using occlusion culling
+    ros::Rate loop_rate(10);
+    while (ros::ok())
+    {
+        //***original cloud & frustum cull & occlusion cull publish***
+        sensor_msgs::PointCloud2 cloud1;
+        sensor_msgs::PointCloud2 cloud2;
+        sensor_msgs::PointCloud2 cloud3;
+        sensor_msgs::PointCloud2 cloud4;
+        sensor_msgs::PointCloud2 cloud5;
+        sensor_msgs::PointCloud2 cloud6;
 
-            cloud1.header.frame_id = "base_point_cloud";
-            cloud2.header.frame_id = "base_point_cloud";
-            cloud3.header.frame_id = "base_point_cloud";
-            cloud4.header.frame_id = "base_point_cloud";
-            cloud5.header.frame_id = "base_point_cloud";
-            cloud6.header.frame_id = "base_point_cloud";
+        pcl::toROSMsg(*originalCloud, cloud1); //cloud of original (white) using original cloud
+        pcl::toROSMsg(*occlusionFreeCloud, cloud2); //cloud of the not occluded voxels (blue) using occlusion culling
+        pcl::toROSMsg(*originalCloudFiltered, cloud3); //cloud of original (white) using original cloud
+        pcl::toROSMsg(*predictedCloudFiltered, cloud4); //cloud of the not occluded voxels (blue) using occlusion culling
+        pcl::toROSMsg(*matchedCloud, cloud5); //cloud of the not occluded voxels (blue) using occlusion culling
+        pcl::toROSMsg(*predictedCloudPtr, cloud6); //cloud of the not occluded voxels (blue) using occlusion culling
 
-            cloud1.header.stamp = ros::Time::now();
-            cloud2.header.stamp = ros::Time::now();
-            cloud3.header.stamp = ros::Time::now();
-            cloud4.header.stamp = ros::Time::now();
-            cloud5.header.stamp = ros::Time::now();
-            cloud6.header.stamp = ros::Time::now();
+        cloud1.header.frame_id = "base_point_cloud";
+        cloud2.header.frame_id = "base_point_cloud";
+        cloud3.header.frame_id = "base_point_cloud";
+        cloud4.header.frame_id = "base_point_cloud";
+        cloud5.header.frame_id = "base_point_cloud";
+        cloud6.header.frame_id = "base_point_cloud";
 
-            pub1.publish(cloud1);
-            pub2.publish(cloud2);
-            pub3.publish(cloud3);
-            pub4.publish(cloud4);
-            pub5.publish(cloud5);
-            predicted_pub.publish(cloud6);
+        cloud1.header.stamp = ros::Time::now();
+        cloud2.header.stamp = ros::Time::now();
+        cloud3.header.stamp = ros::Time::now();
+        cloud4.header.stamp = ros::Time::now();
+        cloud5.header.stamp = ros::Time::now();
+        cloud6.header.stamp = ros::Time::now();
 
-            viewpoints.header.frame_id= "base_point_cloud";
-            viewpoints.header.stamp = ros::Time::now();
-            sen_vector_pub.publish(viewpoints);
+        originalPointCloudPub.publish(cloud1);
+        pub2.publish(cloud2);
+        originalFilteredCloudPub.publish(cloud3);
+        pub4.publish(cloud4);
+        matchedCloudPub.publish(cloud5);
+        predictedCloudPub.publish(cloud6);
 
-            path_pub.publish(linesList);
+        viewpoints.header.frame_id= "base_point_cloud";
+        viewpoints.header.stamp = ros::Time::now();
+        sensorPosePub.publish(viewpoints);
+
+        generagedPathPub.publish(linesList);
 
 
-            ros::spinOnce();
-            loop_rate.sleep();
-        }
+        ros::spinOnce();
+        loop_rate.sleep();
+    }
 
     return 0;
 }
@@ -292,7 +295,7 @@ visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, in
     linksMarkerMsg.action  = visualization_msgs::Marker::ADD;
     linksMarkerMsg.lifetime  = ros::Duration(10000.0);
     std_msgs::ColorRGBA color;
-//    color.r = 1.0f; color.g=.0f; color.b=.0f, color.a=1.0f;
+    //    color.r = 1.0f; color.g=.0f; color.b=.0f, color.a=1.0f;
     if(c_color == 1)
     {
         color.r = 1.0;
@@ -320,7 +323,7 @@ visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, in
         linksMarkerMsg.points.push_back(*linksIterator);
         linksMarkerMsg.colors.push_back(color);
     }
-   return linksMarkerMsg;
+    return linksMarkerMsg;
 }
 geometry_msgs::Pose uav2camTransformation(geometry_msgs::Pose pose, Vec3f rpy, Vec3f xyz)
 {
@@ -352,9 +355,9 @@ geometry_msgs::Pose uav2camTransformation(geometry_msgs::Pose pose, Vec3f rpy, V
     Eigen::Matrix4d cam2cam;
     //the transofrmation is rotation by +90 around x axis of the camera
     cam2cam <<   1, 0, 0, 0,
-                 0, 0,-1, 0,
-                 0, 1, 0, 0,
-                 0, 0, 0, 1;
+            0, 0,-1, 0,
+            0, 1, 0, 0,
+            0, 0, 0, 1;
     Eigen::Matrix4d cam_pose_new = cam_pose * cam2cam;
     geometry_msgs::Pose p;
     Eigen::Vector3d T3;Eigen::Matrix3d Rd; tf::Matrix3x3 R3;
