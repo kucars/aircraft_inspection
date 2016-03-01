@@ -43,31 +43,35 @@ int main(int argc, char **argv)
 
     ros::init(argc, argv, "coverge_quantification");
     ros::NodeHandle n;
-    ros::Publisher originalPointCloudPub    = n.advertise<sensor_msgs::PointCloud2>("original_point_cloud", 100);
-    ros::Publisher pub2 = n.advertise<sensor_msgs::PointCloud2>("occlusion_free_cloud", 100);
-    ros::Publisher originalFilteredCloudPub = n.advertise<sensor_msgs::PointCloud2>("original_filtered", 100);
-    ros::Publisher pub4   = n.advertise<sensor_msgs::PointCloud2>("occlusion_filtered", 100);
-    ros::Publisher matchedCloudPub          = n.advertise<sensor_msgs::PointCloud2>("matched", 100);
-    ros::Publisher predictedCloudPub = n.advertise<sensor_msgs::PointCloud2>("predicted_coverage", 100);
-    ros::Publisher generagedPathPub  = n.advertise<visualization_msgs::Marker>("generated_path", 10);
-    ros::Publisher sensorPosePub     = n.advertise<geometry_msgs::PoseArray>("sensor_pose", 10);
+    ros::Publisher originalCloudPub          = n.advertise<sensor_msgs::PointCloud2>("original_cloud", 100);
+    ros::Publisher originalFilteredCloudPub  = n.advertise<sensor_msgs::PointCloud2>("original_cloud_filtered", 100);
+    ros::Publisher predictedCloudPub         = n.advertise<sensor_msgs::PointCloud2>("predicted_cloud", 100);
+    ros::Publisher predictedCloudFilteredPub = n.advertise<sensor_msgs::PointCloud2>("predicted_cloud_filtered", 100);
+    ros::Publisher coverdCloudPub            = n.advertise<sensor_msgs::PointCloud2>("covered_cloud", 100);
+    ros::Publisher matchedCloudPub           = n.advertise<sensor_msgs::PointCloud2>("matched_cloud", 100);
+    ros::Publisher generagedPathPub          = n.advertise<visualization_msgs::Marker>("generated_path", 10);
+    ros::Publisher sensorPosePub             = n.advertise<geometry_msgs::PoseArray>("sensor_pose", 10);
 
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr originalCloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr originalCloudFiltered(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr matchedCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeCloud(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr predictedCloudFiltered(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr predictedCloudPtr(new pcl::PointCloud<pcl::PointXYZ>);
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr coveredCloud(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr coveredCloudFiltered(new pcl::PointCloud<pcl::PointXYZ>);
+
     pcl::PointCloud<pcl::PointXYZ> predictedCloud;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr predictedCloudPtr(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr predictedCloudFiltered(new pcl::PointCloud<pcl::PointXYZ>);
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr matchedCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
 
 
     std::string path = ros::package::getPath("component_test");
     pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/etihad_nowheels_densed.pcd", *originalCloud);
-    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/trial2.pcd", *occlusionFreeCloud);
+    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/octomap_90_05.pcd", *coveredCloud);
 
     //******************************needed for debugging the predicted vs the constructed
-    //    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/3_5percent.pcd", *predictedCloud);//option 1:loading the predicted from a file
+    //    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/3_90percent.pcd", *predictedCloud);//option 1:loading the predicted from a file
     //Option 2: extract the visible surface at each viewpoint
 
     OcclusionCulling occlusionCulling(n,"etihad_nowheels_densed.pcd");
@@ -75,7 +79,7 @@ int main(int argc, char **argv)
     geometry_msgs::PoseArray viewpoints;
     geometry_msgs::Pose pt,loc;
 
-    std::string str1 = path+"/src/txt/3_10path.txt";
+    std::string str1 = path+"/src/txt/3_90path.txt";
     const char * filename1 = str1.c_str();
     assert(filename1 != NULL);
     filename1 = strdup(filename1);
@@ -138,16 +142,27 @@ int main(int argc, char **argv)
     originalCloudFilteredVoxels.filter(*originalCloudFiltered);
     std::cout<<"original filtered "<<originalCloudFiltered->points.size()<<"\n";
 
-    //*******************Occupied Cloud Grid***************************
+    //*******************Predicted Cloud Grid***************************
     pcl::VoxelGridOcclusionEstimationT predictedCloudFilteredVoxels;
     predictedCloudFilteredVoxels.setInputCloud (predictedCloudPtr);
     predictedCloudFilteredVoxels.setLeafSize (res, res, res);
     predictedCloudFilteredVoxels.initializeVoxelGrid();
     predictedCloudFilteredVoxels.filter(*predictedCloudFiltered);
-    std::cout<<"covered filtered "<<predictedCloudFiltered->points.size()<<"\n";
+    std::cout<<"predicted filtered "<<predictedCloudFiltered->points.size()<<"\n";
 
     float test = (float)predictedCloudFiltered->points.size()/(float)originalCloudFiltered->points.size() *100;
-    std::cout<<" TEST coverage percentage : "<<test<<"\n";
+    std::cout<<" TEST predicted coverage percentage : "<<test<<"\n";
+
+    //*******************Covered Cloud Grid***************************
+    pcl::VoxelGridOcclusionEstimationT coveredCloudFilteredVoxels;
+    coveredCloudFilteredVoxels.setInputCloud (coveredCloud);
+    coveredCloudFilteredVoxels.setLeafSize (res, res, res);
+    coveredCloudFilteredVoxels.initializeVoxelGrid();
+    coveredCloudFilteredVoxels.filter(*coveredCloudFiltered);
+    std::cout<<"covered filtered "<<coveredCloudFiltered->points.size()<<"\n";
+
+    test = (float)coveredCloudFiltered->points.size()/(float)originalCloudFiltered->points.size() *100;
+    std::cout<<" TEST covered coverage percentage : "<<test<<"\n";
 
     //*****************************************************************
 
@@ -180,8 +195,8 @@ int main(int argc, char **argv)
 
     originalVoxelsSize = originalCloudFiltered->points.size();
     //iterate through the entire coverage grid to check the number of matched voxel between the original and the covered ones
-    Eigen::Vector3i  min_b = predictedCloudFilteredVoxels.getMinBoxCoordinates ();
-    Eigen::Vector3i  max_b = predictedCloudFilteredVoxels.getMaxBoxCoordinates ();
+    Eigen::Vector3i  min_b = coveredCloudFilteredVoxels.getMinBoxCoordinates ();
+    Eigen::Vector3i  max_b = coveredCloudFilteredVoxels.getMaxBoxCoordinates ();
     for (int kk = min_b.z (); kk <= max_b.z (); ++kk)
     {
         for (int jj = min_b.y (); jj <= max_b.y (); ++jj)
@@ -190,10 +205,10 @@ int main(int argc, char **argv)
             {
 
                 Eigen::Vector3i ijk (ii, jj, kk);
-                int index1 = predictedCloudFilteredVoxels.getCentroidIndexAt (ijk);
+                int index1 = coveredCloudFilteredVoxels.getCentroidIndexAt (ijk);
                 if(index1!=-1)
                 {
-                    Eigen::Vector4f centroid = predictedCloudFilteredVoxels.getCentroidCoordinate (ijk);
+                    Eigen::Vector4f centroid = coveredCloudFilteredVoxels.getCentroidCoordinate (ijk);
                     Eigen::Vector3i ijk_in_Original= originalCloudFilteredVoxels.getGridCoordinates(centroid[0],centroid[1],centroid[2]) ;
 
                     int index = originalCloudFilteredVoxels.getCentroidIndexAt (ijk_in_Original);
@@ -231,29 +246,23 @@ int main(int argc, char **argv)
     // *****************Rviz Visualization ************
 
     ros::Rate loop_rate(10);
+    sensor_msgs::PointCloud2 cloud1;
+    sensor_msgs::PointCloud2 cloud2;
+    sensor_msgs::PointCloud2 cloud3;
+    sensor_msgs::PointCloud2 cloud4;
+    sensor_msgs::PointCloud2 cloud5;
+    sensor_msgs::PointCloud2 cloud6;
+
     while (ros::ok())
     {
         //***original cloud & frustum cull & occlusion cull publish***
-        sensor_msgs::PointCloud2 cloud1;
-        sensor_msgs::PointCloud2 cloud2;
-        sensor_msgs::PointCloud2 cloud3;
-        sensor_msgs::PointCloud2 cloud4;
-        sensor_msgs::PointCloud2 cloud5;
-        sensor_msgs::PointCloud2 cloud6;
 
         pcl::toROSMsg(*originalCloud, cloud1); //cloud of original (white) using original cloud
-        pcl::toROSMsg(*occlusionFreeCloud, cloud2); //cloud of the not occluded voxels (blue) using occlusion culling
+        pcl::toROSMsg(*coveredCloud, cloud2); //cloud of the not occluded voxels (blue) using occlusion culling
         pcl::toROSMsg(*originalCloudFiltered, cloud3); //cloud of original (white) using original cloud
         pcl::toROSMsg(*predictedCloudFiltered, cloud4); //cloud of the not occluded voxels (blue) using occlusion culling
         pcl::toROSMsg(*matchedCloud, cloud5); //cloud of the not occluded voxels (blue) using occlusion culling
         pcl::toROSMsg(*predictedCloudPtr, cloud6); //cloud of the not occluded voxels (blue) using occlusion culling
-
-        cloud1.header.frame_id = "base_point_cloud";
-        cloud2.header.frame_id = "base_point_cloud";
-        cloud3.header.frame_id = "base_point_cloud";
-        cloud4.header.frame_id = "base_point_cloud";
-        cloud5.header.frame_id = "base_point_cloud";
-        cloud6.header.frame_id = "base_point_cloud";
 
         cloud1.header.stamp = ros::Time::now();
         cloud2.header.stamp = ros::Time::now();
@@ -262,10 +271,17 @@ int main(int argc, char **argv)
         cloud5.header.stamp = ros::Time::now();
         cloud6.header.stamp = ros::Time::now();
 
-        originalPointCloudPub.publish(cloud1);
-        pub2.publish(cloud2);
+        cloud1.header.frame_id = "base_point_cloud";
+        cloud2.header.frame_id = "base_point_cloud";
+        cloud3.header.frame_id = "base_point_cloud";
+        cloud4.header.frame_id = "base_point_cloud";
+        cloud5.header.frame_id = "base_point_cloud";
+        cloud6.header.frame_id = "base_point_cloud";
+
+        originalCloudPub.publish(cloud1);
+        coverdCloudPub.publish(cloud2);
         originalFilteredCloudPub.publish(cloud3);
-        pub4.publish(cloud4);
+        predictedCloudFilteredPub.publish(cloud4);
         matchedCloudPub.publish(cloud5);
         predictedCloudPub.publish(cloud6);
 
@@ -274,7 +290,6 @@ int main(int argc, char **argv)
         sensorPosePub.publish(viewpoints);
 
         generagedPathPub.publish(linesList);
-
 
         ros::spinOnce();
         loop_rate.sleep();
