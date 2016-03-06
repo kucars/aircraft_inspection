@@ -145,15 +145,23 @@ def setpoint_demo():
     begin= rospy.get_time()    # stamp should update
     rospy.loginfo("TAKEOFF 1")
     #setpoint.set(4.0, -30.0, 4.0, 3.14, 3)
-    setpoint.set(4.0, -30.0, 5.0, 3.14, 5)
+    setpoint.set(3.0, -34.5, 5.0, 3.14, 5)
     rospy.loginfo("TAKEOFF 2")
     #setpoint.set(4.0, -30.0, 9.0, 3.14, 6)
-    setpoint.set(4.0, -30.0, 10.5, 3.14, 6)  
+    setpoint.set(3.0, -34.5, 9.0, 3.14, 6)  
     rospy.loginfo("MOVING using data from the file")
     #setpoint.set(4.0, -29.0, 9.0, -2.3562, 8)
     data = theFile.readlines()
     temp_vals = []
-    temp_vals.append(10.5)
+    temp_valsx = []
+    temp_valsy = []
+    temp_valsz = []
+
+    temp_vals.append(9.0)
+    temp_valsx.append(3.0)
+    temp_valsy.append(-34.5)
+    temp_valsz.append(9.0)
+
     index=0
     for line in data:
       index = index+1
@@ -162,30 +170,68 @@ def setpoint_demo():
       print float(poses[1])
       print float(poses[2])
       print float(poses[3])
-      temp_vals.append(float(poses[2]))
-      diff = temp_vals[index]-temp_vals[index-1]
-      setpoint.set(float(poses[0]), float(poses[1]), temp_vals[index-1], float(poses[3]), 10)
-      print diff
-      if diff>1.5: # and temp_vals[index]>1.5:
+      setpoint.set(temp_valsx[index-1], temp_valsy[index-1], temp_valsz[index-1], float(poses[3]), 5)#12
+      #setpoint.set(float(poses[0]), float(poses[1]), float(poses[2]), float(poses[3]), 7)#12
+      temp_valsx.append(float(poses[0]))
+      temp_valsy.append(float(poses[1]))
+      temp_valsz.append(float(poses[2]))
+
+      #temp_vals.append(float(poses[2]))
+      diffx = temp_valsx[index]-temp_valsx[index-1]
+      diffy = temp_valsy[index]-temp_valsy[index-1]
+      diffz = temp_valsz[index]-temp_valsz[index-1]
+      
+      #setpoint.set(float(poses[0]), float(poses[1]), temp_vals[index-1], float(poses[3]), 10)
+      print diffz
+      if diffz>0: # and temp_vals[index]>1.5:
 	print "diff>1"
-	start = temp_vals[index-1]
-	end = float(poses[2])
-	step = 1.5
-	while start < end: # and temp_vals[index]>1.5:
-	    start += step
-	    setpoint.set(float(poses[0]), float(poses[1]), start, float(poses[3]), 4)
-      elif diff<-1.5: # and temp_vals[index]>1.5:
+	startx = temp_valsx[index-1]
+	starty = temp_valsy[index-1]
+	startz = temp_valsz[index-1]
+	endz = float(poses[2])
+	stepz = 0.125
+	stepx = 0.125
+	stepy = 0.125
+	if diffx<0:
+	  stepx=stepx*-1
+	elif diffx==0:
+	  stepx=0
+	if diffy<0:
+	  stepy=stepy*-1
+	elif diffy==0:
+	  stepy=0
+	while startz < endz: # and temp_vals[index]>1.5:
+	    setpoint.set(startx, starty, startz, float(poses[3]), 1.2)
+	    startz += stepz
+	    startx += stepx
+	    starty += stepy	    
+      elif diffz<0: # and temp_vals[index]>1.5:
 	print "diff<-1"
-	start = temp_vals[index-1]
-	end = float(poses[2])
-	step = 1.5
-	while start > end:
-	    start -= step
-	    setpoint.set(float(poses[0]), float(poses[1]), start, float(poses[3]), 4)
+	startx = temp_valsx[index-1]
+	starty = temp_valsy[index-1]
+	startz = temp_valsz[index-1]
+	endz = float(poses[2])
+	stepz = 0.125
+	stepx = 0.125
+	stepy = 0.125
+	if diffx<0:
+	  stepx=stepx*-1
+	elif diffx==0:
+	  stepx=0	  
+	if diffy<0:
+	  stepy=stepy*-1
+	elif diffy==0:
+	  stepy=0	  
+	while startz > endz:   
+	    setpoint.set(startx, starty, startz, float(poses[3]), 1.2)
+	    startz -= stepz
+	    startx += stepx
+	    starty += stepy	    
       else:
 	print "nothing"
 	#if temp_vals[index]>1.5:
-	setpoint.set(float(poses[0]), float(poses[1]), float(poses[2]), float(poses[3]), 4)#12
+	setpoint.set(float(poses[0]), float(poses[1]), float(poses[2]), float(poses[3]), 5)#12
+      setpoint.set(float(poses[0]), float(poses[1]), float(poses[2]), float(poses[3]), 5)#12
 
     ######testing###
     #setpoint.set(4.0, -29.0, 9.0, -2.3562, 8)

@@ -2,7 +2,7 @@
 <launch>
   
 <arg name="ns" default="rtabmap"/>
-  <arg name="rviz"                    default="true" />
+  <arg name="rviz"                    default="false" />
   <arg name="args"              default="--delete_db_on_start"/>
   <arg name="database_path"     default="rtabmap.db"/>
   <arg name="localization"      default="false"/>
@@ -13,7 +13,7 @@
 <group ns="$(arg ns)">
 <!--    <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0 0 0.0 -0.5 0.5 -0.5 0.5 /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link /iris/xtion_sensor/camera_depth_optical_frame 500" /> -->
     
- <node name="rtabmap" pkg="rtabmap_ros" type="rtabmap" output="screen">
+ <node name="rtabmap" pkg="rtabmap_ros" type="rtabmap" output="screen" args="$(arg args)">
 	  <param name="database_path"       type="string" value="$(arg database_path)"/>
 	  <param name="frame_id"            type="string" value="/iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link"/>
 	  <param name="odom_frame_id"       type="string" value="world"/>
