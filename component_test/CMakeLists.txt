@@ -22,13 +22,15 @@ find_package(octomap REQUIRED)
 # CGAL and its components
 find_package( CGAL QUIET COMPONENTS  )
 
+#Cuda related Flags
+find_package(CUDA REQUIRED)
+#list(APPEND CMAKE_CXX_FLAGS "-std=c++11 -O3")
+#list(APPEND CUDA_NVCC_FLAGS "-std=c++11;-O2;-DVERBOSE")
+#set(CUDA_PROPAGATE_HOST_FLAGS OFF)
+
 if ( NOT CGAL_FOUND )
   message(STATUS "This project requires the CGAL library, and will not be compiled.")
   return()  
-endif()
-
-if ( CGAL_FOUND )
-  message(STATUS "FOUND CGAL ===================================================== ${CGAL_Core_LIBRARY} ---- ${CGAL_LIBRARY}")
 endif()
 
 include_directories(${PCL_INCLUDE_DIRS})
@@ -48,6 +50,7 @@ include_directories(include
 add_library(fcl_test src/fcl_utility.cpp )
 add_library(voxel_grid_occlusion_estimation src/voxel_grid_occlusion_estimation.cpp )
 add_library(frustum_culling src/frustum_culling.cpp )
+
 add_library(occlusion_culling src/occlusion_culling.cpp)
 target_link_libraries(occlusion_culling frustum_culling voxel_grid_occlusion_estimation ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
@@ -86,6 +89,7 @@ target_link_libraries(trial_testing ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Boost
 add_executable(coverage_quantification src/coverage_quantification.cpp)
 add_dependencies(coverage_quantification ${catkin_EXPORTED_TARGETS})
 target_link_libraries(coverage_quantification occlusion_culling ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+
 
 add_executable(occlusion_culling_debug src/occlusion_culling_debug.cpp)
 add_dependencies(occlusion_culling_debug ${catkin_EXPORTED_TARGETS})
@@ -130,3 +134,13 @@ target_link_libraries(cgal_interior_skeleton -lgmp -lmpfr ${catkin_LIBRARIES} ${
 add_executable(triangulation_mesh src/triangulation_mesh.cpp)
 add_dependencies(triangulation_mesh ${catkin_EXPORTED_TARGETS})
 target_link_libraries(triangulation_mesh -lgmp -lmpfr ${catkin_LIBRARIES} ${CGAL_Core_LIBRARY} ${CGAL_LIBRARY} ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+
+if (CUDA_FOUND)
+    cuda_add_library(frustum_culling_gpu src/frustum_culling_gpu.cu )
+    add_library(occlusion_culling_gpu src/occlusion_culling_gpu.cpp)
+    target_link_libraries(occlusion_culling_gpu frustum_culling_gpu voxel_grid_occlusion_estimation ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+    cuda_add_executable(test_cuda src/test_cuda.cu)
+    add_executable(coverage_quantification_gpu src/coverage_quantification_gpu.cpp)
+    add_dependencies(coverage_quantification_gpu ${catkin_EXPORTED_TARGETS})
+    target_link_libraries(coverage_quantification_gpu occlusion_culling_gpu ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+endif (CUDA_FOUND)

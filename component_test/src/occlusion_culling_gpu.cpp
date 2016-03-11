@@ -1,9 +1,10 @@
-#include "component_test/occlusion_culling.h"
+#include "component_test/occlusion_culling_gpu.h"
 
 
-OcclusionCulling::OcclusionCulling(ros::NodeHandle &n, std::string modelName):
+OcclusionCullingGPU::OcclusionCullingGPU(ros::NodeHandle &n, std::string modelName):
     nh(n),
-    model(modelName)
+    model(modelName),
+    fc(true)
 {
 //   original_pub = nh.advertise<sensor_msgs::PointCloud2>("original_point_cloud", 10);
 //   visible_pub = nh.advertise<sensor_msgs::PointCloud2>("occlusion_free_cloud", 100);
@@ -45,9 +46,16 @@ OcclusionCulling::OcclusionCulling(ros::NodeHandle &n, std::string modelName):
    voxelgrid.setInputCloud (cloud);
    voxelgrid.setLeafSize (0.5f, 0.5f, 0.5f);
    voxelgrid.filter (*filtered_cloud);
+
+   fc.initializeGPUPointData(cloud);
+   fc.setVerticalFOV (45);
+   fc.setHorizontalFOV (58);
+   fc.setNearPlaneDistance (0.7);
+   fc.setFarPlaneDistance (6.0);
 }
-OcclusionCulling::OcclusionCulling(std::string modelName):
-    model(modelName)
+OcclusionCullingGPU::OcclusionCullingGPU(std::string modelName):
+    model(modelName),
+    fc(true)
 {
     cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
     filtered_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
@@ -84,9 +92,16 @@ OcclusionCulling::OcclusionCulling(std::string modelName):
     voxelgrid.setInputCloud (cloud);
     voxelgrid.setLeafSize (0.5f, 0.5f, 0.5f);
     voxelgrid.filter (*filtered_cloud);
+
+    fc.initializeGPUPointData(cloud);
+    fc.setVerticalFOV (45);
+    fc.setHorizontalFOV (58);
+    fc.setNearPlaneDistance (0.7);
+    fc.setFarPlaneDistance (6.0);
 }
-OcclusionCulling::OcclusionCulling():
-    model(NULL)
+OcclusionCullingGPU::OcclusionCullingGPU():
+    model(NULL),
+    fc(true)
 {
     cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
     filtered_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
@@ -123,23 +138,31 @@ OcclusionCulling::OcclusionCulling():
     voxelgrid.setInputCloud (cloud);
     voxelgrid.setLeafSize (0.5f, 0.5f, 0.5f);
     voxelgrid.filter (*filtered_cloud);
+
+    fc.initializeGPUPointData(cloud);
+    fc.setVerticalFOV (45);
+    fc.setHorizontalFOV (58);
+    fc.setNearPlaneDistance (0.7);
+    fc.setFarPlaneDistance (6.0);
 }
-OcclusionCulling::~OcclusionCulling()
+OcclusionCullingGPU::~OcclusionCullingGPU()
 {
 }
-pcl::PointCloud<pcl::PointXYZ> OcclusionCulling::extractVisibleSurface(geometry_msgs::Pose location)
+
+pcl::PointCloud<pcl::PointXYZ> OcclusionCullingGPU::extractVisibleSurface(geometry_msgs::Pose location)
 {
     // 1 *****Frustum Culling*******
     pcl::PointCloud <pcl::PointXYZ>::Ptr output (new pcl::PointCloud <pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeCloud_local(new pcl::PointCloud<pcl::PointXYZ>);
 
-    pcl::FrustumCullingTT fc (true);
+    /*
+    pcl::FrustumCullingTT fc(true);
     fc.setInputCloud (cloud);
     fc.setVerticalFOV (45);
     fc.setHorizontalFOV (58);
     fc.setNearPlaneDistance (0.7);
     fc.setFarPlaneDistance (6.0);
-
+    */
 
     Eigen::Matrix4f camera_pose;
     Eigen::Matrix3d Rd;
@@ -161,6 +184,7 @@ pcl::PointCloud<pcl::PointXYZ> OcclusionCulling::extractVisibleSurface(geometry_
     camera_pose.block (0, 3, 3, 1) = T;
     camera_pose (3, 3) = 1;
     fc.setCameraPose (camera_pose);
+
     ros::Time tic = ros::Time::now();
     fc.filter (*output);
     ros::Time toc = ros::Time::now();
@@ -235,17 +259,15 @@ pcl::PointCloud<pcl::PointXYZ> OcclusionCulling::extractVisibleSurface(geometry_
 
                     occlusionFreeCloud_local->points.push_back(ptest);
                     occlusionFreeCloud->points.push_back(ptest);
-
                 }
             }
         }
-
 
     }
     FreeCloud.points = occlusionFreeCloud_local->points;
     return FreeCloud;
 }
-float OcclusionCulling::calcCoveragePercent(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered)
+float OcclusionCullingGPU::calcCoveragePercent(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered)
 {
 
     // *******************original cloud Grid***************************
@@ -430,12 +452,12 @@ float OcclusionCulling::calcCoveragePercent(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 //    return coverage_percentage;
 //}
 
-void OcclusionCulling::visualizeFOV(geometry_msgs::Pose location)
+void OcclusionCullingGPU::visualizeFOV(geometry_msgs::Pose location)
 {
 
     pcl::PointCloud <pcl::PointXYZ>::Ptr output (new pcl::PointCloud <pcl::PointXYZ>);
 
-    pcl::FrustumCullingTT fc (true);
+    pcl::FrustumCullingTT fc(true);
     fc.setInputCloud (cloud);
     fc.setVerticalFOV (45);
     fc.setHorizontalFOV (58);
@@ -512,7 +534,7 @@ void OcclusionCulling::visualizeFOV(geometry_msgs::Pose location)
     marker_array.markers.push_back(linesList4);
     fov_pub.publish(marker_array);
 }
-visualization_msgs::Marker OcclusionCulling::drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color[])
+visualization_msgs::Marker OcclusionCullingGPU::drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color[])
 {
     visualization_msgs::Marker linksMarkerMsg;
     linksMarkerMsg.header.frame_id="map"; //change to "base_point_cloud" if it is used in component test package

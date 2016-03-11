@@ -30,10 +30,10 @@
 #include <pcl/common/eigen.h>
 #include <pcl/common/transforms.h>
 #include <pcl/range_image/range_image.h>
-//#include <voxel_grid_occlusion_estimation.h>
 #include "fcl_utility.h"
 #include <pcl/filters/voxel_grid.h>
-#include <component_test/occlusion_culling.h>
+#include <component_test/occlusion_culling_gpu.h>
+
 using namespace fcl;
 visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int c_color, float scale);
 geometry_msgs::Pose uav2camTransformation(geometry_msgs::Pose pose, Vec3f rpy, Vec3f xyz);
@@ -74,7 +74,7 @@ int main(int argc, char **argv)
     //    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/3_90percent.pcd", *predictedCloud);//option 1:loading the predicted from a file
     //Option 2: extract the visible surface at each viewpoint
 
-    OcclusionCulling occlusionCulling(n,"etihad_nowheels_densed.pcd");
+    OcclusionCullingGPU occlusionCulling(n,"etihad_nowheels_densed.pcd");
     double locationx,locationy,locationz,yaw;
     geometry_msgs::PoseArray viewpoints;
     geometry_msgs::Pose pt,loc;
@@ -119,7 +119,8 @@ int main(int argc, char **argv)
         predictedCloud += tempCloud;
         viewPointCount++;
     }
-    std::cout<<"On Average Occulision Culling takes (s) = "<<timeSum/viewPointCount<<"\n";
+    timeAverage = timeSum/viewPointCount;
+    std::cout<<"\nOn Average Occulision Culling takes (s) = "<<timeAverage<<"\n";
     predictedCloudPtr->points = predictedCloud.points;
 
     // Draw Path
