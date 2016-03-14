@@ -23,7 +23,7 @@ find_package(octomap REQUIRED)
 find_package( CGAL QUIET COMPONENTS  )
 
 #Cuda related Flags
-find_package(CUDA REQUIRED)
+find_package(CUDA QUIET)
 #list(APPEND CMAKE_CXX_FLAGS "-std=c++11 -O3")
 #list(APPEND CUDA_NVCC_FLAGS "-std=c++11;-O2;-DVERBOSE")
 #set(CUDA_PROPAGATE_HOST_FLAGS OFF)
@@ -48,8 +48,12 @@ include_directories(include
 )
   
 add_library(fcl_test src/fcl_utility.cpp )
+add_library(voxel_grid src/voxel_grid.cpp)
+
 add_library(voxel_grid_occlusion_estimation src/voxel_grid_occlusion_estimation.cpp )
+
 add_library(frustum_culling src/frustum_culling.cpp )
+target_link_libraries(frustum_culling voxel_grid ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES})
 
 add_library(occlusion_culling src/occlusion_culling.cpp)
 target_link_libraries(occlusion_culling frustum_culling voxel_grid_occlusion_estimation ${catkin_LIBRARIES} ${PCL_LIBRARIES})
@@ -84,7 +88,7 @@ target_link_libraries(components_combination frustum_culling voxel_grid_occlusio
 
 add_executable(trial_testing src/trial_testing.cpp src/occlusion_culling.cpp src/frustum_culling.cpp src/voxel_grid_occlusion_estimation.cpp)
 add_dependencies(trial_testing ${catkin_EXPORTED_TARGETS})
-target_link_libraries(trial_testing ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+target_link_libraries(trial_testing voxel_grid ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
 add_executable(coverage_quantification src/coverage_quantification.cpp)
 add_dependencies(coverage_quantification ${catkin_EXPORTED_TARGETS})
