@@ -8,9 +8,11 @@
 #include <cassert>
 #include <iomanip>
 #include "fcl_utility.h"
-#include "voxel_grid.h"
+//#include "voxel_grid.h"
+#include"component_test/visualization_voxelgrid.h"
 using namespace fcl;
 visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int c_color, float scale);
+visualization_msgs::Marker drawPoints(std::vector<geometry_msgs::Point> points, int c_color, int duration);
 geometry_msgs::Pose uav2camTransformation(geometry_msgs::Pose pose, Vec3f rpy, Vec3f xyz);
 visualization_msgs::Marker linesList;
 geometry_msgs::PoseArray viewpoints, points;
@@ -86,8 +88,15 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "test");
     ros::NodeHandle n;
     ros::Publisher originalCloudPub          = n.advertise<sensor_msgs::PointCloud2>("original_cloud", 100);
-    ros::Publisher voxelsPub          = n.advertise<sensor_msgs::PointCloud2>("voxels", 100);
-    ros::Publisher voxelPointsPub          = n.advertise<sensor_msgs::PointCloud2>("voxel_points", 100);
+    ros::Publisher voxelsPub                 = n.advertise<sensor_msgs::PointCloud2>("voxels", 100);
+    ros::Publisher voxelPointsPub            = n.advertise<sensor_msgs::PointCloud2>("voxel_points", 100);
+    ros::Publisher frustumPointsPub          = n.advertise<sensor_msgs::PointCloud2>("frustum_points", 100);
+    ros::Publisher visiblePointsPub          = n.advertise<sensor_msgs::PointCloud2>("visible_points", 100);
+    ros::Publisher intersectionPointPub      = n.advertise<visualization_msgs::Marker>("intersection_points", 10);
+    ros::Publisher voxelBoxPub               = n.advertise<visualization_msgs::Marker>("voxels_box", 10);
+    ros::Publisher linesPub                     = n.advertise<visualization_msgs::Marker>("lines", 10);
+
+//    ros::Publisher fov                       = n.advertise<visualization_msgs::MarkerArray>("voxels_box", 10);
 
     ros::Publisher sensorPosePub             = n.advertise<geometry_msgs::PoseArray>("sensor_pose", 10);
     ros::Publisher PosePub                   = n.advertise<geometry_msgs::PoseArray>("pose", 10);
@@ -96,41 +105,132 @@ int main(int argc, char **argv)
     pcl::PointCloud<pcl::PointXYZ>::Ptr originalCloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr voxelsPtr(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr voxelsPointsPtr(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr visiblePointsPtr(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr frustumPointsPtr(new pcl::PointCloud<pcl::PointXYZ>);
 
-    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/sphere_densed.pcd", *originalCloud);
+    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/etihad_nowheels_densed.pcd", *originalCloud);
 
     //**********************viewing the generated path*********
     //    distance_viewpoints();
 
-    //**********************testing voxelgrid****************************
-    std::cout<<"1 \n\n\n";
+    //**********************testing visulization voxelgrid***********
     geometry_msgs::Pose pose;
-    std::cout<<"2";
     geometry_msgs::PoseArray poses;
-    pcl::PointCloud<pcl::PointXYZ> pointcloud;
-    pose.position.x = -3;pose.position.y = 0;pose.position.z = 0;pose.orientation.x = 0;pose.orientation.y = 0;pose.orientation.z = 0;pose.orientation.w = 1;
-    std::cout<<"3";
     pcl::VoxelGridT voxelgrid;
-    //    pcl::VoxelGridOcclusionEstimationT voxelgrid1;
-    //    voxelgrid1.setInputCloud (originalCloud);
-    //    voxelgrid1.setLeafSize (0.5f, 0.5f, 0.5f);
-    //    voxelgrid1.initializeVoxelGrid();
-    //    voxelgrid1.filter (*test);
     voxelgrid.setInputCloud (originalCloud);
     voxelgrid.setLeafSize (0.5f, 0.5f, 0.5f);
-    voxelgrid.filter (*voxelsPtr);
-    std::cout<<"voxel is created\n";
-    std::cout<<"size: "<<voxelsPtr->points.size();
-    std::cout<<"3";
-    int s = voxelgrid.voxelSet[2][0][4].size();
-    std::cout<<"point size : "<<s<<std::endl;
-    for (int i =0; i<s; i++)
-        voxelsPointsPtr->points.push_back(voxelgrid.voxelSet[2][0][4][i]);
-    Eigen::Vector3i ijk(2,0,4);
-    Eigen::Vector4f centroid = voxelgrid.getCentroidCoordinate(ijk);
-    std::cout<<"centroid :"<<centroid[0]<<" "<<centroid[1]<<" "<<centroid[2]<<"\n";
-    pose.position.x = centroid[0];pose.position.y = centroid[1];pose.position.z = centroid[2];pose.orientation.x = 0;pose.orientation.y = 0;pose.orientation.z = 0;pose.orientation.w = 1;
+    voxelgrid.filter(*voxelsPtr);
+    //    std::cout<<"finished filtering peacefully\n";
+
+    pose.position.x = 5;pose.position.y = -25;pose.position.z = 5.8;pose.orientation.x = -0.0328686;pose.orientation.y = 0.706342;pose.orientation.z = 0.706342;pose.orientation.w = 0.0328686;
     poses.poses.push_back(pose);
+    pcl::PointCloud<pcl::PointXYZ> pointcloud;
+    OcclusionCulling occ(n,"etihad_nowheels_densed.pcd");
+    pointcloud = occ.extractVisibleSurface(pose);
+    Point o(5,-25,5.8);
+    std::vector<Point> far_points;
+    Point b1(occ.fc.fp_tl[0], occ.fc.fp_tl[1], occ.fc.fp_tl[2]);far_points.push_back(b1);//top left (far)
+    Point b2(occ.fc.fp_tr[0], occ.fc.fp_tr[1], occ.fc.fp_tr[2]);far_points.push_back(b2);//top right (far)
+    Point b3(occ.fc.fp_bl[0], occ.fc.fp_bl[1], occ.fc.fp_bl[2]);far_points.push_back(b3);//bottom left (far)
+    Point b4(occ.fc.fp_br[0], occ.fc.fp_br[1], occ.fc.fp_br[2]);far_points.push_back(b4);//bottom right (far)
+    //testing the new class (use visualization_voxelgrid.rviz)
+    VoxelGridVisualization obj(n,"etihad_nowheels_densed.pcd",voxelgrid,"world");
+    obj.visualizeBB();
+    obj.intersectionFOVBB(o, far_points);
+    obj.visualizeFOVBBIntersection(o, far_points);
+    Eigen::Vector3i ijk(59,137,28); //59,131,22
+    obj.selectedVoxelPoints(ijk,visiblePointsPtr);
+//    std::cout<<"finished the selectedVoxelsPoints peacefully\n";
+//    Eigen::Vector4f centroid = voxelgrid.getCentroidCoordinate (ijk);
+//    geometry_msgs::Pose pos;
+//    pos.position.x = centroid[0];pos.position.y = centroid[1];pos.position.z = centroid[2];
+//    poses.poses.push_back(pos);
+//    std::cout<<"centroid: x="<<centroid[0]<<" y="<<centroid[1]<<" z="<<centroid[2]<<"\n";
+
+    //**********************testing frustum culling (the voxel grid was used inside the frustum culling)******************
+//    std::cout<<"size of original cloud : "<<originalCloud->points.size()<<"\n\n";
+//    geometry_msgs::Pose pose;
+//    geometry_msgs::PoseArray poses;
+//    pcl::PointCloud<pcl::PointXYZ> pointcloud;
+//    pose.position.x = 5;pose.position.y = -25;pose.position.z = 5.8;pose.orientation.x = -0.0328686;pose.orientation.y = 0.706342;pose.orientation.z = 0.706342;pose.orientation.w = 0.0328686;
+//    poses.poses.push_back(pose);
+//    OcclusionCulling obj(n,"etihad_nowheels_densed.pcd");
+//    pointcloud = obj.extractVisibleSurface(pose);
+//    frustumPointsPtr->points= obj.FrustumCloud->points;
+//    visiblePointsPtr->points= obj.occlusionFreeCloud->points;
+//    geometry_msgs::Point linePoint;
+//    std::vector<geometry_msgs::Point> pointSegments;
+//    for(int i =0 ; i<obj.fc.i_point_g.size(); i++){
+//        linePoint.x = obj.fc.i_point_g.at(i)[0];
+//        linePoint.y = obj.fc.i_point_g.at(i)[1];
+//        linePoint.z = obj.fc.i_point_g.at(i)[2];
+//        pointSegments.push_back(linePoint);
+//     }
+//    visualization_msgs::Marker pointsList = drawPoints(pointSegments,2,100000000);
+//    std::vector<geometry_msgs::Point> lineSegments;
+//    for(int i =0 ; i<obj.fc.bb_centroids_g.size(); i++){
+
+//        if(i+1 != obj.fc.bb_centroids_g.size()){
+//            linePoint.x = obj.fc.bb_centroids_g.at(i)[0];
+//            linePoint.y = obj.fc.bb_centroids_g.at(i)[1];
+//            linePoint.z = obj.fc.bb_centroids_g.at(i)[2];
+//            lineSegments.push_back(linePoint);
+//            linePoint.x = obj.fc.bb_centroids_g.at(i+1)[0];
+//            linePoint.y = obj.fc.bb_centroids_g.at(i+1)[1];
+//            linePoint.z = obj.fc.bb_centroids_g.at(i+1)[2];
+//            lineSegments.push_back(linePoint);
+//        }
+//     }
+//    linePoint.x = obj.fc.bb_centroids_g.at(0)[0];linePoint.y = obj.fc.bb_centroids_g.at(0)[1];linePoint.z = obj.fc.bb_centroids_g.at(0)[2];lineSegments.push_back(linePoint);
+//    linePoint.x = obj.fc.bb_centroids_g.at(3)[0];linePoint.y = obj.fc.bb_centroids_g.at(3)[1];linePoint.z = obj.fc.bb_centroids_g.at(3)[2];lineSegments.push_back(linePoint);
+//    linePoint.x = obj.fc.bb_centroids_g.at(0)[0];linePoint.y = obj.fc.bb_centroids_g.at(0)[1];linePoint.z = obj.fc.bb_centroids_g.at(0)[2];lineSegments.push_back(linePoint);
+//    linePoint.x = obj.fc.bb_centroids_g.at(5)[0];linePoint.y = obj.fc.bb_centroids_g.at(5)[1];linePoint.z = obj.fc.bb_centroids_g.at(5)[2];lineSegments.push_back(linePoint);
+//    linePoint.x = obj.fc.bb_centroids_g.at(1)[0];linePoint.y = obj.fc.bb_centroids_g.at(1)[1];linePoint.z = obj.fc.bb_centroids_g.at(1)[2];lineSegments.push_back(linePoint);
+//    linePoint.x = obj.fc.bb_centroids_g.at(6)[0];linePoint.y = obj.fc.bb_centroids_g.at(6)[1];linePoint.z = obj.fc.bb_centroids_g.at(6)[2];lineSegments.push_back(linePoint);
+//    linePoint.x = obj.fc.bb_centroids_g.at(2)[0];linePoint.y = obj.fc.bb_centroids_g.at(2)[1];linePoint.z = obj.fc.bb_centroids_g.at(2)[2];lineSegments.push_back(linePoint);
+//    linePoint.x = obj.fc.bb_centroids_g.at(7)[0];linePoint.y = obj.fc.bb_centroids_g.at(7)[1];linePoint.z = obj.fc.bb_centroids_g.at(7)[2];lineSegments.push_back(linePoint);
+//    linePoint.x = obj.fc.bb_centroids_g.at(7)[0];linePoint.y = obj.fc.bb_centroids_g.at(7)[1];linePoint.z = obj.fc.bb_centroids_g.at(7)[2];lineSegments.push_back(linePoint);
+//    linePoint.x = obj.fc.bb_centroids_g.at(4)[0];linePoint.y = obj.fc.bb_centroids_g.at(4)[1];linePoint.z = obj.fc.bb_centroids_g.at(4)[2];lineSegments.push_back(linePoint);
+//    visualization_msgs::Marker linesList = drawLines(lineSegments,1,0.1);
+//    obj.visualizeFOV(pose);
+//    std::vector<geometry_msgs::Point> lineSegments2;
+//    for (int i =0 ; i<4; i++)
+//    {
+//        linePoint.x = obj.fc.origin[0];
+//        linePoint.y = obj.fc.origin[1];
+//        linePoint.z = obj.fc.origin[2];
+//        lineSegments2.push_back(linePoint);
+//        linePoint.x = obj.fc.far_pts_g[i][0];
+//        linePoint.y = obj.fc.far_pts_g[i][1];
+//        linePoint.z = obj.fc.far_pts_g[i][2];
+//        lineSegments2.push_back(linePoint);
+
+//    }
+//    visualization_msgs::Marker linesList2 = drawLines(lineSegments2,3,0.2);
+
+    //**********************testing voxelgrid*******************
+
+    //    pcl::VoxelGridT voxelgrid;
+    //    //    pcl::VoxelGridOcclusionEstimationT voxelgrid1;
+    //    //    voxelgrid1.setInputCloud (originalCloud);
+    //    //    voxelgrid1.setLeafSize (0.5f, 0.5f, 0.5f);
+    //    //    voxelgrid1.initializeVoxelGrid();
+    //    //    voxelgrid1.filter (*test);
+    //    voxelgrid.setInputCloud (originalCloud);
+    //    voxelgrid.setLeafSize (0.5f, 0.5f, 0.5f);
+    //    voxelgrid.filter (*voxelsPtr);
+    //    std::cout<<"voxel is created\n";
+    //    std::cout<<"size: "<<voxelsPtr->points.size();
+    //    std::cout<<"3";
+    //    int s = voxelgrid.voxelSet[2][0][4].size();
+    //    std::cout<<"point size : "<<s<<std::endl;
+    //    for (int i =0; i<s; i++)
+    //        voxelsPointsPtr->points.push_back(voxelgrid.voxelSet[2][0][4][i]);
+    //    Eigen::Vector3i ijk(2,0,4);
+    //    Eigen::Vector4f centroid = voxelgrid.getCentroidCoordinate(ijk);
+    //    std::cout<<"centroid :"<<centroid[0]<<" "<<centroid[1]<<" "<<centroid[2]<<"\n";
+    //    pose.position.x = centroid[0];pose.position.y = centroid[1];pose.position.z = centroid[2];pose.orientation.x = 0;pose.orientation.y = 0;pose.orientation.z = 0;pose.orientation.w = 1;
+    //    poses.poses.push_back(pose);
 
     //**********************testing****************************
     //    ros::Publisher visible_pub = n.advertise<sensor_msgs::PointCloud2>("occlusion_free_cloud", 100);
@@ -187,32 +287,50 @@ int main(int argc, char **argv)
     ////     std::cout<<"coverage percentage: "<<combinedcoverage<<"%\n";
     ////     vec.poses.push_back(location);
     ros::Rate loop_rate(10);
-    sensor_msgs::PointCloud2 cloud1,cloud2, cloud3;
+    sensor_msgs::PointCloud2 cloud1,cloud2, cloud3,cloud4,cloud5;
 
 
     while (ros::ok())
     {
         //         std::cout<<"publishing\n";
 
-        pcl::toROSMsg(*originalCloud, cloud1); //cloud of original (white) using original cloud
-        cloud1.header.stamp = ros::Time::now();
-        cloud1.header.frame_id = "world"; //change according to the global frame please!!
-        originalCloudPub.publish(cloud1);
+//        pcl::toROSMsg(*originalCloud, cloud1); //cloud of original (white) using original cloud
+//        cloud1.header.stamp = ros::Time::now();
+//        cloud1.header.frame_id = "world"; //change according to the global frame please!!
+//        originalCloudPub.publish(cloud1);
 
+        //**********************testing frustum_culling (trial_testing.rviz)******************
+        //        pcl::toROSMsg(*frustumPointsPtr, cloud4); //blue
+        //        cloud4.header.stamp = ros::Time::now();
+        //        cloud4.header.frame_id = "world";
+        //        frustumPointsPub.publish(cloud4);
+
+        //        pcl::toROSMsg(*visiblePointsPtr, cloud5); //red
+        //        cloud5.header.stamp = ros::Time::now();
+        //        cloud5.header.frame_id = "world";
+        //        visiblePointsPub.publish(cloud5);
+
+        //        poses.header.frame_id= "world";
+        //        poses.header.stamp = ros::Time::now();
+        //        PosePub.publish(poses);
+
+        //        intersectionPointPub.publish(pointsList);
+        //        voxelBoxPub.publish(linesList);
+        //        linesPub.publish(linesList2);
         //**********************testing voxelgrid (trial_testing.rviz)******************
-        pcl::toROSMsg(*voxelsPtr, cloud2); //blue
-        cloud2.header.stamp = ros::Time::now();
-        cloud2.header.frame_id = "world";
-        voxelsPub.publish(cloud2);
+        //        pcl::toROSMsg(*voxelsPtr, cloud2); //blue
+        //        cloud2.header.stamp = ros::Time::now();
+        //        cloud2.header.frame_id = "world";
+        //        voxelsPub.publish(cloud2);
 
-        pcl::toROSMsg(*voxelsPointsPtr, cloud3); //red
-        cloud3.header.stamp = ros::Time::now();
-        cloud3.header.frame_id = "world";
-        voxelPointsPub.publish(cloud3);
+        //        pcl::toROSMsg(*voxelsPointsPtr, cloud3); //red
+        //        cloud3.header.stamp = ros::Time::now();
+        //        cloud3.header.frame_id = "world";
+        //        voxelPointsPub.publish(cloud3);
 
-        poses.header.frame_id= "world";
-        poses.header.stamp = ros::Time::now();
-        PosePub.publish(poses);
+        //        poses.header.frame_id= "world";
+        //        poses.header.stamp = ros::Time::now();
+        //        PosePub.publish(poses);
 
         //**********************viewing the generated path(octomap_mapping.rviz)*********
         //         viewpoints.header.frame_id= "world";
@@ -266,6 +384,49 @@ int main(int argc, char **argv)
 
 
     return 0;
+}
+visualization_msgs::Marker drawPoints(std::vector<geometry_msgs::Point> points, int c_color, int duration)
+{
+    visualization_msgs::Marker pointMarkerMsg;
+    pointMarkerMsg.header.frame_id="world";
+    pointMarkerMsg.header.stamp=ros::Time::now();
+    pointMarkerMsg.ns="point_marker";
+    pointMarkerMsg.id = 444444;
+    pointMarkerMsg.type = visualization_msgs::Marker::POINTS;
+    pointMarkerMsg.scale.x = 0.11;
+    pointMarkerMsg.scale.y = 0.11;
+    pointMarkerMsg.action  = visualization_msgs::Marker::ADD;
+    pointMarkerMsg.lifetime  = ros::Duration(duration);
+    std_msgs::ColorRGBA color;
+    //    color.r = 1.0f; color.g=.0f; color.b=.0f, color.a=1.0f;
+    if(c_color == 1)
+    {
+        color.r = 1.0;
+        color.g = 0.0;
+        color.b = 0.0;
+        color.a = 1.0;
+    }
+    else if(c_color == 2)
+    {
+        color.r = 0.0;
+        color.g = 1.0;
+        color.b = 0.0;
+        color.a = 1.0;
+    }
+    else
+    {
+        color.r = 0.0;
+        color.g = 0.0;
+        color.b = 1.0;
+        color.a = 1.0;
+    }
+    std::vector<geometry_msgs::Point>::iterator pointsIterator;
+    for(pointsIterator = points.begin();pointsIterator != points.end();pointsIterator++)
+    {
+        pointMarkerMsg.points.push_back(*pointsIterator);
+        pointMarkerMsg.colors.push_back(color);
+    }
+   return pointMarkerMsg;
 }
 visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int c_color, float scale)
 {

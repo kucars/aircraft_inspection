@@ -256,6 +256,14 @@ pcl::VoxelGridT::applyFilter (PointCloud &output)
   min_b_[2] = static_cast<int> (floor (min_p[2] * inverse_leaf_size_[2]));
   max_b_[2] = static_cast<int> (floor (max_p[2] * inverse_leaf_size_[2]));
 
+  // added for computing the centroid correctly (IMP for the getCentroidCoordinate function in .h file)
+  minbb[0] = (static_cast<float> ( min_b_[0]) * leaf_size_[0]);
+  minbb[1] = (static_cast<float> ( min_b_[1]) * leaf_size_[1]);
+  minbb[2] = (static_cast<float> ( min_b_[2]) * leaf_size_[2]);
+  maxbb[0] = (static_cast<float> ( (max_b_[0]) + 1) * leaf_size_[0]);
+  maxbb[1] = (static_cast<float> ( (max_b_[1]) + 1 ) * leaf_size_[1]);
+  maxbb[2] = (static_cast<float> ( (max_b_[2]) + 1 ) * leaf_size_[2]);
+
   // Compute the number of divisions needed along all axis
   div_b_ = max_b_ - min_b_ + Eigen::Vector4i::Ones ();
   div_b_[3] = 0;
@@ -344,6 +352,7 @@ pcl::VoxelGridT::applyFilter (PointCloud &output)
     // First pass: go over all points and insert them into the index_vector vector
     // with calculated idx. Points with the same idx value will contribute to the
     // same point of resulting CloudPoint
+    std::cout<<"indices size in the voxel Grid class: "<<indices_->size()<<std::endl;
     for (std::vector<int>::const_iterator it = indices_->begin (); it != indices_->end (); ++it)
     {
       if (!input_->is_dense)
