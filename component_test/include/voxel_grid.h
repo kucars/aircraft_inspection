@@ -192,8 +192,10 @@ namespace pcl
 
     public:
 
-
+      //new variables
       std::vector<std::vector<std::vector<std::vector<pcl::PointXYZ> > > > voxelSet;//include the set of points of the voxel
+      Eigen::Vector4f minbb;
+      Eigen::Vector4f maxbb;
 
       /** \brief Empty constructor. */
       VoxelGridT () :
@@ -362,18 +364,20 @@ namespace pcl
                                  static_cast<int> (floor (z * inverse_leaf_size_[2]))));
       }
 
+      //added from voxel grid occlusion estimation code in order to get the voxel coordinates not the ijk
+      // it is important and used in the other codes
       inline Eigen::Vector4f
       getCentroidCoordinate (const Eigen::Vector3i& ijk)
       {
         int i,j,k;
-        i = ((min_b_[0] < 0) ? (abs (min_b_[0]) + ijk[0]) : (ijk[0] - min_b_[0]));
-        j = ((min_b_[1] < 0) ? (abs (min_b_[1]) + ijk[1]) : (ijk[1] - min_b_[1]));
-        k = ((min_b_[2] < 0) ? (abs (min_b_[2]) + ijk[2]) : (ijk[2] - min_b_[2]));
+        i = ((minbb[0] < 0) ? (abs (min_b_[0]) + ijk[0]) : (ijk[0] - min_b_[0]));
+        j = ((minbb[1] < 0) ? (abs (min_b_[1]) + ijk[1]) : (ijk[1] - min_b_[1]));
+        k = ((minbb[2] < 0) ? (abs (min_b_[2]) + ijk[2]) : (ijk[2] - min_b_[2]));
 
         Eigen::Vector4f xyz;
-        xyz[0] = min_b_[0] + (leaf_size_[0] * 0.5f) + (static_cast<float> (i) * leaf_size_[0]);
-        xyz[1] = min_b_[1] + (leaf_size_[1] * 0.5f) + (static_cast<float> (j) * leaf_size_[1]);
-        xyz[2] = min_b_[2] + (leaf_size_[2] * 0.5f) + (static_cast<float> (k) * leaf_size_[2]);
+        xyz[0] = minbb[0] + (leaf_size_[0] * 0.5f) + (static_cast<float> (i) * leaf_size_[0]);
+        xyz[1] = minbb[1] + (leaf_size_[1] * 0.5f) + (static_cast<float> (j) * leaf_size_[1]);
+        xyz[2] = minbb[2] + (leaf_size_[2] * 0.5f) + (static_cast<float> (k) * leaf_size_[2]);
         xyz[3] = 0;
         return xyz;
       }

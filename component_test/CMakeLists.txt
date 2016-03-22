@@ -33,7 +33,7 @@ if ( NOT CGAL_FOUND )
   return()  
 endif()
 
-include_directories(${PCL_INCLUDE_DIRS})
+include_directories(${PCL_INCLUDE_DIRS} /usr/local/cuda/include/)
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
@@ -45,10 +45,12 @@ catkin_package(
 
 include_directories(include
   ${catkin_INCLUDE_DIRS}
+#  /usr/local/cuda/include/
 )
   
 add_library(fcl_test src/fcl_utility.cpp )
-add_library(voxel_grid src/voxel_grid.cpp)
+add_library(voxel_grid src/voxel_grid.cpp )
+target_link_libraries(voxel_grid ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES})
 
 add_library(voxel_grid_occlusion_estimation src/voxel_grid_occlusion_estimation.cpp )
 
@@ -57,6 +59,13 @@ target_link_libraries(frustum_culling voxel_grid ${catkin_LIBRARIES} -lgmp -lmpf
 
 add_library(occlusion_culling src/occlusion_culling.cpp)
 target_link_libraries(occlusion_culling frustum_culling voxel_grid_occlusion_estimation ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_library(visualization_voxelgrid src/visualization_voxelgrid.cpp)
+target_link_libraries(visualization_voxelgrid voxel_grid ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES})
+
+add_executable(surface_coverage_evaluation src/surface_coverage_evaluation.cpp)
+add_dependencies(surface_coverage_evaluation ${catkin_EXPORTED_TARGETS})
+target_link_libraries(surface_coverage_evaluation occlusion_culling ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
 add_executable(accuracy_check src/accuracy_check.cpp)
 add_dependencies(accuracy_check ${catkin_EXPORTED_TARGETS})
@@ -88,7 +97,7 @@ target_link_libraries(components_combination frustum_culling voxel_grid_occlusio
 
 add_executable(trial_testing src/trial_testing.cpp src/occlusion_culling.cpp src/frustum_culling.cpp src/voxel_grid_occlusion_estimation.cpp)
 add_dependencies(trial_testing ${catkin_EXPORTED_TARGETS})
-target_link_libraries(trial_testing voxel_grid ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+target_link_libraries(trial_testing visualization_voxelgrid voxel_grid ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
 add_executable(coverage_quantification src/coverage_quantification.cpp)
 add_dependencies(coverage_quantification ${catkin_EXPORTED_TARGETS})

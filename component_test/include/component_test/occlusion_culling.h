@@ -45,6 +45,7 @@ public:
     Eigen::Vector3i  max_b1, min_b1;
     visualization_msgs::Marker linesList1,linesList2,linesList3,linesList4;
     visualization_msgs::MarkerArray marker_array;
+    pcl::FrustumCullingTT fc;
 
 
     //methods

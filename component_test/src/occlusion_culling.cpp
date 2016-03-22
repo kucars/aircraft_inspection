@@ -3,7 +3,8 @@
 
 OcclusionCulling::OcclusionCulling(ros::NodeHandle &n, std::string modelName):
     nh(n),
-    model(modelName)
+    model(modelName),
+    fc(true)
 {
 //   original_pub = nh.advertise<sensor_msgs::PointCloud2>("original_point_cloud", 10);
 //   visible_pub = nh.advertise<sensor_msgs::PointCloud2>("occlusion_free_cloud", 100);
@@ -45,9 +46,16 @@ OcclusionCulling::OcclusionCulling(ros::NodeHandle &n, std::string modelName):
    voxelgrid.setInputCloud (cloud);
    voxelgrid.setLeafSize (0.5f, 0.5f, 0.5f);
    voxelgrid.filter (*filtered_cloud);
+
+   fc.setInputCloud (cloud);
+   fc.setVerticalFOV (45);
+   fc.setHorizontalFOV (58);
+   fc.setNearPlaneDistance (0.7);
+   fc.setFarPlaneDistance (6.0);
 }
 OcclusionCulling::OcclusionCulling(std::string modelName):
-    model(modelName)
+    model(modelName),
+    fc(true)
 {
     cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
     filtered_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
@@ -84,9 +92,16 @@ OcclusionCulling::OcclusionCulling(std::string modelName):
     voxelgrid.setInputCloud (cloud);
     voxelgrid.setLeafSize (0.5f, 0.5f, 0.5f);
     voxelgrid.filter (*filtered_cloud);
+
+    fc.setInputCloud (cloud);
+    fc.setVerticalFOV (45);
+    fc.setHorizontalFOV (58);
+    fc.setNearPlaneDistance (0.7);
+    fc.setFarPlaneDistance (6.0);
 }
 OcclusionCulling::OcclusionCulling():
-    model(NULL)
+    model(NULL),
+    fc(true)
 {
     cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
     filtered_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
@@ -123,6 +138,12 @@ OcclusionCulling::OcclusionCulling():
     voxelgrid.setInputCloud (cloud);
     voxelgrid.setLeafSize (0.5f, 0.5f, 0.5f);
     voxelgrid.filter (*filtered_cloud);
+
+    fc.setInputCloud (cloud);
+    fc.setVerticalFOV (45);
+    fc.setHorizontalFOV (58);
+    fc.setNearPlaneDistance (0.7);
+    fc.setFarPlaneDistance (6.0);
 }
 OcclusionCulling::~OcclusionCulling()
 {
@@ -133,12 +154,12 @@ pcl::PointCloud<pcl::PointXYZ> OcclusionCulling::extractVisibleSurface(geometry_
     pcl::PointCloud <pcl::PointXYZ>::Ptr output (new pcl::PointCloud <pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeCloud_local(new pcl::PointCloud<pcl::PointXYZ>);
 
-    pcl::FrustumCullingTT fc (true);
-    fc.setInputCloud (cloud);
-    fc.setVerticalFOV (45);
-    fc.setHorizontalFOV (58);
-    fc.setNearPlaneDistance (0.7);
-    fc.setFarPlaneDistance (6.0);
+//    pcl::FrustumCullingTT fc (true);
+//    fc.setInputCloud (cloud);
+//    fc.setVerticalFOV (45);
+//    fc.setHorizontalFOV (58);
+//    fc.setNearPlaneDistance (0.7);
+//    fc.setFarPlaneDistance (6.0);
 
 
     Eigen::Matrix4f camera_pose;
@@ -435,12 +456,12 @@ void OcclusionCulling::visualizeFOV(geometry_msgs::Pose location)
 
     pcl::PointCloud <pcl::PointXYZ>::Ptr output (new pcl::PointCloud <pcl::PointXYZ>);
 
-    pcl::FrustumCullingTT fc (true);
-    fc.setInputCloud (cloud);
-    fc.setVerticalFOV (45);
-    fc.setHorizontalFOV (58);
-    fc.setNearPlaneDistance (0.7);
-    fc.setFarPlaneDistance (6.0);
+//    pcl::FrustumCullingTT fc (true);
+//    fc.setInputCloud (cloud);
+//    fc.setVerticalFOV (45);
+//    fc.setHorizontalFOV (58);
+//    fc.setNearPlaneDistance (0.7);
+//    fc.setFarPlaneDistance (6.0);
 
     Eigen::Matrix4f camera_pose;
     Eigen::Matrix3d Rd;
