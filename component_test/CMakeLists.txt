@@ -150,8 +150,9 @@ target_link_libraries(triangulation_mesh -lgmp -lmpfr ${catkin_LIBRARIES} ${CGAL
 
 if (CUDA_FOUND)
     cuda_add_library(frustum_culling_gpu src/frustum_culling_gpu.cu )
+    cuda_add_library(voxel_grid_occlusion_estimation_gpu src/voxel_grid_occlusion_estimation_gpu.cu )
     add_library(occlusion_culling_gpu src/occlusion_culling_gpu.cpp)
-    target_link_libraries(occlusion_culling_gpu frustum_culling_gpu voxel_grid_occlusion_estimation ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+    target_link_libraries(occlusion_culling_gpu frustum_culling_gpu voxel_grid_occlusion_estimation_gpu ${catkin_LIBRARIES} ${PCL_LIBRARIES})
     cuda_add_executable(test_cuda src/test_cuda.cu)
     add_executable(coverage_quantification_gpu src/coverage_quantification_gpu.cpp)
     add_dependencies(coverage_quantification_gpu ${catkin_EXPORTED_TARGETS})
