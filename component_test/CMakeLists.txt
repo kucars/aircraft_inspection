@@ -33,7 +33,7 @@ if ( NOT CGAL_FOUND )
   return()  
 endif()
 
-include_directories(${PCL_INCLUDE_DIRS})
+include_directories(${PCL_INCLUDE_DIRS} /usr/local/cuda/include/)
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
@@ -45,6 +45,7 @@ catkin_package(
 
 include_directories(include
   ${catkin_INCLUDE_DIRS}
+#  /usr/local/cuda/include/
 )
   
 add_library(fcl_test src/fcl_utility.cpp )
@@ -61,6 +62,10 @@ target_link_libraries(occlusion_culling frustum_culling voxel_grid_occlusion_est
 
 add_library(visualization_voxelgrid src/visualization_voxelgrid.cpp)
 target_link_libraries(visualization_voxelgrid voxel_grid ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES})
+
+add_executable(surface_coverage_evaluation src/surface_coverage_evaluation.cpp)
+add_dependencies(surface_coverage_evaluation ${catkin_EXPORTED_TARGETS})
+target_link_libraries(surface_coverage_evaluation occlusion_culling ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
 add_executable(accuracy_check src/accuracy_check.cpp)
 add_dependencies(accuracy_check ${catkin_EXPORTED_TARGETS})

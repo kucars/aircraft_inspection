@@ -1,5 +1,5 @@
-#ifndef OCCLUSION_H_
-#define OCCLUSION_H_
+#ifndef OCCLUSION_GPU_H_
+#define OCCLUSION_GPU_H_
 
 #include "ros/ros.h"
 #include <ros/package.h>
