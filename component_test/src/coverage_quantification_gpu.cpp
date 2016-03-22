@@ -145,7 +145,7 @@ int main(int argc, char **argv)
 
     // *******************original cloud Grid***************************
     //used VoxelGridOcclusionEstimationT since the voxelGrid does not include getcentroid function
-    pcl::VoxelGridOcclusionEstimationT originalCloudFilteredVoxels;
+    pcl::VoxelGridOcclusionEstimationGPU originalCloudFilteredVoxels;
     originalCloudFilteredVoxels.setInputCloud (originalCloud);
     float res = 0.5;
     originalCloudFilteredVoxels.setLeafSize (res, res, res);
@@ -154,7 +154,7 @@ int main(int argc, char **argv)
     std::cout<<"original filtered "<<originalCloudFiltered->points.size()<<"\n";
 
     //*******************Predicted Cloud Grid***************************
-    pcl::VoxelGridOcclusionEstimationT predictedCloudFilteredVoxels;
+    pcl::VoxelGridOcclusionEstimationGPU predictedCloudFilteredVoxels;
     predictedCloudFilteredVoxels.setInputCloud (predictedCloudPtr);
     predictedCloudFilteredVoxels.setLeafSize (res, res, res);
     predictedCloudFilteredVoxels.initializeVoxelGrid();
@@ -165,7 +165,7 @@ int main(int argc, char **argv)
     std::cout<<" TEST predicted coverage percentage : "<<test<<"\n";
 
     //*******************Covered Cloud Grid***************************
-    pcl::VoxelGridOcclusionEstimationT coveredCloudFilteredVoxels;
+    pcl::VoxelGridOcclusionEstimationGPU coveredCloudFilteredVoxels;
     coveredCloudFilteredVoxels.setInputCloud (coveredCloud);
     coveredCloudFilteredVoxels.setLeafSize (res, res, res);
     coveredCloudFilteredVoxels.initializeVoxelGrid();
@@ -351,6 +351,7 @@ visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, in
     }
     return linksMarkerMsg;
 }
+
 geometry_msgs::Pose uav2camTransformation(geometry_msgs::Pose pose, Vec3f rpy, Vec3f xyz)
 {
 
@@ -395,5 +396,4 @@ geometry_msgs::Pose uav2camTransformation(geometry_msgs::Pose pose, Vec3f rpy, V
     p.orientation.x = qt.getX(); p.orientation.y = qt.getY();p.orientation.z = qt.getZ();p.orientation.w = qt.getW();
 
     return p;
-
 }

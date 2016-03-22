@@ -6,8 +6,6 @@ OcclusionCullingGPU::OcclusionCullingGPU(ros::NodeHandle &n, std::string modelNa
     model(modelName),
     fc(true)
 {
-//   original_pub = nh.advertise<sensor_msgs::PointCloud2>("original_point_cloud", 10);
-//   visible_pub = nh.advertise<sensor_msgs::PointCloud2>("occlusion_free_cloud", 100);
 
    fov_pub = n.advertise<visualization_msgs::MarkerArray>("fov", 10);
    cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
@@ -17,7 +15,7 @@ OcclusionCullingGPU::OcclusionCullingGPU(ros::NodeHandle &n, std::string modelNa
    FrustumCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
    std::string path = ros::package::getPath("component_test");
    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/"+model, *cloud);
-   voxelRes = 0.5;
+   voxelRes = 0.5f;
    OriginalVoxelsSize=0.0;
    id=0.0;
    voxelFilterOriginal.setInputCloud (cloud);
@@ -44,7 +42,7 @@ OcclusionCullingGPU::OcclusionCullingGPU(ros::NodeHandle &n, std::string modelNa
 
    pcl::VoxelGrid<pcl::PointXYZ> voxelgrid;
    voxelgrid.setInputCloud (cloud);
-   voxelgrid.setLeafSize (0.5f, 0.5f, 0.5f);
+   voxelgrid.setLeafSize(voxelRes, voxelRes,voxelRes);
    voxelgrid.filter (*filtered_cloud);
 
    fc.initializeGPUPointData(cloud);
@@ -61,10 +59,9 @@ OcclusionCullingGPU::OcclusionCullingGPU(std::string modelName):
     filtered_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
     FrustumCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
 
-//    occlusionFreeCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
     std::string path = ros::package::getPath("component_test");
     pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/"+model, *cloud);
-    voxelRes = 0.5;
+    voxelRes = 0.5f;
     OriginalVoxelsSize=0.0;
     id=0.0;
     voxelFilterOriginal.setInputCloud (cloud);
@@ -90,7 +87,7 @@ OcclusionCullingGPU::OcclusionCullingGPU(std::string modelName):
     }
     pcl::VoxelGrid<pcl::PointXYZ> voxelgrid;
     voxelgrid.setInputCloud (cloud);
-    voxelgrid.setLeafSize (0.5f, 0.5f, 0.5f);
+    voxelgrid.setLeafSize(voxelRes, voxelRes,voxelRes);
     voxelgrid.filter (*filtered_cloud);
 
     fc.initializeGPUPointData(cloud);
@@ -107,10 +104,9 @@ OcclusionCullingGPU::OcclusionCullingGPU():
     filtered_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
     FrustumCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
 
-//    occlusionFreeCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
     std::string path = ros::package::getPath("component_test");
     pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/scaled_desktop.pcd", *cloud);
-    voxelRes = 0.5;
+    voxelRes = 0.5f;
     OriginalVoxelsSize=0.0;
     id=0.0;
     voxelFilterOriginal.setInputCloud (cloud);
@@ -136,7 +132,7 @@ OcclusionCullingGPU::OcclusionCullingGPU():
     }
     pcl::VoxelGrid<pcl::PointXYZ> voxelgrid;
     voxelgrid.setInputCloud (cloud);
-    voxelgrid.setLeafSize (0.5f, 0.5f, 0.5f);
+    voxelgrid.setLeafSize(voxelRes, voxelRes,voxelRes);
     voxelgrid.filter (*filtered_cloud);
 
     fc.initializeGPUPointData(cloud);
@@ -151,24 +147,12 @@ OcclusionCullingGPU::~OcclusionCullingGPU()
 
 pcl::PointCloud<pcl::PointXYZ> OcclusionCullingGPU::extractVisibleSurface(geometry_msgs::Pose location)
 {
-    // 1 *****Frustum Culling*******
     pcl::PointCloud <pcl::PointXYZ>::Ptr output (new pcl::PointCloud <pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeCloud_local(new pcl::PointCloud<pcl::PointXYZ>);
-
-    /*
-    pcl::FrustumCullingTT fc(true);
-    fc.setInputCloud (cloud);
-    fc.setVerticalFOV (45);
-    fc.setHorizontalFOV (58);
-    fc.setNearPlaneDistance (0.7);
-    fc.setFarPlaneDistance (6.0);
-    */
-
     Eigen::Matrix4f camera_pose;
     Eigen::Matrix3d Rd;
     Eigen::Matrix3f Rf;
 
-    camera_pose.setZero ();
+    camera_pose.setZero();
 
     tf::Quaternion qt;
     qt.setX(location.orientation.x);
@@ -185,88 +169,37 @@ pcl::PointCloud<pcl::PointXYZ> OcclusionCullingGPU::extractVisibleSurface(geomet
     camera_pose (3, 3) = 1;
     fc.setCameraPose (camera_pose);
 
-    ros::Time tic = ros::Time::now();
-    fc.filter (*output);
-    ros::Time toc = ros::Time::now();
+//    ros::Time tic = ros::Time::now();
+    fc.filter(*output);
+//    ros::Time toc = ros::Time::now();
 
-    std::cout<<"\nFrustum Filter took:"<< toc.toSec() - tic.toSec();
+//    std::cout<<"\nFrustum Filter took:"<< toc.toSec() - tic.toSec();
 
-    FrustumCloud->points= output->points;
+    FrustumCloud->points = output->points;
 
     //2:****voxel grid occlusion estimation *****
     Eigen::Quaternionf quat(qt.w(),qt.x(),qt.y(),qt.z());
     output->sensor_origin_  = Eigen::Vector4f(T[0],T[1],T[2],0);
     output->sensor_orientation_= quat;
-    pcl::VoxelGridOcclusionEstimationT voxelFilter;
-    voxelFilter.setInputCloud (output);
-    //voxelFilter.setLeafSize (0.03279f, 0.03279f, 0.03279f);
-    voxelFilter.setLeafSize (voxelRes, voxelRes, voxelRes);
-    voxelFilter.initializeVoxelGrid();
+    pcl::VoxelGridOcclusionEstimationGPU voxelOcclusionEstimationFilter;
+    voxelOcclusionEstimationFilter.setInputCloud(output);
+    voxelOcclusionEstimationFilter.setLeafSize (voxelRes, voxelRes, voxelRes);
+    voxelOcclusionEstimationFilter.initializeVoxelGrid();
 
-    int state,ret;
+    double timeOnRayTracing=0;
+    freeCloud.clear();
+    ros::Time t1 = ros::Time::now();
+    voxelOcclusionEstimationFilter.occlusionFreeEstimationAll(output,freeCloud);
+    occlusionFreeCloud->points = freeCloud.points;
+    ros::Time t2 = ros::Time::now();
+    timeOnRayTracing = (t2.toSec() - t1.toSec());
 
-    pcl::PointXYZ pt,p1,p2;
-    pcl::PointXYZRGB point;
-    std::vector<Eigen::Vector3i, Eigen::aligned_allocator<Eigen::Vector3i> > out_ray;
-    std::vector<geometry_msgs::Point> lineSegments;
-    geometry_msgs::Point linePoint;
-
-    // iterate over the entire frustum points
-    for ( int i = 0; i < (int)output->points.size(); i ++ )
-    {
-        pcl::PointXYZ ptest = output->points[i];
-        Eigen::Vector3i ijk = voxelFilter.getGridCoordinates( ptest.x, ptest.y, ptest.z);
-        // process all free voxels
-        int index = voxelFilter.getCentroidIndexAt (ijk);
-        Eigen::Vector4f centroid = voxelFilter.getCentroidCoordinate (ijk);
-        point = pcl::PointXYZRGB(0,244,0);
-        point.x = centroid[0];
-        point.y = centroid[1];
-        point.z = centroid[2];
-
-        if(index!=-1 )
-        {
-            out_ray.clear();
-            ret = voxelFilter.occlusionEstimation( state,out_ray, ijk);
-            //                        std::cout<<"State is:"<<state<<"\n";
-
-            if(state != 1)
-            {
-                // estimate direction to target voxel
-                Eigen::Vector4f direction = centroid - cloud->sensor_origin_;
-                direction.normalize ();
-                // estimate entry point into the voxel grid
-                float tmin = voxelFilter.rayBoxIntersection (cloud->sensor_origin_, direction,p1,p2);
-                if(tmin!=-1)
-                {
-                    // coordinate of the boundary of the voxel grid
-                    Eigen::Vector4f start = cloud->sensor_origin_ + tmin * direction;
-                    linePoint.x = cloud->sensor_origin_[0]; linePoint.y = cloud->sensor_origin_[1]; linePoint.z = cloud->sensor_origin_[2];
-                    //std::cout<<"Box Min X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
-                    lineSegments.push_back(linePoint);
-
-                    linePoint.x = start[0]; linePoint.y = start[1]; linePoint.z = start[2];
-                    //std::cout<<"Box Max X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
-                    lineSegments.push_back(linePoint);
-
-                    linePoint.x = start[0]; linePoint.y = start[1]; linePoint.z = start[2];
-                    //std::cout<<"Box Max X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
-                    lineSegments.push_back(linePoint);
-
-                    linePoint.x = centroid[0]; linePoint.y = centroid[1]; linePoint.z = centroid[2];
-                    //std::cout<<"Box Max X:"<<linePoint.x<<" y:"<< linePoint.y<<" z:"<< linePoint.z<<"\n";
-                    lineSegments.push_back(linePoint);
-
-                    occlusionFreeCloud_local->points.push_back(ptest);
-                    occlusionFreeCloud->points.push_back(ptest);
-                }
-            }
-        }
-
-    }
-    FreeCloud.points = occlusionFreeCloud_local->points;
-    return FreeCloud;
+//    toc = ros::Time::now();
+//    double diff = toc.toSec() - tic.toSec();
+//    std::cout<<"\nProcessing Occlusuin culling on remaining points took:"<< diff <<" raytracing took:"<<timeOnRayTracing<<" percentage:"<<timeOnRayTracing*100.0f/diff;
+    return freeCloud;
 }
+
 float OcclusionCullingGPU::calcCoveragePercent(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered)
 {
 
@@ -279,7 +212,7 @@ float OcclusionCullingGPU::calcCoveragePercent(pcl::PointCloud<pcl::PointXYZ>::P
 
      //*******************Occupied Cloud Grid***************************
     ros::Time covpercent_begin = ros::Time::now();
-    pcl::VoxelGridOcclusionEstimationT voxelFilterOccupied;
+    pcl::VoxelGridOcclusionEstimationGPU voxelFilterOccupied;
 //        voxelFilterOccupied.setInputCloud (occlusionFreeCloud);
     voxelFilterOccupied.setInputCloud (cloud_filtered);
     voxelFilterOccupied.setLeafSize (voxelRes, voxelRes, voxelRes);
@@ -294,26 +227,7 @@ float OcclusionCullingGPU::calcCoveragePercent(pcl::PointCloud<pcl::PointXYZ>::P
 //        Eigen::Vector3i  max_b1 = voxelFilterOriginal.getMaxBoxCoordinates ();
 
     float MatchedVoxels=0 ;//OriginalVoxelsSize=0, ;
-
-        // iterate over the entire original voxel grid to get the size of the grid
-//        for (int kk = min_b1.z (); kk <= max_b1.z (); ++kk)
-//        {
-//            for (int jj = min_b1.y (); jj <= max_b1.y (); ++jj)
-//            {
-//                for (int ii = min_b1.x (); ii <= max_b1.x (); ++ii)
-//                {
-//                    Eigen::Vector3i ijk1 (ii, jj, kk);
-//                    int index1 = voxelFilterOriginal.getCentroidIndexAt (ijk1);
-//                    if(index1!=-1)
-//                    {
-//                        OriginalVoxelsSize++;
-//                    }
-
-//                }
-//            }
-//        }
-
-        //iterate through the entire coverage grid to check the number of matched voxel between the original and the covered ones
+     //iterate through the entire coverage grid to check the number of matched voxel between the original and the covered ones
     for (int kk = min_b.z (); kk <= max_b.z (); ++kk)
     {
         for (int jj = min_b.y (); jj <= max_b.y (); ++jj)
@@ -355,109 +269,13 @@ float OcclusionCullingGPU::calcCoveragePercent(pcl::PointCloud<pcl::PointXYZ>::P
 
     return coverage_percentage;
 }
-//float OcclusionCulling::calcCoveragePercent(geometry_msgs::Pose location)
-//{
-
-//    pcl::PointCloud<pcl::PointXYZ>::Ptr tempCloud(new pcl::PointCloud<pcl::PointXYZ>);
-//    pcl::PointCloud<pcl::PointXYZ> temp;
-//    ros::Time occlusion_begin = ros::Time::now();
-//    temp= extractVisibleSurface(location);
-//    tempCloud->points = temp.points;
-//    ros::Time occlusion_end = ros::Time::now();
-//    double elapsed =  occlusion_end.toSec() - occlusion_begin.toSec();
-//    std::cout<<"Extract visible surface duration (s) = "<<elapsed<<"\n";
-//    // *******************original cloud Grid***************************
-//    //used VoxelGridOcclusionEstimationT since the voxelGrid does not include getcentroid function
-////        pcl::VoxelGridOcclusionEstimationT voxelFilterOriginal;
-////        voxelFilterOriginal.setInputCloud (cloud);
-////        voxelFilterOriginal.setLeafSize (voxelRes, voxelRes, voxelRes);
-////        voxelFilterOriginal.initializeVoxelGrid();
-
-//     //*******************Occupied Cloud Grid***************************
-//    ros::Time covpercent_begin = ros::Time::now();
-//    pcl::VoxelGridOcclusionEstimationT voxelFilterOccupied;
-////        voxelFilterOccupied.setInputCloud (occlusionFreeCloud);
-//    voxelFilterOccupied.setInputCloud (tempCloud);
-//    voxelFilterOccupied.setLeafSize (voxelRes, voxelRes, voxelRes);
-//    voxelFilterOccupied.initializeVoxelGrid();
-
-
-
-//     //*****************************************************************
-//    Eigen::Vector3i  min_b = voxelFilterOccupied.getMinBoxCoordinates ();
-//    Eigen::Vector3i  max_b = voxelFilterOccupied.getMaxBoxCoordinates ();
-////        Eigen::Vector3i  min_b1 = voxelFilterOriginal.getMinBoxCoordinates ();
-////        Eigen::Vector3i  max_b1 = voxelFilterOriginal.getMaxBoxCoordinates ();
-
-//    float MatchedVoxels=0 ;//OriginalVoxelsSize=0, ;
-
-//        // iterate over the entire original voxel grid to get the size of the grid
-////        for (int kk = min_b1.z (); kk <= max_b1.z (); ++kk)
-////        {
-////            for (int jj = min_b1.y (); jj <= max_b1.y (); ++jj)
-////            {
-////                for (int ii = min_b1.x (); ii <= max_b1.x (); ++ii)
-////                {
-////                    Eigen::Vector3i ijk1 (ii, jj, kk);
-////                    int index1 = voxelFilterOriginal.getCentroidIndexAt (ijk1);
-////                    if(index1!=-1)
-////                    {
-////                        OriginalVoxelsSize++;
-////                    }
-
-////                }
-////            }
-////        }
-
-//        //iterate through the entire coverage grid to check the number of matched voxel between the original and the covered ones
-//    for (int kk = min_b.z (); kk <= max_b.z (); ++kk)
-//    {
-//        for (int jj = min_b.y (); jj <= max_b.y (); ++jj)
-//        {
-//            for (int ii = min_b.x (); ii <= max_b.x (); ++ii)
-//            {
-
-//                Eigen::Vector3i ijk (ii, jj, kk);
-//                int index1 = voxelFilterOccupied.getCentroidIndexAt (ijk);
-//                if(index1!=-1)
-//                {
-//                    Eigen::Vector4f centroid = voxelFilterOccupied.getCentroidCoordinate (ijk);
-//                    Eigen::Vector3i ijk_in_Original= voxelFilterOriginal.getGridCoordinates(centroid[0],centroid[1],centroid[2]) ;
-
-//                    int index = voxelFilterOriginal.getCentroidIndexAt (ijk_in_Original);
-
-//                    if(index!=-1)
-//                    {
-//                        MatchedVoxels++;
-//                    }
-//                }
-
-//            }
-//        }
-//    }
-
-//    //calculating the coverage percentage
-//    float coverage_ratio= MatchedVoxels/OriginalVoxelsSize;
-//    float coverage_percentage= coverage_ratio*100;
-
-//    std::cout<<" the coverage ratio is = "<<coverage_ratio<<"\n";
-//    std::cout<<" the number of covered voxels = "<<MatchedVoxels<<" voxel is covered"<<"\n";
-//    std::cout<<" the number of original voxels = "<<OriginalVoxelsSize<<" voxel"<<"\n\n\n";
-//    std::cout<<" the coverage percentage is = "<<coverage_percentage<<" %"<<"\n";
-
-//    ros::Time covpercent_end = ros::Time::now();
-//    elapsed =  covpercent_end.toSec() - covpercent_begin.toSec();
-//    std::cout<<"Coverage Percentage Calculation duration (s) = "<<elapsed<<"\n";
-
-//    return coverage_percentage;
-//}
 
 void OcclusionCullingGPU::visualizeFOV(geometry_msgs::Pose location)
 {
 
     pcl::PointCloud <pcl::PointXYZ>::Ptr output (new pcl::PointCloud <pcl::PointXYZ>);
 
-    pcl::FrustumCullingTT fc(true);
+    pcl::FrustumCullingGPU fc(true);
     fc.setInputCloud (cloud);
     fc.setVerticalFOV (45);
     fc.setHorizontalFOV (58);

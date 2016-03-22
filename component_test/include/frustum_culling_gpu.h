@@ -74,7 +74,7 @@ namespace pcl
    * \author Aravindhan K Krishnan
    * \ingroup filters
    */
-  class FrustumCullingTT : public FilterIndices<pcl::PointXYZ>
+  class FrustumCullingGPU : public FilterIndices<pcl::PointXYZ>
   {
     typedef typename Filter<pcl::PointXYZ>::PointCloud PointCloud;
     typedef typename PointCloud::Ptr PointCloudPtr;
@@ -82,13 +82,13 @@ namespace pcl
 
     public:
 
-      typedef boost::shared_ptr< FrustumCullingTT> Ptr;
-      typedef boost::shared_ptr< const FrustumCullingTT > ConstPtr;
+      typedef boost::shared_ptr< FrustumCullingGPU> Ptr;
+      typedef boost::shared_ptr< const FrustumCullingGPU > ConstPtr;
 
 
       using Filter<pcl::PointXYZ>::getClassName;
 
-      FrustumCullingTT (bool extract_removed_indices = false)
+      FrustumCullingGPU (bool extract_removed_indices = false)
         : FilterIndices<pcl::PointXYZ>::FilterIndices (extract_removed_indices)
         , camera_pose_ (Eigen::Matrix4f::Identity ())
         , hfov_ (60.0f)
@@ -96,9 +96,9 @@ namespace pcl
         , np_dist_ (0.1f)
         , fp_dist_ (5.0f)
       {
-        filter_name_ = "FrustumCullingTT";
+        filter_name_ = "FrustumCullingGPU";
       }
-       ~FrustumCullingTT();
+       ~FrustumCullingGPU();
       /** \brief Set the pose of the camera w.r.t the origin
         * \param[in] camera_pose the camera pose
         *

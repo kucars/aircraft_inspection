@@ -22,7 +22,7 @@
 #include <pcl/common/eigen.h>
 #include <pcl/common/transforms.h>
 #include <pcl/range_image/range_image.h>
-#include <voxel_grid_occlusion_estimation.h>
+#include <voxel_grid_occlusion_estimation_gpu.h>
 
 class OcclusionCullingGPU
 {
@@ -38,14 +38,14 @@ public:
     pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeCloud;//I can add it to accumulate cloud if I want to extract visible surface from multiple locations
     pcl::PointCloud<pcl::PointXYZ>::Ptr FrustumCloud;//frustum cull
 
-    pcl::PointCloud<pcl::PointXYZ> FreeCloud;
+    pcl::PointCloud<pcl::PointXYZ> freeCloud;
     float voxelRes, OriginalVoxelsSize;
     double id;
-    pcl::VoxelGridOcclusionEstimationT voxelFilterOriginal;
+    pcl::VoxelGridOcclusionEstimationGPU voxelFilterOriginal;
     Eigen::Vector3i  max_b1, min_b1;
     visualization_msgs::Marker linesList1,linesList2,linesList3,linesList4;
     visualization_msgs::MarkerArray marker_array;
-    pcl::FrustumCullingTT fc;
+    pcl::FrustumCullingGPU fc;
 
     //methods
     OcclusionCullingGPU(ros::NodeHandle & n, std::string modelName);

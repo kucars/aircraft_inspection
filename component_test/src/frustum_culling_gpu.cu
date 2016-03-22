@@ -41,7 +41,7 @@
 
 
 ///////////////////////////////////////////////////////////////////////////////
-pcl::FrustumCullingTT::~FrustumCullingTT()
+pcl::FrustumCullingGPU::~FrustumCullingGPU()
 {
     free(x);
     free(y);
@@ -59,7 +59,7 @@ pcl::FrustumCullingTT::~FrustumCullingTT()
     cudaFree(deviceIndicesCount);
 }
 
-void pcl::FrustumCullingTT::initializeGPUPointData(const PointCloudConstPtr &cloud)
+void pcl::FrustumCullingGPU::initializeGPUPointData(const PointCloudConstPtr &cloud)
 {
     setInputCloud(cloud);
     if(input_->points.size() == 0)
@@ -101,7 +101,7 @@ void pcl::FrustumCullingTT::initializeGPUPointData(const PointCloudConstPtr &clo
     cudaMemcpy(deviceZ,z,size,cudaMemcpyHostToDevice);
 }
 
-void pcl::FrustumCullingTT::applyFilter (PointCloud& output)
+void pcl::FrustumCullingGPU::applyFilter (PointCloud& output)
 {
     std::vector<int> indices;
     if (keep_organized_)
@@ -155,13 +155,9 @@ __global__ void point_inside_fov_check(double *x, double*y, double*z,float * pl_
         }
     }
 }
-void pcl::FrustumCullingTT::applyFilter (std::vector<int> &indices)
-{
-    std::cout<<"\nPerforming the Magic using GPUs";
-    Eigen::Vector4f pt(1,2,3,4);
-    Eigen::Vector4f ps(1,1,1,1);
-    std::cout<<"\nThe dot product returns:"<<pt.dot(ps);
 
+void pcl::FrustumCullingGPU::applyFilter (std::vector<int> &indices)
+{
     Eigen::Vector4f pl_n; // near plane
     Eigen::Vector4f pl_f; // far plane
     Eigen::Vector4f pl_t; // top plane
@@ -244,16 +240,8 @@ void pcl::FrustumCullingTT::applyFilter (std::vector<int> &indices)
     cudaMemcpy(device_pl_n,pl_n.data(),size,cudaMemcpyHostToDevice);
     cudaMemcpy(device_pl_f,pl_f.data(),size,cudaMemcpyHostToDevice);
 
-    std::cout<<"\n Size of Double:"<<sizeof(float)<<" sizeof Eigen Vector:"<<sizeof(pl_t(0));
     cudaMemcpy(test,device_pl_t,size,cudaMemcpyDeviceToHost);
-
-    std::cout<<"\n pl_t x:"<<pl_t(0)<<" y:"<<pl_t(1)<<" z:"<<pl_t(2)<<" d:"<<pl_t(3);
-    std::cout<<"\n device_plt_t x:"<<test[0]<<" y:"<<test[1]<<" z:"<<test[2]<<" d:"<<test[3];
-
     int numBlocks = (int)ceil(numPoints/NUM_THREADS) + 1;
-    std::cout<<"\nNum of Blocks needed:"<<numBlocks;
-    std::cout<<"\nSize of points is:"<<numPoints<<" size of cloud is:"<<input_->points.size()<<" size of indicies:"<<indices_->size();
-    std::cout<<"\nSize of indicies element:"<<sizeof(indices[0])<<" deviceIndicies elemeint size:"<<sizeof(int);
 
     point_inside_fov_check<<<numBlocks, NUM_THREADS>>>(deviceX,deviceY,deviceZ,device_pl_t,device_pl_b,device_pl_r,device_pl_l,device_pl_n,device_pl_f,deviceIndices,deviceIndicesCount,numPoints);
 
@@ -261,44 +249,7 @@ void pcl::FrustumCullingTT::applyFilter (std::vector<int> &indices)
     cudaMemcpy(&indicesCount,deviceIndicesCount, sizeof(int),cudaMemcpyDeviceToHost);
     cudaMemcpy(indices.data(),deviceIndices, numPoints*sizeof(int),cudaMemcpyDeviceToHost);
 
-    std::cout<<"\nNew size of indicies:"<<indicesCount<<" Negative is:"<<negative_; fflush(stdout);
-
+    // Entries with zeros are outside the frustum
     indices.erase(std::remove(indices.begin(), indices.end(), 0), indices.end());
-
-    //for(int i=0;i<indices.size();i++)
-    //{
-    //    std::cout<<"\nIndex:"<<i<<" value:"<<indices[i];
-    //}
-
-    //indices.resize (0);
-    //indices.resize (indicesCount);
-
-    /*
-    size_t indices_ctr = 0;
-    size_t removed_ctr = 0;
-    for (size_t i = 0; i < indices_->size (); i++)
-    {
-        int idx = indices_->at (i);
-        Eigen::Vector4f pt (input_->points[idx].x,
-                            input_->points[idx].y,
-                            input_->points[idx].z,
-                            1.0f);
-        bool is_in_fov = (pt.dot (pl_l) <= 0) &&
-                (pt.dot (pl_r) <= 0) &&
-                (pt.dot (pl_t) <= 0) &&
-                (pt.dot (pl_b) <= 0) &&
-                (pt.dot (pl_f) <= 0) &&
-                (pt.dot (pl_n) <= 0);
-        if (is_in_fov ^ negative_)
-        {
-            indices[indices_ctr++] = idx;
-        }
-        else if (extract_removed_indices_)
-        {
-            (*removed_indices_)[removed_ctr++] = idx;
-        }
-    }
-    indices.resize (indices_ctr);
-    removed_indices_->resize (removed_ctr);
-    */
+    // TODO: maybe we need to keep te removed indicies ?
 }
