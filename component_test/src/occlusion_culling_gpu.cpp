@@ -14,7 +14,7 @@ OcclusionCullingGPU::OcclusionCullingGPU(ros::NodeHandle &n, std::string modelNa
    occlusionFreeCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
    FrustumCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
    std::string path = ros::package::getPath("component_test");
-   pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/"+model+".pcd", *cloud);
+   pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/"+model, *cloud);
    voxelRes = 0.5f;
    OriginalVoxelsSize=0.0;
    id=0.0;
