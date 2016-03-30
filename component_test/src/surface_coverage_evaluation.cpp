@@ -26,6 +26,7 @@
 #include <iostream>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/conversions.h>
 #include <pcl/visualization/cloud_viewer.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/common/eigen.h>
@@ -34,36 +35,77 @@
 #include "fcl_utility.h"
 #include <pcl/filters/voxel_grid.h>
 #include <component_test/occlusion_culling.h>
+#include <component_test/occlusion_culling_gpu.h>
 #include <pcl/io/pcd_io.h>
 #include "fcl_utility.h"
+#include <pcl/PolygonMesh.h>
+//VTK
+#include <vtkVersion.h>
+#include <vtkSmartPointer.h>
+#include <vtkSurfaceReconstructionFilter.h>
+#include <vtkProgrammableSource.h>
+#include <vtkContourFilter.h>
+#include <vtkReverseSense.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkProperty.h>
+#include <vtkPolyData.h>
+#include <vtkCamera.h>
+#include <vtkRenderer.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderWindowInteractor.h>
+#include <vtkSphereSource.h>
+#include <vtkXMLPolyDataReader.h>
+#include <vtkPolyDataReader.h>
+#include <vtkPLYWriter.h>
+#include <pcl/io/vtk_lib_io.h>
+#include <pcl/io/vtk_io.h>
+#include <pcl/surface/vtk_smoothing/vtk_utils.h>
+#include <rviz_visual_tools/rviz_visual_tools.h>
+//#include <igl/copyleft/cgal/intersect_other.h>
  using namespace fcl;
 geometry_msgs::Pose uav2camTransformation(geometry_msgs::Pose pose, Vec3f rpy, Vec3f xyz);
+visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int c_color[], double scale, std::string frame_id);
+void meshing(pcl::PointCloud<pcl::PointXYZ> pointcloud, pcl::PolygonMeshPtr& mesh);
+float calcMeshSurfaceArea(pcl::PolygonMesh::Ptr& mesh);
+bool contains(pcl::PointCloud<pcl::PointXYZ> c, pcl::PointXYZ p) ;
+pcl::PointCloud<pcl::PointXYZ> pointsDifference(pcl::PointCloud<pcl::PointXYZ> c1, pcl::PointCloud<pcl::PointXYZ> c2) ;
 
 int main(int argc, char **argv)
 {
 
-    ros::init(argc, argv, "accuracy_check");
+    ros::init(argc, argv, "surface_coverage_evaluation");
     ros::NodeHandle n;
-    ros::Publisher pub1 = n.advertise<sensor_msgs::PointCloud2>("originalPointCloud", 100);
-    ros::Publisher pub2 = n.advertise<sensor_msgs::PointCloud2>("accuracyCloud", 100);
-    ros::Publisher pub3 = n.advertise<geometry_msgs::PoseArray>("viewpoints", 100);
+    ros::Publisher originalCloudPub = n.advertise<sensor_msgs::PointCloud2>("originalPointCloud", 100);
+    ros::Publisher accuracyCloudPub = n.advertise<sensor_msgs::PointCloud2>("accuracyCloud", 100);
+    ros::Publisher extraCloudPub = n.advertise<sensor_msgs::PointCloud2>("extraCloud", 100);
+    ros::Publisher viewpointsPub    = n.advertise<geometry_msgs::PoseArray>("viewpoints", 100);
+    ros::Publisher waypointsPub     = n.advertise<geometry_msgs::PoseArray>("waypoints", 100);
+    ros::Publisher pathPub         = n.advertise<visualization_msgs::Marker>("path", 10);
+    rviz_visual_tools::RvizVisualToolsPtr visual_tools_(new rviz_visual_tools::RvizVisualTools("map","/rviz_visual_markers"));
+
+    geometry_msgs::Pose p;
+    p.position.x=0;    p.position.y=0; p.position.z=0; p.orientation.x=0; p.orientation.y=0;p.orientation.z=0;p.orientation.w=1;
+
+    geometry_msgs::Point p1;p1.x=0;p1.y=0;p1.z=0;    geometry_msgs::Point p2;p2.x=0;p2.y=0;p2.z=6;
+    visual_tools_->publishLine(p1,p2,rviz_visual_tools::PINK, rviz_visual_tools::LARGE);
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr originalCloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr accuracyCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-    OcclusionCulling obj(n,"etihad_nowheels_densed.pcd");
-    double locationx,locationy,locationz,yaw,max=0, EMax,min=1,EMin;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr visibleCloudPtr(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr extraPtr(new pcl::PointCloud<pcl::PointXYZ>);
+
+    OcclusionCullingGPU obj(n,"etihad_nowheels_densed.pcd");
+    double locationx,locationy,locationz,yaw,max=0, EMax,min=100,EMin;
 
     //reading the original cloud
     std::string path = ros::package::getPath("component_test");
     pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/etihad_nowheels_densed.pcd", *originalCloud);
-    geometry_msgs::PoseArray viewpoints;
-    geometry_msgs::Pose pt;
 
     ros::Time accuracy_begin = ros::Time::now();
 
 
     //1: reading the path from a file
-    std::string str1 = path+"/src/txt/3_90path_new.txt";
+    std::string str1 = path+"/src/txt/2_5_10path.txt";//3_90path_new
     const char * filename1 = str1.c_str();
     assert(filename1 != NULL);
     filename1 = strdup(filename1);
@@ -77,7 +119,56 @@ int main(int argc, char **argv)
     Vec3f rpy(0,0.093,0);
     Vec3f xyz(0,0.0,-0.055);
     geometry_msgs::Pose loc;
+    geometry_msgs::PoseArray viewpoints,points;
+    geometry_msgs::PoseArray extraPoints,extraArea;
+    geometry_msgs::Pose pt;
 
+    int i=0;
+    while (!feof(file1))
+    {
+        fscanf(file1,"%lf %lf %lf %lf\n",&locationx,&locationy,&locationz,&yaw);
+        pt.position.x=locationx; pt.position.y=locationy; pt.position.z=locationz;
+
+        tf::Quaternion tf_q ;
+        tf_q= tf::createQuaternionFromYaw(yaw);
+        pt.orientation.x=tf_q.getX();pt.orientation.y=tf_q.getY();pt.orientation.z=tf_q.getZ();pt.orientation.w=tf_q.getW();
+        points.poses.push_back(pt);
+        loc= uav2camTransformation(pt,rpy,xyz);
+        viewpoints.poses.push_back(loc);
+
+        pcl::PointCloud<pcl::PointXYZ> visible, extra_cloud;
+        visible = obj.extractVisibleSurface(loc);
+//        global +=visible;
+        extra_cloud = pointsDifference(visible,global);
+        extraPtr->points = extra_cloud.points;
+        global.points =visible.points;
+        visibleCloudPtr->points = visible.points;
+        std::cout<<"There are :  "<<visible.size()<<"points\n";
+        pcl::PolygonMesh::Ptr m(new pcl::PolygonMesh());
+        meshing(visible, m);
+        float area = calcMeshSurfaceArea(m);
+
+//        pcl::Vertices v;
+
+//        std::cout<<"polygons in main "<<m->polygons.size()<<"\n";
+//        std::cout<<"polygons vertices "<<m->polygons[0].vertices.size()<<"\n";
+//        pcl::PointCloud<pcl::PointXYZ> cloud;
+//        pcl::fromPCLPointCloud2 (m->cloud, cloud);
+//        cloud.points[ mesh.polygons[tri_i].vertices[vertex_i] ]
+//        std::cout<<"polygon 0 vertices 0: x:"<<cloud.points[ m->polygons[0].vertices[0] ].x<<" y:"<<cloud.points[ m->polygons[0].vertices[0] ].y<<" z:"<< cloud.points[ m->polygons[0].vertices[0] ].z<<"\n";
+          if(i==0)
+              break;
+          i++;
+        for(int i=0; i<visible.size();i++){
+            double temp = visible.at(i).z;//depth
+            if(max<temp)
+               max=temp;
+            if(min>temp)
+               min=temp;
+        }
+    }
+
+/*
     while (!feof(file1))
     {
         fscanf(file1,"%lf %lf %lf %lf\n",&locationx,&locationy,&locationz,&yaw);
@@ -170,34 +261,64 @@ int main(int argc, char **argv)
     ros::Time accuracy_end = ros::Time::now();
     double elapsed =  accuracy_end.toSec() - accuracy_begin.toSec();
     std::cout<<"accuracy check duration (s) = "<<elapsed<<"\n";
-
+*/
     // *****************Rviz Visualization ************
+    geometry_msgs::Point pt1;
+    std::vector<geometry_msgs::Point> lineSegments;
+    for (int i =0; i<points.poses.size(); i++)
+    {
+        if(i+1< points.poses.size())
+        {
+            pt1.x = points.poses[i].position.x;
+            pt1.y =  points.poses.at(i).position.y;
+            pt1.z =  points.poses.at(i).position.z;
+            lineSegments.push_back(pt1);
+
+            pt1.x = points.poses.at(i+1).position.x;
+            pt1.y =  points.poses.at(i+1).position.y;
+            pt1.z =  points.poses.at(i+1).position.z;
+            lineSegments.push_back(pt1);
+
+        }
+    }
+    int c_color[3];
+    c_color[0]=1; c_color[1]=0; c_color[2]=0;
+    visualization_msgs::Marker linesList = drawLines(lineSegments,c_color,0.15, "map");
 
     ros::Rate loop_rate(10);
+    sensor_msgs::PointCloud2 cloud1;
+    sensor_msgs::PointCloud2 cloud2,cloud3;
     while (ros::ok())
     {
 
-
-        //***original cloud & frustum cull & occlusion cull publish***
-        sensor_msgs::PointCloud2 cloud1;
-        sensor_msgs::PointCloud2 cloud2;
-
-
+        //***original cloud & accuracy cloud publish***
         pcl::toROSMsg(*originalCloud, cloud1); //cloud of original (white) using original cloud
-        pcl::toROSMsg(*accuracyCloud, cloud2); //cloud of the not occluded voxels (blue) using occlusion culling
+        pcl::toROSMsg(*visibleCloudPtr, cloud2); //cloud of the not occluded voxels (blue) using occlusion culling
+        pcl::toROSMsg(*extraPtr, cloud3); //cloud of the not occluded voxels (blue) using occlusion culling
 
         cloud1.header.frame_id = "map";
         cloud2.header.frame_id = "map";
+        cloud3.header.frame_id = "map";
 
         cloud1.header.stamp = ros::Time::now();
         cloud2.header.stamp = ros::Time::now();
+        cloud3.header.stamp = ros::Time::now();
 
-        pub1.publish(cloud1);
-        pub2.publish(cloud2);
+        originalCloudPub.publish(cloud1);
+        accuracyCloudPub.publish(cloud2);
+        extraCloudPub.publish(cloud3);
 
+        //***viewpoints & waypoints  publish***
         viewpoints.header.frame_id= "map";
         viewpoints.header.stamp = ros::Time::now();
-        pub3.publish(viewpoints);
+        viewpointsPub.publish(viewpoints);
+
+        points.header.frame_id= "map";
+        points.header.stamp = ros::Time::now();
+        waypointsPub.publish(points);
+
+        //***path publish***
+        pathPub.publish(linesList);
 
         ros::spinOnce();
         loop_rate.sleep();
@@ -251,4 +372,125 @@ geometry_msgs::Pose uav2camTransformation(geometry_msgs::Pose pose, Vec3f rpy, V
     return p;
 
 }
+visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int c_color[], double scale, std::string frame_id)
+{
+    visualization_msgs::Marker linksMarkerMsg;
+    linksMarkerMsg.header.frame_id=frame_id; //change to "base_point_cloud" if it is used in component test package
+    linksMarkerMsg.header.stamp=ros::Time::now();
+    linksMarkerMsg.ns="link_marker";
+    linksMarkerMsg.id = 2342342;
+    linksMarkerMsg.type = visualization_msgs::Marker::LINE_LIST;
+    linksMarkerMsg.scale.x = scale;//0.08
+    linksMarkerMsg.action  = visualization_msgs::Marker::ADD;
+    linksMarkerMsg.lifetime  = ros::Duration(10000000);
+    std_msgs::ColorRGBA color;
+    color.r = (float)c_color[0]; color.g=(float)c_color[1]; color.b=(float)c_color[2], color.a=1.0f;
 
+    std::vector<geometry_msgs::Point>::iterator linksIterator;
+    for(linksIterator = links.begin();linksIterator != links.end();linksIterator++)
+    {
+        linksMarkerMsg.points.push_back(*linksIterator);
+        linksMarkerMsg.colors.push_back(color);
+    }
+   return linksMarkerMsg;
+}
+
+void meshing(pcl::PointCloud<pcl::PointXYZ> pointcloud, pcl::PolygonMeshPtr& mesh)
+{
+    //reading the cloud into vtkpolydata
+    vtkSmartPointer<vtkPoints> pts = vtkSmartPointer<vtkPoints>::New();
+    std::cout<<"entered the meshing function \n";
+
+    for (int i = 0; i < pointcloud.points.size (); i++)
+    {
+        double p[3];
+        p[0] = pointcloud.points[i].x;
+        p[1] = pointcloud.points[i].y;
+        p[2] = pointcloud.points[i].z;
+        pts->InsertNextPoint (p);
+    }
+    std::cout<<"after loop\n";
+
+    vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+    polydata->SetPoints(pts);
+    std::cout<<"after assinging the polydata\n";
+
+    // Construct the surface and create isosurface.
+    vtkSmartPointer<vtkSurfaceReconstructionFilter> surf =
+            vtkSmartPointer<vtkSurfaceReconstructionFilter>::New();
+#if VTK_MAJOR_VERSION <= 5
+    surf->SetInput(polydata);
+#else
+    surf->SetInputData(polydata);
+#endif
+
+    vtkSmartPointer<vtkContourFilter> cf =
+            vtkSmartPointer<vtkContourFilter>::New();
+    cf->SetInputConnection(surf->GetOutputPort());
+    cf->SetValue(0, 0.0);
+
+    // Sometimes the contouring algorithm can create a volume whose gradient
+    // vector and ordering of polygon (using the right hand rule) are
+    // inconsistent. vtkReverseSense cures this problem.
+    vtkSmartPointer<vtkReverseSense> reverse =
+            vtkSmartPointer<vtkReverseSense>::New();
+    reverse->SetInputConnection(cf->GetOutputPort());
+    reverse->ReverseCellsOn();
+    reverse->ReverseNormalsOn();
+
+    vtkSmartPointer<vtkPolyData> polydatatest  = vtkSmartPointer<vtkPolyData>::New();
+    polydatatest->Reset();
+    polydatatest= reverse->GetOutput();
+    polydatatest->Update();
+    std::cout<<"polygons are "<<polydatatest->GetNumberOfPolys()<<"\n";
+    //     pcl::PolygonMesh::Ptr result(new pcl::PolygonMesh());
+
+    //     pcl::VTKUtils::convertToPCL (polydatatest, *mesh); //option 1
+    pcl::VTKUtils::vtk2mesh(polydatatest,*mesh); //option 2
+    //     pcl::io::mesh2vtk(test,polydatatest);
+    std::cout<<"polygons in pcl are "<<mesh->polygons.size()<<"\n";
+
+     //write the mesh to file (optional)
+     std::string filename = "trial.ply";//argv[1];
+     vtkSmartPointer<vtkPLYWriter> plyWriter =
+             vtkSmartPointer<vtkPLYWriter>::New();
+     plyWriter->SetFileName(filename.c_str());
+     plyWriter->SetInputConnection(reverse->GetOutputPort());
+     plyWriter->Write();
+
+}
+
+float calcMeshSurfaceArea(pcl::PolygonMesh::Ptr& mesh)
+{
+    int s = mesh->polygons.size();
+    float totalArea=0.0;
+    pcl::PointCloud<pcl::PointXYZ> cloud;
+    pcl::fromPCLPointCloud2 (mesh->cloud, cloud);
+    for (int i =0; i<s; i++){
+        pcl::PointCloud<pcl::PointXYZ> temp_cloud;
+        temp_cloud.points.push_back( cloud.points[ mesh->polygons[i].vertices[0] ]);
+        temp_cloud.points.push_back( cloud.points[ mesh->polygons[i].vertices[1] ]);
+        temp_cloud.points.push_back( cloud.points[ mesh->polygons[i].vertices[2] ]);
+        totalArea += pcl::calculatePolygonArea(temp_cloud);
+    }
+    std::cout<<"total area "<<totalArea<<"\n";
+    return totalArea;
+}
+bool contains(pcl::PointCloud<pcl::PointXYZ> c, pcl::PointXYZ p) {
+    pcl::PointCloud<pcl::PointXYZ>::iterator it = c.begin();
+    for (; it != c.end(); ++it) {
+        if (it->x == p.x && it->y == p.y && it->z == p.z)
+            return true;
+    }
+    return false;
+}
+pcl::PointCloud<pcl::PointXYZ> pointsDifference(pcl::PointCloud<pcl::PointXYZ> c1, pcl::PointCloud<pcl::PointXYZ> c2) { //c1 visible  //c2 global
+    pcl::PointCloud<pcl::PointXYZ> inter;
+    pcl::PointCloud<pcl::PointXYZ>::iterator it = c1.begin();
+    for (; it != c1.end(); ++it) {
+        if (!contains(c2, *it))
+            inter.push_back(*it);
+    }
+
+    return inter;
+}
