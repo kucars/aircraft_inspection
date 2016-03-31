@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   nav_msgs
   shape_msgs
   std_msgs
+  rviz_visual_tools
   )
 
 find_package(PCL REQUIRED)
@@ -46,6 +47,7 @@ catkin_package(
 
 include_directories(include
   ${catkin_INCLUDE_DIRS}
+  ${rviz_visual_tools_INCLUDE_DIRS}
 #  /usr/local/cuda/include/
 #  /home/randa/workspace/catkin_ws/src/libigl/include/
 )
@@ -68,7 +70,7 @@ target_link_libraries(visualization_voxelgrid voxel_grid ${catkin_LIBRARIES} -lg
 add_executable(surface_coverage_evaluation src/surface_coverage_evaluation.cpp)
 target_include_directories(surface_coverage_evaluation PUBLIC include ${catkin_INCLUDE_DIRS})
 add_dependencies(surface_coverage_evaluation ${catkin_EXPORTED_TARGETS})
-target_link_libraries(surface_coverage_evaluation occlusion_culling occlusion_culling_gpu rviz_visual_tools ${VTK_LIBRARIES} ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+target_link_libraries(surface_coverage_evaluation occlusion_culling occlusion_culling_gpu ${rviz_visual_tools_LIBRARIES} ${VTK_LIBRARIES} ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
 add_executable(accuracy_check src/accuracy_check.cpp)
 add_dependencies(accuracy_check ${catkin_EXPORTED_TARGETS})
