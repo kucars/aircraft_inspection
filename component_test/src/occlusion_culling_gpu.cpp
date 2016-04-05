@@ -50,6 +50,18 @@ OcclusionCullingGPU::OcclusionCullingGPU(ros::NodeHandle &n, std::string modelNa
    fc.setHorizontalFOV (58);
    fc.setNearPlaneDistance (0.7);
    fc.setFarPlaneDistance (6.0);
+
+   double max=0,min=std::numeric_limits<double>::max();
+   for(int i=0; i<cloud->points.size();i++){
+       double temp = cloud->at(i).z;//depth
+       if(max<temp)
+          max=temp;
+       if(min>temp)
+          min=temp;
+   }
+   maxAccuracyError = 0.0000285 * max*max;
+   minAccuracyError = 0.0000285 * min*min;
+
 }
 OcclusionCullingGPU::OcclusionCullingGPU(std::string modelName):
     model(modelName),
@@ -269,7 +281,20 @@ float OcclusionCullingGPU::calcCoveragePercent(pcl::PointCloud<pcl::PointXYZ>::P
 
     return coverage_percentage;
 }
-
+double OcclusionCullingGPU::calcAvgAccuracy(pcl::PointCloud<pcl::PointXYZ> pointCloud)
+{
+    double avgAccuracy;
+    double pointError,val,errorSum=0, errorRatio;
+    for (int j=0; j<pointCloud.size(); j++)
+    {
+        val = pointCloud.at(j).z;//depth
+        pointError= 0.0000285 * val * val;
+        errorRatio=pointError/maxAccuracyError;
+        errorSum += errorRatio;
+    }
+    avgAccuracy=errorSum/pointCloud.size();
+    return avgAccuracy;
+}
 void OcclusionCullingGPU::visualizeFOV(geometry_msgs::Pose location)
 {
 

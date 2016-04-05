@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project( component_test )
 SET ( CMAKE_CXX_FLAGS "-frounding-math" )
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -29,6 +30,8 @@ find_package(CUDA QUIET)
 #list(APPEND CMAKE_CXX_FLAGS "-std=c++11 -O3")
 #list(APPEND CUDA_NVCC_FLAGS "-std=c++11;-O2;-DVERBOSE")
 #set(CUDA_PROPAGATE_HOST_FLAGS OFF)
+FIND_LIBRARY(LIBIGL_LIBRARY igl PATHS "/home/randa/workspace/catkin_ws/src/libigl/lib/")
+message(${LIBIGL_LIBRARY})
 
 if ( NOT CGAL_FOUND )
   message(STATUS "This project requires the CGAL library, and will not be compiled.")
@@ -51,7 +54,7 @@ include_directories(include
 #  /usr/local/cuda/include/
 #  /home/randa/workspace/catkin_ws/src/libigl/include/
 )
-  
+
 add_library(fcl_test src/fcl_utility.cpp )
 add_library(voxel_grid src/voxel_grid.cpp )
 target_link_libraries(voxel_grid ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES})
@@ -68,9 +71,11 @@ add_library(visualization_voxelgrid src/visualization_voxelgrid.cpp)
 target_link_libraries(visualization_voxelgrid voxel_grid ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES})
 
 add_executable(surface_coverage_evaluation src/surface_coverage_evaluation.cpp)
-target_include_directories(surface_coverage_evaluation PUBLIC include ${catkin_INCLUDE_DIRS})
+#set_source_files_properties(surface_coverage_evaluation PROPERTIES COMPILE_FLAGS "-std=c++11")
+target_include_directories(surface_coverage_evaluation PUBLIC include ${catkin_INCLUDE_DIRS} ${LIBIGL_INCLUDE_DIRS} /home/randa/workspace/catkin_ws/src/libigl/include/)
+target_compile_definitions(surface_coverage_evaluation PRIVATE ${LIBIGL_DEFINITIONS})
 add_dependencies(surface_coverage_evaluation ${catkin_EXPORTED_TARGETS})
-target_link_libraries(surface_coverage_evaluation occlusion_culling occlusion_culling_gpu ${rviz_visual_tools_LIBRARIES} ${VTK_LIBRARIES} ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+target_link_libraries(surface_coverage_evaluation occlusion_culling occlusion_culling_gpu ${LIBIGL_LIBRARY} ${LIBIGL_EXTRA_LIBRARIES} ${rviz_visual_tools_LIBRARIES} ${VTK_LIBRARIES} ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
 add_executable(accuracy_check src/accuracy_check.cpp)
 add_dependencies(accuracy_check ${catkin_EXPORTED_TARGETS})
