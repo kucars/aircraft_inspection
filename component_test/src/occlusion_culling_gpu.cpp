@@ -51,6 +51,7 @@ OcclusionCullingGPU::OcclusionCullingGPU(ros::NodeHandle &n, std::string modelNa
    fc.setNearPlaneDistance (0.7);
    fc.setFarPlaneDistance (6.0);
 
+   //max accuracy calculation
    double max=0,min=std::numeric_limits<double>::max();
    for(int i=0; i<cloud->points.size();i++){
        double temp = cloud->at(i).z;//depth
@@ -107,6 +108,18 @@ OcclusionCullingGPU::OcclusionCullingGPU(std::string modelName):
     fc.setHorizontalFOV (58);
     fc.setNearPlaneDistance (0.7);
     fc.setFarPlaneDistance (6.0);
+
+    //max accuracy calculation
+    double max=0,min=std::numeric_limits<double>::max();
+    for(int i=0; i<cloud->points.size();i++){
+        double temp = cloud->at(i).z;//depth
+        if(max<temp)
+           max=temp;
+        if(min>temp)
+           min=temp;
+    }
+    maxAccuracyError = 0.0000285 * max*max;
+    minAccuracyError = 0.0000285 * min*min;
 }
 OcclusionCullingGPU::OcclusionCullingGPU():
     model(NULL),
@@ -152,6 +165,18 @@ OcclusionCullingGPU::OcclusionCullingGPU():
     fc.setHorizontalFOV (58);
     fc.setNearPlaneDistance (0.7);
     fc.setFarPlaneDistance (6.0);
+
+    //max accuracy calculation
+    double max=0,min=std::numeric_limits<double>::max();
+    for(int i=0; i<cloud->points.size();i++){
+        double temp = cloud->at(i).z;//depth
+        if(max<temp)
+           max=temp;
+        if(min>temp)
+           min=temp;
+    }
+    maxAccuracyError = 0.0000285 * max*max;
+    minAccuracyError = 0.0000285 * min*min;
 }
 OcclusionCullingGPU::~OcclusionCullingGPU()
 {
@@ -289,8 +314,8 @@ double OcclusionCullingGPU::calcAvgAccuracy(pcl::PointCloud<pcl::PointXYZ> point
     {
         val = pointCloud.at(j).z;//depth
         pointError= 0.0000285 * val * val;
-        errorRatio=pointError/maxAccuracyError;
-        errorSum += errorRatio;
+//        errorRatio=pointError/maxAccuracyError;
+        errorSum += pointError;
     }
     avgAccuracy=errorSum/pointCloud.size();
     return avgAccuracy;
