@@ -73,10 +73,49 @@
 #include <vtkTransform.h>
 #include <vtkTransformPolyDataFilter.h>
 
+//CGAL
+// Triangle triangle intersection
+#include <CGAL/intersections.h>
+// Constrained Delaunay Triangulation types
+#include <CGAL/Constrained_Delaunay_triangulation_2.h>
+#include <CGAL/Constrained_triangulation_plus_2.h>
+// Axis-align boxes for all-pairs self-intersection detection
+#include <CGAL/point_generators_3.h>
+#include <CGAL/Bbox_3.h>
+#include <CGAL/box_intersection_d.h>
+#include <CGAL/function_objects.h>
+#include <CGAL/Join_input_iterator.h>
+#include <CGAL/algorithm.h>
+#include <vector>
+// Axis-aligned bounding box tree for tet tri intersection
+#include <CGAL/AABB_tree.h>
+#include <CGAL/AABB_traits.h>
+#include <CGAL/AABB_triangle_primitive.h>
+// Boolean operations
+#include <CGAL/Polyhedron_3.h>
+// Delaunay Triangulation in 3D
+#include <CGAL/Delaunay_triangulation_3.h>
+// kernels
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
+#include <CGAL/Simple_cartesian.h>
+#include <CGAL/Cartesian_converter.h>
+
 #include <rviz_visual_tools/rviz_visual_tools.h>
 //#include <igl/copyleft/cgal/intersect_other.h>
+#include <component_test/mesh_surface.h>
 
- using namespace fcl;
+typedef CGAL::Exact_predicates_exact_constructions_kernel exactKernel; //CGAL::Exact_predicates_exact_constructions_kernel//it could be also CGAL::Exact_predicates_inexact_constructions_kernel CHECK LATER
+typedef CGAL::Simple_cartesian<double> simpleKernel;
+typedef CGAL::Point_3<exactKernel>    Point_3;
+typedef CGAL::Segment_3<exactKernel>  Segment_3;
+typedef CGAL::Triangle_3<exactKernel> Triangle_3;
+typedef CGAL::Plane_3<exactKernel>    Plane_3;
+typedef CGAL::Tetrahedron_3<exactKernel> Tetrahedron_3;
+typedef simpleKernel::Point_3   Point_3_S;
+typedef CGAL::Cartesian_converter<exactKernel,simpleKernel > converter;
+
+using namespace fcl;
 geometry_msgs::Pose uav2camTransformation(geometry_msgs::Pose pose, Vec3f rpy, Vec3f xyz);
 visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int c_color[], double scale, std::string frame_id);
 void meshingVTK(pcl::PointCloud<pcl::PointXYZ> pointcloud, pcl::PolygonMeshPtr& mesh);
@@ -110,13 +149,13 @@ int main(int argc, char **argv)
     pcl::PointCloud<pcl::PointXYZ>::Ptr extraPtr(new pcl::PointCloud<pcl::PointXYZ>);
 
     OcclusionCullingGPU obj(n,"etihad_nowheels_densed.pcd");
-//    OcclusionCullingGPU obj(n,"etihad_nowheels_nointernal_newdensed.pcd");
+    //    OcclusionCullingGPU obj(n,"etihad_nowheels_nointernal_newdensed.pcd");
     double locationx,locationy,locationz,yaw;
 
     //reading the original cloud
     std::string path = ros::package::getPath("component_test");
     pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/etihad_nowheels_densed.pcd", *originalCloud);
-//    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/etihad_nowheels_nointernal_newdensed.pcd", *originalCloud);
+    //    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/etihad_nowheels_nointernal_newdensed.pcd", *originalCloud);
 
 
     //1: reading the path from a file
@@ -136,18 +175,24 @@ int main(int argc, char **argv)
     geometry_msgs::Pose loc;
     geometry_msgs::PoseArray viewpoints,points;
     geometry_msgs::PoseArray extraPoints;
-    std::vector<double> extraAreas,avgAccuracyErrors;
+    std::vector<double> extraAreas,avgAccuracyErrors, intersectionAreas;
     geometry_msgs::Pose pt;
+    std::string str2 = path+"/src/mesh/p22.obj";
+
+    MeshSurface ms(n);
+    Triangles TA,TB;
+    std::vector<Vec3f> pt2;
+    ms.loadOBJFile(str2.c_str(), pt2, TB);
 
     int i=0;
     while (!feof(file1))
     {
         fscanf(file1,"%lf %lf %lf %lf\n",&locationx,&locationy,&locationz,&yaw);
         pt.position.x=locationx; pt.position.y=locationy; pt.position.z=locationz;
-//        pt.position.x=4.0; pt.position.y=-25; pt.position.z=5;
+        //        pt.position.x=4.0; pt.position.y=-25; pt.position.z=5;
         tf::Quaternion tf_q ;
         tf_q= tf::createQuaternionFromYaw(yaw);
-//        yaw=3.14;
+        //        yaw=3.14;
         pt.orientation.x=tf_q.getX();pt.orientation.y=tf_q.getY();pt.orientation.z=tf_q.getZ();pt.orientation.w=tf_q.getW();
         points.poses.push_back(pt);
         loc= uav2camTransformation(pt,rpy,xyz);
@@ -155,34 +200,47 @@ int main(int argc, char **argv)
 
         pcl::PointCloud<pcl::PointXYZ> visible, extra_cloud;
         visible = obj.extractVisibleSurface(loc);
-//        global +=visible;
-//        extra_cloud = pointsDifference(visible,global);
-//        extraPtr->points = extra_cloud.points;
-//        global.points =visible.points;
         visibleCloudPtr->points = visible.points;
-        std::cout<<"There are :  "<<visible.size()<<"points\n";
-        pcl::PolygonMesh::Ptr m(new pcl::PolygonMesh());
-        meshingPCL(visible, m);
-        float area = calcMeshSurfaceArea(m);
+        Triangles cgalvec, inter;
+        ms.meshingPCL(visible,cgalvec,true);
+        double areafull=ms.calcCGALMeshSurfaceArea(TB);
+        std::cout<<"full area:"<<areafull<<std::endl;
+        ms.setCGALMeshA(cgalvec);
+        ms.setCGALMeshB(TB);
+        double extraArea=ms.getExtraArea(inter);
+        std::cout<<"intersection area:"<<extraArea<<std::endl;
+//        ms.clear();
+        //testing the mesh_surface library
 
-//        pcl::Vertices v;
 
-//        std::cout<<"polygons in main "<<m->polygons.size()<<"\n";
-//        std::cout<<"polygons vertices "<<m->polygons[0].vertices.size()<<"\n";
-//        pcl::PointCloud<pcl::PointXYZ> cloud;
-//        pcl::fromPCLPointCloud2 (m->cloud, cloud);
-//        cloud.points[ mesh.polygons[tri_i].vertices[vertex_i] ]
-//        std::cout<<"polygon 0 vertices 0: x:"<<cloud.points[ m->polygons[0].vertices[0] ].x<<" y:"<<cloud.points[ m->polygons[0].vertices[0] ].y<<" z:"<< cloud.points[ m->polygons[0].vertices[0] ].z<<"\n";
+        //this was used to find extra points (it is time consuming, not optimized)
+        //        global +=visible;
+        //        extra_cloud = pointsDifference(visible,global);
+        //        extraPtr->points = extra_cloud.points;
+        //        global.points =visible.points;
 
-          //3: calculate the accuracy error ratio average
-          double accuracyAvg = obj.calcAvgAccuracy(visible);
-          avgAccuracyErrors.push_back(accuracyAvg);
-          std::cout<<"average accuracy at "<<i<<" is " <<accuracyAvg<<"\n";
+        //This was used to test the mehsing using PCL, I also have the VTK meshing and transformation but it is very horrible :S
+        //        std::cout<<"There are :  "<<visible.size()<<"points\n";
+        //        pcl::PolygonMesh::Ptr m(new pcl::PolygonMesh());
+        //        meshingPCL(visible, m);
+        //        float area = calcMeshSurfaceArea(m);
+        //        pcl::Vertices v;
+        //        std::cout<<"polygons in main "<<m->polygons.size()<<"\n";
+        //        std::cout<<"polygons vertices "<<m->polygons[0].vertices.size()<<"\n";
+        //        pcl::PointCloud<pcl::PointXYZ> cloud;
+        //        pcl::fromPCLPointCloud2 (m->cloud, cloud);
+        //        cloud.points[ mesh.polygons[tri_i].vertices[vertex_i] ]
+        //        std::cout<<"polygon 0 vertices 0: x:"<<cloud.points[ m->polygons[0].vertices[0] ].x<<" y:"<<cloud.points[ m->polygons[0].vertices[0] ].y<<" z:"<< cloud.points[ m->polygons[0].vertices[0] ].z<<"\n";
 
-          //just to handle one point
-          if(i==1)
-              break;
-          i++;
+        //3: calculate the accuracy error ratio average
+        double accuracyAvg = obj.calcAvgAccuracy(visible);
+        avgAccuracyErrors.push_back(accuracyAvg);
+        std::cout<<"average accuracy at "<<i<<" is " <<accuracyAvg<<"\n";
+
+        //just to handle one point
+        if(i==0)
+            break;
+        i++;
     }
 
 
@@ -301,7 +359,7 @@ void meshingPCL(pcl::PointCloud<pcl::PointXYZ> pointcloud, pcl::PolygonMeshPtr& 
     // Additional vertex information
     std::vector<int> parts = gp3.getPartIDs();
     std::vector<int> states = gp3.getPointStates();
-  //  pcl::io::saveOBJFile ("bun01.obj", triangles);
+    //  pcl::io::saveOBJFile ("bun01.obj", triangles);
     pcl::io::savePolygonFilePLY("plane.ply",triangles);
     pcl::io::saveVTKFile ("plane.vtk", triangles);
     mesh->polygons= triangles.polygons;
@@ -398,78 +456,78 @@ void meshingVTK(pcl::PointCloud<pcl::PointXYZ> pointcloud, pcl::PolygonMeshPtr& 
     //     pcl::io::mesh2vtk(test,polydatatest);
     std::cout<<"polygons in pcl are "<<mesh->polygons.size()<<"\n";
 
-     //write the mesh to file (optional)
-     std::string filename = "trial.ply";//argv[1];
-     vtkSmartPointer<vtkPLYWriter> plyWriter =
-             vtkSmartPointer<vtkPLYWriter>::New();
-     plyWriter->SetFileName(filename.c_str());
-     plyWriter->SetInputConnection(reverse->GetOutputPort());
-     plyWriter->Write();
+    //write the mesh to file (optional)
+    std::string filename = "trial.ply";//argv[1];
+    vtkSmartPointer<vtkPLYWriter> plyWriter =
+            vtkSmartPointer<vtkPLYWriter>::New();
+    plyWriter->SetFileName(filename.c_str());
+    plyWriter->SetInputConnection(reverse->GetOutputPort());
+    plyWriter->Write();
 
 }
 
 vtkSmartPointer<vtkPolyData> transform_back(vtkSmartPointer<vtkPoints> pt, vtkSmartPointer<vtkPolyData> pd)
 {
-  // The reconstructed surface is transformed back to where the
-  // original points are. (Hopefully) it is only a similarity
-  // transformation.
+    // The reconstructed surface is transformed back to where the
+    // original points are. (Hopefully) it is only a similarity
+    // transformation.
 
-  // 1. Get bounding box of pt, get its minimum corner (left, bottom, least-z), at c0, pt_bounds
+    // 1. Get bounding box of pt, get its minimum corner (left, bottom, least-z), at c0, pt_bounds
 
-  // 2. Get bounding box of surface pd, get its minimum corner (left, bottom, least-z), at c1, pd_bounds
+    // 2. Get bounding box of surface pd, get its minimum corner (left, bottom, least-z), at c1, pd_bounds
 
-  // 3. compute scale as:
-  //       scale = (pt_bounds[1] - pt_bounds[0])/(pd_bounds[1] - pd_bounds[0]);
+    // 3. compute scale as:
+    //       scale = (pt_bounds[1] - pt_bounds[0])/(pd_bounds[1] - pd_bounds[0]);
 
-  // 4. transform the surface by T := T(pt_bounds[0], [2], [4]).S(scale).T(-pd_bounds[0], -[2], -[4])
-
-
-
-  // 1.
-  double pt_bounds[6];  // (xmin,xmax, ymin,ymax, zmin,zmax)
-  pt->GetBounds(pt_bounds);
+    // 4. transform the surface by T := T(pt_bounds[0], [2], [4]).S(scale).T(-pd_bounds[0], -[2], -[4])
 
 
-  // 2.
-  double pd_bounds[6];  // (xmin,xmax, ymin,ymax, zmin,zmax)
-  pd->GetBounds(pd_bounds);
 
-//   // test, make sure it is isotropic
-   std::cout<<std::abs((pd_bounds[1] - pd_bounds[0])/(pt_bounds[1] - pt_bounds[0]))<<std::endl;
-   std::cout<<(pd_bounds[3] - pd_bounds[2])/(pt_bounds[3] - pt_bounds[2])<<std::endl;
-   std::cout<<(pd_bounds[5] - pd_bounds[4])/(pt_bounds[5] - pt_bounds[4])<<std::endl;
-//   // TEST
+    // 1.
+    double pt_bounds[6];  // (xmin,xmax, ymin,ymax, zmin,zmax)
+    pt->GetBounds(pt_bounds);
 
 
-  // 3
-  double scalex = std::abs ((pd_bounds[1] - pd_bounds[0])/(pt_bounds[1] - pt_bounds[0]));
-  double scaley = std::abs ((pd_bounds[3] - pd_bounds[2])/(pt_bounds[3] - pt_bounds[2]));
-//  double scalez = std::abs ((pd_bounds[5] - pd_bounds[4])/(pt_bounds[5] - pt_bounds[4]));
+    // 2.
+    double pd_bounds[6];  // (xmin,xmax, ymin,ymax, zmin,zmax)
+    pd->GetBounds(pd_bounds);
+
+    //   // test, make sure it is isotropic
+    std::cout<<std::abs((pd_bounds[1] - pd_bounds[0])/(pt_bounds[1] - pt_bounds[0]))<<std::endl;
+    std::cout<<(pd_bounds[3] - pd_bounds[2])/(pt_bounds[3] - pt_bounds[2])<<std::endl;
+    std::cout<<(pd_bounds[5] - pd_bounds[4])/(pt_bounds[5] - pt_bounds[4])<<std::endl;
+    //   // TEST
 
 
-  // 4.
-  vtkSmartPointer<vtkTransform> transp = vtkSmartPointer<vtkTransform>::New();
-  transp->Translate(pt_bounds[0], pt_bounds[2], pt_bounds[4]);
-  transp->Scale(scaley, scaley, scaley);
-//  transp->RotateZ(180);
-  transp->Translate( -pd_bounds[0],  -pd_bounds[2],  -pd_bounds[4]);
+    // 3
+    double scalex = std::abs ((pd_bounds[1] - pd_bounds[0])/(pt_bounds[1] - pt_bounds[0]));
+    double scaley = std::abs ((pd_bounds[3] - pd_bounds[2])/(pt_bounds[3] - pt_bounds[2]));
+    //  double scalez = std::abs ((pd_bounds[5] - pd_bounds[4])/(pt_bounds[5] - pt_bounds[4]));
 
-  vtkSmartPointer<vtkTransformPolyDataFilter> tpd = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+
+    // 4.
+    vtkSmartPointer<vtkTransform> transp = vtkSmartPointer<vtkTransform>::New();
+    transp->Translate(pt_bounds[0], pt_bounds[2], pt_bounds[4]);
+    transp->Scale(scaley, scaley, scaley);
+    //  transp->RotateZ(180);
+    transp->Translate( -pd_bounds[0],  -pd_bounds[2],  -pd_bounds[4]);
+
+    vtkSmartPointer<vtkTransformPolyDataFilter> tpd = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
 #if VTK_MAJOR_VERSION <= 5
-  tpd->SetInput(pd);
+    tpd->SetInput(pd);
 #else
-  tpd->SetInputData(pd);
+    tpd->SetInputData(pd);
 #endif
-  tpd->SetTransform(transp);
-  tpd->Update();
-  std::string filename = "new.ply";//argv[1];
-  vtkSmartPointer<vtkPLYWriter> plyWriter =
-          vtkSmartPointer<vtkPLYWriter>::New();
-  plyWriter->SetFileName(filename.c_str());
-  plyWriter->SetInputConnection(tpd->GetOutputPort());
-  plyWriter->Write();
+    tpd->SetTransform(transp);
+    tpd->Update();
+    std::string filename = "new.ply";//argv[1];
+    vtkSmartPointer<vtkPLYWriter> plyWriter =
+            vtkSmartPointer<vtkPLYWriter>::New();
+    plyWriter->SetFileName(filename.c_str());
+    plyWriter->SetInputConnection(tpd->GetOutputPort());
+    plyWriter->Write();
 
-  return tpd->GetOutput();
+    return tpd->GetOutput();
 }
 geometry_msgs::Pose uav2camTransformation(geometry_msgs::Pose pose, Vec3f rpy, Vec3f xyz)
 {
@@ -501,9 +559,9 @@ geometry_msgs::Pose uav2camTransformation(geometry_msgs::Pose pose, Vec3f rpy, V
     Eigen::Matrix4d cam2cam;
     //the transofrmation is rotation by +90 around x axis of the camera
     cam2cam <<   1, 0, 0, 0,
-                 0, 0,-1, 0,
-                 0, 1, 0, 0,
-                 0, 0, 0, 1;
+            0, 0,-1, 0,
+            0, 1, 0, 0,
+            0, 0, 0, 1;
     Eigen::Matrix4d cam_pose_new = cam_pose * cam2cam;
     geometry_msgs::Pose p;
     Eigen::Vector3d T3;Eigen::Matrix3d Rd; tf::Matrix3x3 R3;
@@ -537,5 +595,5 @@ visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, in
         linksMarkerMsg.points.push_back(*linksIterator);
         linksMarkerMsg.colors.push_back(color);
     }
-   return linksMarkerMsg;
+    return linksMarkerMsg;
 }
