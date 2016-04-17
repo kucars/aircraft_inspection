@@ -68,11 +68,11 @@ void MeshSurface::meshingPCL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangle
     pcl::PolygonMesh triangles;
 
     // Set the maximum distance between connected points (maximum edge length)
-    gp3.setSearchRadius (0.5);
+    gp3.setSearchRadius (0.7);//0.5
 
     // Set typical values for the parameters
     gp3.setMu (3.0);
-    gp3.setMaximumNearestNeighbors (100);
+    gp3.setMaximumNearestNeighbors (500);//100
     gp3.setMaximumSurfaceAngle(M_PI); //180 deg ... it is originally 45 degrees
     gp3.setMinimumAngle(M_PI/4); // 45 deg ...it is originally 10 degrees
     gp3.setMaximumAngle(M_PI/2); // 90 deg ... it is originally 120 degrees
@@ -160,14 +160,17 @@ double MeshSurface::getIntersectionArea(Triangles& intersectionFaces)
     facesIndicesB.assign( s.begin(), s.end() );
     std::sort( facesIndicesB.begin(), facesIndicesB.end() );
 
+    double areaInt;
     //filling the passed parameter with the intersected faces from mesh B
-    for(int j=0; j<facesIndicesB.size();j++)
-    {
-        intersectionFaces.push_back(meshTB[facesIndicesB[j]]);
-    }
+    if(facesIndicesB.size() != 0){//important in the case of no intersection
+        for(int j=0; j<facesIndicesB.size();j++)
+        {
+            intersectionFaces.push_back(meshTB[facesIndicesB[j]]);
+        }
 
-    //calculating the intersection estimated area based on the intersected triangles from mesh B
-    double areaInt = calcCGALMeshSurfaceArea(intersectionFaces);
+        //calculating the intersection estimated area based on the intersected triangles from mesh B
+        areaInt = calcCGALMeshSurfaceArea(intersectionFaces);
+    }else areaInt=0.0;
 
     return areaInt;
 }
@@ -185,7 +188,6 @@ double MeshSurface::getExtraArea(Triangles& extraAreaFaces)
 
     //facesIndices contains the indices of the intersected triangles from mesh B
     // here we sort it and remove duplicates in order to use it in area calculation (maybe I should find a better optimized way later)
-    std::cout<<"1"<<std::endl;
     std::set<int> s;
     for(int i=0; i<facesIndicesB.size();i++)
         s.insert(facesIndicesB[i]);
@@ -194,23 +196,36 @@ double MeshSurface::getExtraArea(Triangles& extraAreaFaces)
 
     std::vector<Triangle_3> extraAreaFacesTemp;
     int i=0;
-    for(int j=0; j<meshTB.size();j++)
-    {
-        if(j==facesIndicesB[i])
+
+    double extraAreaB;
+    if(facesIndicesB.size()!=0){//important in the case of no intersection
+        for(int j=0; j<meshTB.size();j++)
         {
-            //I can also get the intersection here and calc the area at the end (but I did it in a seperate function)
-            //later I'll merge them better
-            i++;
-        }else
+            if(j==facesIndicesB[i])
+            {
+                //I can also get the intersection here and calc the area at the end (but I did it in a seperate function)
+                //later I'll merge them better
+                i++;
+            }else
+            {
+                extraAreaFaces.push_back(meshTB[j]);// it is the passed vector which could contain other faces (we could take advantage in the path planning)
+                extraAreaFacesTemp.push_back(meshTB[j]);// just to make sure that we are going to calculate the extra area of the additional faces (maybe we should remove it later for optimization reasons)
+            }
+
+        }
+        //calculating the Extra estimated area based on the extra triangles from mesh B
+        //remeber: this the extra area from the second mesh which is mesh B)
+        extraAreaB = calcCGALMeshSurfaceArea(extraAreaFacesTemp);
+    }else {
+        for(int j=0; j<meshTB.size();j++)
         {
             extraAreaFaces.push_back(meshTB[j]);// it is the passed vector which could contain other faces (we could take advantage in the path planning)
-            extraAreaFacesTemp.push_back(meshTB[j]);// just to make sure that we are going to calculate the extra area of the additional faces (maybe we should remove it later for optimization reasons)
+            extraAreaFacesTemp.push_back(meshTB[j]);
         }
-
+        //calculating the Extra estimated area based on the extra triangles from mesh B
+        //remeber: this the extra area from the second mesh which is mesh B)
+        extraAreaB = calcCGALMeshSurfaceArea(extraAreaFacesTemp);
     }
-    //calculating the Extra estimated area based on the extra triangles from mesh B
-    //remeber: this the extra area from the second mesh which is mesh B)
-    double extraAreaB = calcCGALMeshSurfaceArea(extraAreaFacesTemp);
 
     return extraAreaB;
 }
