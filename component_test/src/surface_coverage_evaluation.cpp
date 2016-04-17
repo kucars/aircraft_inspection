@@ -208,8 +208,12 @@ int main(int argc, char **argv)
         ms.setCGALMeshA(cgalvec);
         ms.setCGALMeshB(TB);
         double extraArea=ms.getExtraArea(inter);
-        std::cout<<"intersection area:"<<extraArea<<std::endl;
-//        ms.clear();
+        std::cout<<"extra area:"<<extraArea<<std::endl;
+        std::cout<<"before size ms: "<<ms.meshTA.size()<<std::endl;
+
+        ms.clear();
+        std::cout<<"After size ms: "<<ms.meshTA.size()<<std::endl;
+
         //testing the mesh_surface library
 
 

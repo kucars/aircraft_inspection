@@ -52,6 +52,7 @@
 
 #include <tf/transform_broadcaster.h>
 #include <component_test/occlusion_culling.h>
+#include <component_test/occlusion_culling_gpu.h>
 
 using namespace fcl;
 
@@ -73,10 +74,12 @@ visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, in
 visualization_msgs::Marker drawCUBE(Vec3f vec , int id , int c_color, double size);
 void computeOrientations(geometry_msgs::Pose pos,double deg, geometry_msgs::PoseArray& vectors);//orintation discretization by angle
 //geometry_msgs::Pose calcOrientation(Vec3f sensorP,Vec3f nearestP,geometry_msgs::Vector3& rpy);//orientation to the closest point (previous option)
-void coverageFiltering(geometry_msgs::PoseArray& invectors, geometry_msgs::PoseArray& uavVectors, geometry_msgs::PoseArray& camVectors, OcclusionCulling& obj);
+void coverageFiltering(geometry_msgs::PoseArray& invectors, geometry_msgs::PoseArray& uavVectors, geometry_msgs::PoseArray& camVectors, OcclusionCullingGPU &obj);
 void distanceFiltering(double min,double max,double id, geometry_msgs::PoseArray& uavVectors, Tree& tree, Point& a, visualization_msgs::MarkerArray& marker_array);
 geometry_msgs::Pose uav2camTransformation(geometry_msgs::Pose pose, Vec3f rpy, Vec3f xyz);
 
+pcl::PointCloud<pcl::PointXYZ>::Ptr globalCloudPtr (new pcl::PointCloud<pcl::PointXYZ>);
+pcl::PointCloud<pcl::PointXYZ> globalCloud;
 
 int main(int argc, char **argv)
 {
@@ -95,7 +98,7 @@ int main(int argc, char **argv)
     ros::Publisher lines_pub2 = n.advertise<visualization_msgs::Marker>("fov_top", 10);
     ros::Publisher lines_pub3 = n.advertise<visualization_msgs::Marker>("fov_bottom", 10);
 
-    OcclusionCulling obj(n,"etihad_nowheels_densed.pcd");
+    OcclusionCullingGPU obj(n,"etihad_nowheels_densed.pcd");
 
 //    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
     std::string path = ros::package::getPath("component_test");
@@ -195,12 +198,13 @@ int main(int argc, char **argv)
 
     //PCD file writing
     //write the occlusionfreecloud to pcd file used by the coverage_quantification to calculate the percentage
-    obj.occlusionFreeCloud->width = obj.occlusionFreeCloud->points.size();
-    obj.occlusionFreeCloud->height = 1;
+    globalCloudPtr->points=globalCloud.points;
+    globalCloudPtr->width = globalCloudPtr->points.size();
+    globalCloudPtr->height = 1;
     pcl::PCDWriter writer;
     std::stringstream ss;
     ss << res;
-    writer.write<pcl::PointXYZ> (path+"/src/pcd/occlusionFreeCloud_"+ ss.str()+"m_1to4_etihadNoWheels.pcd", *(obj.occlusionFreeCloud), false);
+    writer.write<pcl::PointXYZ> (path+"/src/pcd/occlusionFreeCloud_"+ ss.str()+"m_1to4_etihadNoWheels.pcd", *(globalCloudPtr), false);
     std::cout<<" DONE writing files"<<"\n";
 
 
@@ -356,7 +360,7 @@ void computeOrientations(geometry_msgs::Pose pos,double deg, geometry_msgs::Pose
 
 }
 
-void coverageFiltering(geometry_msgs::PoseArray& invectors, geometry_msgs::PoseArray& uavVectors, geometry_msgs::PoseArray& camVectors, OcclusionCulling& obj)
+void coverageFiltering(geometry_msgs::PoseArray& invectors, geometry_msgs::PoseArray& uavVectors, geometry_msgs::PoseArray& camVectors, OcclusionCullingGPU& obj)
 {
     geometry_msgs::Pose loc;
     Vec3f rpy(0,0.093,0);
@@ -368,12 +372,13 @@ void coverageFiltering(geometry_msgs::PoseArray& invectors, geometry_msgs::PoseA
         loc= uav2camTransformation(invectors.poses[i],rpy,xyz);
 //        std::cout << "Before transformed x: "<<invectors.poses[i].orientation.x<<" y: "<<invectors.poses[i].orientation.y<<" z: "<<invectors.poses[i].orientation.z<<" w: "<<invectors.poses[i].orientation.w<< std::endl;
 //        std::cout << "After transformed x: "<<loc.orientation.x<<" y: "<<loc.orientation.y<<" z: "<<loc.orientation.z<<" w: "<<loc.orientation.w<< std::endl;
-
         pcl::PointCloud<pcl::PointXYZ> pts;
         pts = obj.extractVisibleSurface(loc);
+
         if (pts.size()!=0)
         {
 //            obj.visualizeFOV(loc);
+            globalCloud += pts;
             uavVectors.poses.push_back(invectors.poses[i]);
             camVectors.poses.push_back(loc);
         }

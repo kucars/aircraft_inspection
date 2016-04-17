@@ -90,7 +90,7 @@ target_link_libraries(coverage_comparison occlusion_culling ${catkin_LIBRARIES} 
 
 add_executable(filtering src/filtering.cpp)
 add_dependencies(filtering ${catkin_EXPORTED_TARGETS})
-target_link_libraries(filtering occlusion_culling ${catkin_LIBRARIES} ${CGAL_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+target_link_libraries(filtering occlusion_culling occlusion_culling_gpu ${catkin_LIBRARIES} ${CGAL_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
 add_executable(frustum_test src/frustum_test.cpp)
 add_dependencies(frustum_test ${catkin_EXPORTED_TARGETS})
