@@ -110,6 +110,7 @@ public:
     static Triangles meshTA,meshTB;
     static std::vector<int> facesIndicesA,facesIndicesB;
     //    pcl::PolygonMeshPtr& pclMesh;
+    int count;
 
     //methods
     MeshSurface(ros::NodeHandle & n, Triangles TA, Triangles TB);

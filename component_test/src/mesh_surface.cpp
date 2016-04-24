@@ -9,10 +9,12 @@ MeshSurface::MeshSurface(ros::NodeHandle &n, Triangles TA, Triangles TB):
 {
     setCGALMeshA(TA);
     setCGALMeshB(TB);
+    count=0;
 }
 MeshSurface::MeshSurface(ros::NodeHandle &n):
     nh(n)
 {
+    count=0;
 }
 MeshSurface::MeshSurface()
 {
@@ -68,11 +70,11 @@ void MeshSurface::meshingPCL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangle
     pcl::PolygonMesh triangles;
 
     // Set the maximum distance between connected points (maximum edge length)
-    gp3.setSearchRadius (0.7);//0.5
+    gp3.setSearchRadius (0.5);//0.5
 
     // Set typical values for the parameters
     gp3.setMu (3.0);
-    gp3.setMaximumNearestNeighbors (500);//100
+    gp3.setMaximumNearestNeighbors (1000);//100
     gp3.setMaximumSurfaceAngle(M_PI); //180 deg ... it is originally 45 degrees
     gp3.setMinimumAngle(M_PI/4); // 45 deg ...it is originally 10 degrees
     gp3.setMaximumAngle(M_PI/2); // 90 deg ... it is originally 120 degrees
@@ -88,7 +90,12 @@ void MeshSurface::meshingPCL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangle
     std::vector<int> states = gp3.getPointStates();
 
     if(saveMeshFlag)
-        pcl::io::savePolygonFilePLY("test.ply",triangles);
+    {
+        std::stringstream ss;
+        ss << count++;
+        std::string fileName=std::string("test")+ ss.str() +".ply";
+        pcl::io::savePolygonFilePLY(fileName,triangles);
+    }
 
     //storing pcl mesh (OPTIONAL : if we want to use pcl polygon mesh)
     //    pclMesh->polygons= triangles.polygons;
