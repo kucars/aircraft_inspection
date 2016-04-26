@@ -170,6 +170,7 @@ double MeshSurface::getIntersectionArea(Triangles& intersectionFaces)
     double areaInt;
     //filling the passed parameter with the intersected faces from mesh B
     if(facesIndicesB.size() != 0){//important in the case of no intersection
+
         for(int j=0; j<facesIndicesB.size();j++)
         {
             intersectionFaces.push_back(meshTB[facesIndicesB[j]]);
@@ -177,7 +178,10 @@ double MeshSurface::getIntersectionArea(Triangles& intersectionFaces)
 
         //calculating the intersection estimated area based on the intersected triangles from mesh B
         areaInt = calcCGALMeshSurfaceArea(intersectionFaces);
+        facesIndicesB.erase(facesIndicesB.begin(),facesIndicesB.end());//in order not to accumelate the intersected faces (it causes a major problem when iterative intersection checks are performed)
+
     }else areaInt=0.0;
+    std::cout<<"stage3"<<std::endl;
 
     return areaInt;
 }
@@ -223,6 +227,8 @@ double MeshSurface::getExtraArea(Triangles& extraAreaFaces)
         //calculating the Extra estimated area based on the extra triangles from mesh B
         //remeber: this the extra area from the second mesh which is mesh B)
         extraAreaB = calcCGALMeshSurfaceArea(extraAreaFacesTemp);
+        facesIndicesB.erase(facesIndicesB.begin(),facesIndicesB.end());//in order not to accumelate the intersected faces (it causes a major problem when iterative intersection checks are performed)
+
     }else {
         for(int j=0; j<meshTB.size();j++)
         {
@@ -232,6 +238,8 @@ double MeshSurface::getExtraArea(Triangles& extraAreaFaces)
         //calculating the Extra estimated area based on the extra triangles from mesh B
         //remeber: this the extra area from the second mesh which is mesh B)
         extraAreaB = calcCGALMeshSurfaceArea(extraAreaFacesTemp);
+        facesIndicesB.erase(facesIndicesB.begin(),facesIndicesB.end());//in order not to accumelate the intersected faces (it causes a major problem when iterative intersection checks are performed)
+
     }
 
     return extraAreaB;
