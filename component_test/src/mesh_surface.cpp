@@ -1,5 +1,5 @@
 #include "component_test/mesh_surface.h"
-
+#include "CGAL/exceptions.h"
 //They are static member variables (this should be done otherwise you will get undefined reference to these variables error)
 Triangles MeshSurface::meshTA,MeshSurface::meshTB;
 std::vector<int> MeshSurface::facesIndicesA, MeshSurface::facesIndicesB;
@@ -41,6 +41,8 @@ void MeshSurface::clear()
 //function that preforms reconstruction (meshing) from unordered pcl point cloud (IMP for mesh surface area evaluation)
 void MeshSurface::meshingPCL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangles& cgalMeshT, bool saveMeshFlag)
 {
+    ros::Time tic1 = ros::Time::now();
+
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr (new pcl::PointCloud<pcl::PointXYZ>);
 
     cloudPtr->points = pointCloud.points;
@@ -100,6 +102,8 @@ void MeshSurface::meshingPCL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangle
     //storing pcl mesh (OPTIONAL : if we want to use pcl polygon mesh)
     //    pclMesh->polygons= triangles.polygons;
     //    pclMesh->cloud= triangles.cloud;
+    ros::Time tic2 = ros::Time::now();
+//    std::cout<<"\nMeshing PCL took:"<< tic2.toSec() - tic1.toSec();
 
     //storing cgal mesh (maybe should be optimized later)
     pcl::PointCloud<pcl::PointXYZ> verticesCloud;
@@ -117,6 +121,9 @@ void MeshSurface::meshingPCL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangle
         tri = Triangle_3(p1,p2,p3);
         cgalMeshT.push_back(tri);
     }
+    ros::Time tic3 = ros::Time::now();
+//    std::cout<<"\n Coversion to CGAL :"<< tic3.toSec() - tic2.toSec();
+
 }
 //creates boxes for each face of the cgal Triangle vector
 void MeshSurface::box_up(Triangles & T, std::vector<Box> & boxes)
@@ -139,25 +146,29 @@ static void cb(const Box &a, const Box &b)
     int fb = b.handle()-MeshSurface::meshTB.begin();
     const Triangle_3 & A = *a.handle();
     const Triangle_3 & B = *b.handle();
-    if(CGAL::do_intersect(A,B))
-    {
-        // There was an intersection
-        MeshSurface::facesIndicesA.push_back(fa); //the index of the intersected face from mesh 1
-        MeshSurface::facesIndicesB.push_back(fb); // the index of the intersected face from mesh 2
-    }
+    try{
+        if(CGAL::do_intersect(A,B))
+        {
+            // There was an intersection
+            MeshSurface::facesIndicesA.push_back(fa); //the index of the intersected face from mesh 1
+            MeshSurface::facesIndicesB.push_back(fb); // the index of the intersected face from mesh 2
+        }
+    }catch(CGAL::Precondition_exception e){std::cout<<"*****Exception3****"<<std::endl;}
 
 }
 // This function finds the intersection area between two meshes and return the area and fill the passed vector with the intersected faces from the second mesh
 double MeshSurface::getIntersectionArea(Triangles& intersectionFaces)
 {
-    std::vector<Box> A_boxes,B_boxes;
-    box_up(meshTA,A_boxes);//create boxes for cgal triangles mesh A
-    box_up(meshTB,B_boxes);//create boxes for cgal triangles mesh B
+    try{
+        std::vector<Box> A_boxes,B_boxes;
+        box_up(meshTA,A_boxes);//create boxes for cgal triangles mesh A
+        box_up(meshTB,B_boxes);//create boxes for cgal triangles mesh B
 
-    CGAL::box_intersection_d(
-      A_boxes.begin(), A_boxes.end(),
-      B_boxes.begin(), B_boxes.end(),
-      &cb);
+        CGAL::box_intersection_d(
+                    A_boxes.begin(), A_boxes.end(),
+                    B_boxes.begin(), B_boxes.end(),
+                    &cb);
+    }catch(CGAL::Precondition_exception e){std::cout<<"*****Exception2****"<<std::endl;}
 
     //facesIndices contains the indices of the intersected triangles from mesh B
     // here we sort it and remove duplicates in order to use it in area calculation (maybe I should find a better optimized way later)
@@ -188,14 +199,19 @@ double MeshSurface::getIntersectionArea(Triangles& intersectionFaces)
 
 double MeshSurface::getExtraArea(Triangles& extraAreaFaces)
 {
-    std::vector<Box> A_boxes,B_boxes;
-    box_up(meshTA,A_boxes);//create boxes for cgal triangles mesh A
-    box_up(meshTB,B_boxes);//create boxes for cgal triangles mesh B
+    try{
+        std::vector<Box> A_boxes,B_boxes;
+        box_up(meshTA,A_boxes);//create boxes for cgal triangles mesh A
+        box_up(meshTB,B_boxes);//create boxes for cgal triangles mesh B
+        ros::Time tic1 = ros::Time::now();
+        CGAL::box_intersection_d(
+                    A_boxes.begin(), A_boxes.end(),
+                    B_boxes.begin(), B_boxes.end(),
+                    &cb);
+        ros::Time tic2 = ros::Time::now();
+        std::cout<<"\nintersection Calc:"<< tic2.toSec() - tic1.toSec();
+    }catch(CGAL::Precondition_exception e){std::cout<<"*****Exception1****"<<std::endl;}
 
-    CGAL::box_intersection_d(
-      A_boxes.begin(), A_boxes.end(),
-      B_boxes.begin(), B_boxes.end(),
-      &cb);
 
     //facesIndices contains the indices of the intersected triangles from mesh B
     // here we sort it and remove duplicates in order to use it in area calculation (maybe I should find a better optimized way later)
@@ -209,6 +225,7 @@ double MeshSurface::getExtraArea(Triangles& extraAreaFaces)
     int i=0;
 
     double extraAreaB;
+    ros::Time tic3 = ros::Time::now();
     if(facesIndicesB.size()!=0){//important in the case of no intersection
         for(int j=0; j<meshTB.size();j++)
         {
@@ -241,6 +258,8 @@ double MeshSurface::getExtraArea(Triangles& extraAreaFaces)
         facesIndicesB.erase(facesIndicesB.begin(),facesIndicesB.end());//in order not to accumelate the intersected faces (it causes a major problem when iterative intersection checks are performed)
 
     }
+    ros::Time tic4 = ros::Time::now();
+//    std::cout<<"\nExtra Area LOOP Calc:"<< tic4.toSec() - tic3.toSec();
 
     return extraAreaB;
 }
