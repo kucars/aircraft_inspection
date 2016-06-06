@@ -55,8 +55,23 @@ void MeshSurface::meshingPCL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangle
     tree->setInputCloud (cloudPtr);
     n.setInputCloud (cloudPtr);
     n.setSearchMethod (tree);
-    n.setKSearch (20);
+    n.setKSearch (100);
+//    n.setRadiusSearch(0.3);
     n.compute (*normals);
+
+    // Normal Estimation OMP (speed up the algorithm of NE)
+    //    pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> ne;
+    //    int nr_cores = boost::thread::hardware_concurrency();
+    //    std::cout<<"number of cores: "<<nr_cores<<std::endl;
+    //    ne.setNumberOfThreads(nr_cores);
+    //    ne.setInputCloud(cloudPtr);
+    //    ne.setRadiusSearch(0.3);
+    //    ne.setSearchMethod(tree);
+    //    Eigen::Vector4f centroid;
+    //    pcl::compute3DCentroid(*cloudPtr, centroid);
+    //    ne.setViewPoint(centroid[0], centroid[1], centroid[2]);
+    //    ne.compute(*normals);
+
     //* normals should not contain the point normals + surface curvatures
     // Concatenate the XYZ and normal fields*
     pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals (new pcl::PointCloud<pcl::PointNormal>);
@@ -76,7 +91,7 @@ void MeshSurface::meshingPCL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangle
 
     // Set typical values for the parameters
     gp3.setMu (3.0);
-    gp3.setMaximumNearestNeighbors (1000);//100
+    gp3.setMaximumNearestNeighbors (5000);//100
     gp3.setMaximumSurfaceAngle(M_PI); //180 deg ... it is originally 45 degrees
     gp3.setMinimumAngle(M_PI/4); // 45 deg ...it is originally 10 degrees
     gp3.setMaximumAngle(M_PI/2); // 90 deg ... it is originally 120 degrees
@@ -95,7 +110,7 @@ void MeshSurface::meshingPCL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangle
     {
         std::stringstream ss;
         ss << count++;
-        std::string fileName=std::string("test")+ ss.str() +".ply";
+        std::string fileName=std::string("testpcl")+ ss.str() +".ply";
         pcl::io::savePolygonFilePLY(fileName,triangles);
     }
 
@@ -103,7 +118,7 @@ void MeshSurface::meshingPCL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangle
     //    pclMesh->polygons= triangles.polygons;
     //    pclMesh->cloud= triangles.cloud;
     ros::Time tic2 = ros::Time::now();
-//    std::cout<<"\nMeshing PCL took:"<< tic2.toSec() - tic1.toSec();
+    std::cout<<"\nMeshing PCL took:"<< tic2.toSec() - tic1.toSec();
 
     //storing cgal mesh (maybe should be optimized later)
     pcl::PointCloud<pcl::PointXYZ> verticesCloud;
@@ -125,6 +140,167 @@ void MeshSurface::meshingPCL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangle
 //    std::cout<<"\n Coversion to CGAL :"<< tic3.toSec() - tic2.toSec();
 
 }
+
+//provides inaccurate reconstruction
+void MeshSurface::meshingPoissonPCL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangles& cgalMeshT, bool saveMeshFlag)
+{
+    ros::Time tic1 = ros::Time::now();
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr (new pcl::PointCloud<pcl::PointXYZ>);
+
+    cloudPtr->points = pointCloud.points;
+    std::cout << "loaded" << std::endl;
+
+    std::cout << "begin passthrough filter" << std::endl;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr filtered(new pcl::PointCloud<pcl::PointXYZ>());
+    pcl::PassThrough<pcl::PointXYZ> filter;
+    filter.setInputCloud(cloudPtr);
+    filter.filter(*filtered);
+    std::cout << "passthrough filter complete" << std::endl;
+
+    std::cout << "begin normal estimation" << std::endl;
+    pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> ne;
+    ne.setNumberOfThreads(8);
+    ne.setInputCloud(filtered);
+    ne.setRadiusSearch(0.2);
+    Eigen::Vector4f centroid;
+    pcl::compute3DCentroid(*filtered, centroid);
+    ne.setViewPoint(centroid[0], centroid[1], centroid[2]);
+
+    pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>());
+    ne.compute(*cloud_normals);
+    std::cout << "normal estimation complete" << endl;
+    std::cout << "reverse normals' direction" << endl;
+
+    for(size_t i = 0; i < cloud_normals->size(); ++i){
+      cloud_normals->points[i].normal_x *= -1;
+      cloud_normals->points[i].normal_y *= -1;
+      cloud_normals->points[i].normal_z *= -1;
+    }
+
+    std::cout << "combine points and normals" << std::endl;
+    pcl::PointCloud<pcl::PointNormal>::Ptr cloud_smoothed_normals(new pcl::PointCloud<pcl::PointNormal>());
+    pcl::concatenateFields(*filtered, *cloud_normals, *cloud_smoothed_normals);
+
+    std::cout << "begin poisson reconstruction" << std::endl;
+    pcl::Poisson<pcl::PointNormal> poisson;
+    poisson.setDepth(8);
+    poisson.setSolverDivide (8);
+    poisson.setIsoDivide (8);
+    poisson.setPointWeight(4.0f);
+    poisson.setInputCloud(cloud_smoothed_normals);
+    pcl::PolygonMesh mesh;
+    poisson.reconstruct(mesh);
+
+    if(saveMeshFlag)
+    {
+        std::stringstream ss;
+        ss << count++;
+        std::string fileName=std::string("test")+ ss.str() +".ply";
+        pcl::io::savePLYFile(fileName,mesh);
+    }
+
+    //storing pcl mesh (OPTIONAL : if we want to use pcl polygon mesh)
+    //    pclMesh->polygons= mesh.polygons;
+    //    pclMesh->cloud= mesh.cloud;
+    ros::Time tic2 = ros::Time::now();
+    std::cout<<"\nMeshing PCL took:"<< tic2.toSec() - tic1.toSec();
+
+    //storing cgal mesh (maybe should be optimized later)
+    pcl::PointCloud<pcl::PointXYZ> verticesCloud;
+    pcl::fromPCLPointCloud2 (mesh.cloud, verticesCloud);
+    Triangle_3 tri;
+    for(int i=0; i<mesh.polygons.size();i++)
+    {
+        pcl::PointXYZ pt;
+        pt=verticesCloud.points[mesh.polygons[i].vertices[0]];
+        Point_3 p1(pt.data[0], pt.data[1], pt.data[2]);
+        pt=verticesCloud.points[mesh.polygons[i].vertices[1]];
+        Point_3 p2(pt.data[0], pt.data[1], pt.data[2]);
+        pt=verticesCloud.points[mesh.polygons[i].vertices[2]];
+        Point_3 p3(pt.data[0], pt.data[1], pt.data[2]);
+        tri = Triangle_3(p1,p2,p3);
+        cgalMeshT.push_back(tri);
+    }
+    ros::Time tic3 = ros::Time::now();
+    std::cout<<"\n Conversion to CGAL :"<< tic3.toSec() - tic2.toSec();
+
+}
+void writeOFFReconstructionMesh(const Reconstruction& reconstruct, std::string name)
+{
+  std::ofstream output(name.c_str());
+  output << "OFF " << reconstruct.number_of_points() << " "
+         << reconstruct.number_of_triangles() << " 0\n";
+  std::copy(reconstruct.points_begin(),
+            reconstruct.points_end(),
+            std::ostream_iterator<RPoint>(output,"\n"));
+  for( Triple_iterator it = reconstruct.surface_begin(); it != reconstruct.surface_end(); ++it )
+      output << "3 " << *it << std::endl;
+}
+//provides good reconstruction
+void MeshSurface::meshingScaleSpaceCGAL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangles& cgalMeshT, bool saveMeshFlag)
+{
+    ros::Time tic2 = ros::Time::now();
+
+     Point_collection points;
+     //convert the cloud to cgal
+     for(int i=0; i<pointCloud.points.size();i++)
+     {
+         RPoint pt;
+         pt = inexactPoint(pointCloud.points.at(i).x, pointCloud.points.at(i).y, pointCloud.points.at(i).z);
+         points.push_back(pt);
+     }
+
+     // Construct the reconstruction with parameters for
+     // the neighborhood squared radius estimation.
+     Reconstruction reconstruct( 5, 50 ); //was 10,100
+     // Add the points.
+     reconstruct.insert( points.begin(), points.end() );
+     // Advance the scale-space several steps.
+     // This automatically estimates the scale-space.
+
+     reconstruct.increase_scale( 1 ); //was 2
+     // Reconstruct the surface from the current scale-space.
+     //     std::cout << "Neighborhood squared radius is "
+     //               << reconstruct.neighborhood_squared_radius() << std::endl;
+     reconstruct.reconstruct_surface();
+     std::cout << "First reconstruction done." << std::endl;
+
+
+     //     reconstruct.increase_scale( 2 );
+     //     // Reconstruct the surface from the current scale-space.
+     //     std::cout << "Neighborhood squared radius is "
+     //               << reconstruct.neighborhood_squared_radius() << std::endl;
+     //     reconstruct.reconstruct_surface();
+     //     std::cout << "Second reconstruction done." << std::endl;
+     // Write the reconstruction.
+
+     ros::Time toc1 = ros::Time::now();
+     std::cout<<"\nscale space took:"<< toc1.toSec() - tic2.toSec()<<std::endl;
+     Triangle_3 tri;
+
+     for( Triple_iterator it = reconstruct.surface_begin(); it != reconstruct.surface_end(); ++it )
+     {
+         Reconstruction::Triple t = *it;
+         Point_3 p1(points.at(t.at(0))[0], points.at(t.at(0))[1], points.at(t.at(0))[2]);
+         Point_3 p2(points.at(t.at(1))[0], points.at(t.at(1))[1], points.at(t.at(1))[2]);
+         Point_3 p3(points.at(t.at(2))[0], points.at(t.at(2))[1], points.at(t.at(2))[2]);
+         tri = Triangle_3(p1,p2,p3);
+         cgalMeshT.push_back(tri);
+//         std::cout<<points.at(t.at(0))[0]<<" "<<points.at(t.at(0))[1]<<" "<<points.at(t.at(0))[2]<<std::endl;
+
+     }
+
+     if(saveMeshFlag)
+     {
+         std::stringstream ss;
+         ss << count++;
+         std::string fileName=std::string("reconstruction")+ ss.str() +".off";
+         writeOFFReconstructionMesh(reconstruct, fileName);
+         std::cout <<"number of triangles :"<<reconstruct.number_of_triangles()<<std::endl;
+     }
+}
+
 //creates boxes for each face of the cgal Triangle vector
 void MeshSurface::box_up(Triangles & T, std::vector<Box> & boxes)
 {

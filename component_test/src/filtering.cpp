@@ -74,7 +74,7 @@ visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, in
 visualization_msgs::Marker drawCUBE(Vec3f vec , int id , int c_color, double size);
 void computeOrientations(geometry_msgs::Pose pos,double deg, geometry_msgs::PoseArray& vectors);//orintation discretization by angle
 //geometry_msgs::Pose calcOrientation(Vec3f sensorP,Vec3f nearestP,geometry_msgs::Vector3& rpy);//orientation to the closest point (previous option)
-void coverageFiltering(geometry_msgs::PoseArray& invectors, geometry_msgs::PoseArray& uavVectors, geometry_msgs::PoseArray& camVectors, OcclusionCullingGPU &obj);
+void coverageFiltering(geometry_msgs::PoseArray& invectors, geometry_msgs::PoseArray& uavVectors, std::vector<geometry_msgs::PoseArray> &camVectors, std::vector<geometry_msgs::Pose> camsPose, OcclusionCullingGPU &obj);
 void distanceFiltering(double min,double max,double id, geometry_msgs::PoseArray& uavVectors, Tree& tree, Point& a, visualization_msgs::MarkerArray& marker_array);
 geometry_msgs::Pose uav2camTransformation(geometry_msgs::Pose pose, Vec3f rpy, Vec3f xyz);
 
@@ -92,13 +92,12 @@ int main(int argc, char **argv)
     ros::Publisher oriented_point_pub = n.advertise<geometry_msgs::PoseArray>("oriented_poses", 1);
     ros::Publisher poses_pub = n.advertise<visualization_msgs::MarkerArray>("filtered_poses", 1);
     ros::Publisher fov_pub = n.advertise<visualization_msgs::MarkerArray>("fov", 10);
-    ros::Publisher cam_posespub = n.advertise<geometry_msgs::PoseArray>("cam_poses", 1);
 
     ros::Publisher lines_pub1 = n.advertise<visualization_msgs::Marker>("fov_far_near", 10);
     ros::Publisher lines_pub2 = n.advertise<visualization_msgs::Marker>("fov_top", 10);
     ros::Publisher lines_pub3 = n.advertise<visualization_msgs::Marker>("fov_bottom", 10);
 
-    OcclusionCullingGPU obj(n,"etihad_nowheels_densed.pcd");
+    OcclusionCullingGPU obj(n,"etihad_nowheels_nointernal_newdensed.pcd");
 
 //    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
     std::string path = ros::package::getPath("component_test");
@@ -141,22 +140,53 @@ int main(int argc, char **argv)
 
     // 2: *******************Filtering ***************************
 
-    geometry_msgs::PoseArray filtered_vectors, camPoses;
+    // 2.1: ********* sensors number **********
+    std::vector<ros::Publisher> cam_publishers;
+    std::vector<geometry_msgs::PoseArray> camsVec;
+    std::vector<geometry_msgs::Pose> camsPose;
+    cout<<"number of onboard sensors is: ";
+    int sensorNum;
+    cin>> sensorNum;
+    int num=0;
+    while (sensorNum != 0)
+    {
+        geometry_msgs::PoseArray cam;
+        camsVec.push_back(cam);
+        std::cout<<"Sensor "<<num<<" pose xyz & rpy: ";
+        geometry_msgs::Pose camPos;
+        cin>>camPos.position.x;
+        cin>>camPos.position.y;
+        cin>>camPos.position.z;
+        cin>>camPos.orientation.x;
+        cin>>camPos.orientation.y;
+        cin>>camPos.orientation.z;
+        camsPose.push_back(camPos);
+
+        std::stringstream ss;
+        ss << num;
+        std::string sensorTopic = "cam_poses"+ss.str();
+        ros::Publisher cam_posespub = n.advertise<geometry_msgs::PoseArray>(sensorTopic.c_str(), 10);
+        cam_publishers.push_back(cam_posespub);
+        sensorNum--;
+        num++;
+    }
+
+    geometry_msgs::PoseArray filtered_vectors;
     visualization_msgs::MarkerArray marker_array ;
-    visualization_msgs::Marker marker2 ;
+
     std::vector<Vec3f> pt1;
     std::list<CGALTriangle> triangles;
     int intersectionsCount=0;
-    std::vector<geometry_msgs::Vector3> points_rpy;
-    std::string str = path+"/src/mesh/etihad_nowheels.obj";
+    std::string str = path+"/src/mesh/etihad_nowheels_nointernal_new.obj";
 
     ros::Time filtering_begin = ros::Time::now();
     loadOBJFile(str.c_str(), pt1, triangles);
+
     // constructs AABB tree
     Tree tree(triangles.begin(),triangles.end());
     std::cout<<"traingles size:"<<triangles.size()<<"\n";
     for (int j=0; j<points.poses.size();j++)
-//    for (int j=10220; j<10255;j++) //working on part of the viewpoints
+//    for (int j=10220; j<15255;j++) //working on part of the viewpoints
 //    for (int j=100000; j<100500;j++) //working on part of the viewpoints
     {
         Point a(points.poses[j].position.x , points.poses[j].position.y  ,points.poses[j].position.z);
@@ -172,7 +202,8 @@ int main(int argc, char **argv)
         if(intersectionsCount%2 != 1)
         {
             distanceFiltering(1,16,j,vectors, tree, a, marker_array);
-            coverageFiltering(vectors,filtered_vectors,camPoses,obj);
+            coverageFiltering(vectors,filtered_vectors,camsVec,camsPose,obj);
+
             std::cout << "filtered Vectors #"<<filtered_vectors.poses.size()<< std::endl;
         }
     }
@@ -181,20 +212,41 @@ int main(int argc, char **argv)
     std::cout<<"filtering duration (s) = "<<elapsed<<"\n";
     std::cout<<"filtered points size = "<<filtered_vectors.poses.size()<<"\n";
 
-    //....write to file.....
-    ofstream pointFile,cameraPointFile;
-    std::string file_loc = path+"/src/txt/SearchSpaceUAV_1.5m_1to4_NEW_etihadNoWheels.txt";
-    std::string file_loc1 = path+"/src/txt/SearchSpaceCam_1.5m_1to4_NEW_etihadNoWheels.txt";
+//    //....write to file.....
+
+    std::string modelName = "etihad_nowheels_nointernal_newdensed.pcd";
+
+//    std::vector<std::ofstream> sensors;
+    for(int i=0; i<camsPose.size();i++)
+    {
+
+        std::stringstream ss;
+        ss << i;
+        std::string file_loc = path+"/src/txt/SearchSpaceCam_1.5m_1to4_"+modelName+"_"+ss.str()+".txt";
+        const char * filename = file_loc.c_str();
+        std::ofstream cameraPointFile(filename);
+        for(int j=0; j<camsVec[i].poses.size(); j++)
+        {
+            cameraPointFile << camsVec[i].poses[j].position.x<<" "<<camsVec[i].poses[j].position.y<<" "<<camsVec[i].poses[j].position.z<<" "<<camsVec[i].poses[j].orientation.x<<" "<<camsVec[i].poses[j].orientation.y<<" "<<camsVec[i].poses[j].orientation.z<<" "<<camsVec[i].poses[j].orientation.w<<"\n";
+
+        }
+        cameraPointFile.close();
+
+//        sensors.push_back(camFile);
+    }
+    ofstream pointFile;
+
+    std::string file_loc = path+"/src/txt/SearchSpaceUAV_1.5m_1to4_"+modelName+".txt";
     pointFile.open (file_loc.c_str());
-    cameraPointFile.open (file_loc1.c_str());
+//    cameraPointFile.open (file_loc1.c_str());
 
     for (int j=0; j<filtered_vectors.poses.size(); j++)
     {
         pointFile << filtered_vectors.poses[j].position.x<<" "<<filtered_vectors.poses[j].position.y<<" "<<filtered_vectors.poses[j].position.z<<" "<<filtered_vectors.poses[j].orientation.x<<" "<<filtered_vectors.poses[j].orientation.y<<" "<<filtered_vectors.poses[j].orientation.z<<" "<<filtered_vectors.poses[j].orientation.w<<"\n";
-        cameraPointFile << camPoses.poses[j].position.x<<" "<<camPoses.poses[j].position.y<<" "<<camPoses.poses[j].position.z<<" "<<camPoses.poses[j].orientation.x<<" "<<camPoses.poses[j].orientation.y<<" "<<camPoses.poses[j].orientation.z<<" "<<camPoses.poses[j].orientation.w<<"\n";
+
+//        cameraPointFile << camPoses.poses[j].position.x<<" "<<camPoses.poses[j].position.y<<" "<<camPoses.poses[j].position.z<<" "<<camPoses.poses[j].orientation.x<<" "<<camPoses.poses[j].orientation.y<<" "<<camPoses.poses[j].orientation.z<<" "<<camPoses.poses[j].orientation.w<<"\n";
     }
     pointFile.close();
-    cameraPointFile.close();
 
     //PCD file writing
     //write the occlusionfreecloud to pcd file used by the coverage_quantification to calculate the percentage
@@ -235,9 +287,13 @@ int main(int argc, char **argv)
         filtered_vectors.header.stamp = ros::Time::now();
         oriented_point_pub.publish(filtered_vectors);
 
-        camPoses.header.frame_id= "base_point_cloud";
-        camPoses.header.stamp = ros::Time::now();
-        cam_posespub.publish(camPoses);
+        for(int i=0; i<cam_publishers.size(); i++)
+        {
+            camsVec[i].header.frame_id= "base_point_cloud";
+            camsVec[i].header.stamp = ros::Time::now();
+            cam_publishers[i].publish(camsVec[i]);
+        }
+
 
         poses_pub.publish(marker_array);
 
@@ -360,29 +416,37 @@ void computeOrientations(geometry_msgs::Pose pos,double deg, geometry_msgs::Pose
 
 }
 
-void coverageFiltering(geometry_msgs::PoseArray& invectors, geometry_msgs::PoseArray& uavVectors, geometry_msgs::PoseArray& camVectors, OcclusionCullingGPU& obj)
+void coverageFiltering(geometry_msgs::PoseArray& invectors, geometry_msgs::PoseArray& uavVectors, std::vector<geometry_msgs::PoseArray>& camVectors, std::vector<geometry_msgs::Pose> camsPose, OcclusionCullingGPU& obj)
 {
     geometry_msgs::Pose loc;
-    Vec3f rpy(0,0.093,0);
-    Vec3f xyz(0,0.0,-0.055);
-//    std::cout << "invectors #"<<invectors.poses.size()<< std::endl;
 
+    //going through the UAV samples
     for (int i=0; i<invectors.poses.size(); i++)
     {
-        loc= uav2camTransformation(invectors.poses[i],rpy,xyz);
-//        std::cout << "Before transformed x: "<<invectors.poses[i].orientation.x<<" y: "<<invectors.poses[i].orientation.y<<" z: "<<invectors.poses[i].orientation.z<<" w: "<<invectors.poses[i].orientation.w<< std::endl;
-//        std::cout << "After transformed x: "<<loc.orientation.x<<" y: "<<loc.orientation.y<<" z: "<<loc.orientation.z<<" w: "<<loc.orientation.w<< std::endl;
         pcl::PointCloud<pcl::PointXYZ> pts;
-        pts = obj.extractVisibleSurface(loc);
-
-        if (pts.size()!=0)
+        std::vector<geometry_msgs::Pose> poses;
+        //going through the sensors per the UAV samples
+        for (int j =0; j<camsPose.size() ; j++)
         {
-//            obj.visualizeFOV(loc);
-            globalCloud += pts;
-            uavVectors.poses.push_back(invectors.poses[i]);
-            camVectors.poses.push_back(loc);
-        }
+            Vec3f xyz(camsPose[j].position.x, camsPose[j].position.y, camsPose[j].position.z);
+            Vec3f rpy(camsPose[j].orientation.x, camsPose[j].orientation.y, camsPose[j].orientation.z);
+            loc= uav2camTransformation(invectors.poses[i],rpy,xyz);
+            poses.push_back(loc);
+            //        std::cout << "Before transformed x: "<<invectors.poses[i].orientation.x<<" y: "<<invectors.poses[i].orientation.y<<" z: "<<invectors.poses[i].orientation.z<<" w: "<<invectors.poses[i].orientation.w<< std::endl;
+            //        std::cout << "After transformed x: "<<loc.orientation.x<<" y: "<<loc.orientation.y<<" z: "<<loc.orientation.z<<" w: "<<loc.orientation.w<< std::endl;
 
+            pts += obj.extractVisibleSurface(loc);
+        }
+            if (pts.size()>=3)
+            {
+    //            obj.visualizeFOV(loc);
+                globalCloud += pts;
+                uavVectors.poses.push_back(invectors.poses[i]);
+                for (int j =0; j<camsPose.size() ; j++)
+                {
+                    camVectors[j].poses.push_back(poses[j]);
+                }
+            }
     }
 
 }

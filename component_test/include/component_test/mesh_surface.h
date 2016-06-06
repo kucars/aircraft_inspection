@@ -1,6 +1,8 @@
 #ifndef MESHSURFACE_H_
 #define MESHSURFACE_H_
 
+#define CGAL_EIGEN3_ENABLED
+
 #include "ros/ros.h"
 #include <ros/package.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -55,7 +57,15 @@
 #include <pcl/io/vtk_lib_io.h>
 #include <pcl/io/vtk_io.h>
 #include <pcl/surface/vtk_smoothing/vtk_utils.h>
-
+#include <pcl/common/common.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/io/ply_io.h>
+#include <pcl/search/kdtree.h>
+#include <pcl/features/normal_3d_omp.h>
+#include <pcl/point_types.h>
+#include <pcl/surface/mls.h>
+#include <pcl/surface/poisson.h>
+#include <pcl/filters/passthrough.h>
 //CGAL
 // Triangle triangle intersection
 #include <CGAL/intersections.h>
@@ -83,6 +93,10 @@
 #include <CGAL/Exact_predicates_exact_constructions_kernel.h>
 #include <CGAL/Simple_cartesian.h>
 #include <CGAL/Cartesian_converter.h>
+//scale factor reconstruction
+#include <algorithm>
+#include <CGAL/Scale_space_surface_reconstruction_3.h>
+#include <CGAL/IO/read_off_points.h>
 
 typedef CGAL::Exact_predicates_exact_constructions_kernel exactKernel; //CGAL::Exact_predicates_exact_constructions_kernel//it could be also CGAL::Exact_predicates_inexact_constructions_kernel CHECK LATER
 typedef CGAL::Simple_cartesian<double> simpleKernel;
@@ -100,6 +114,13 @@ typedef typename Triangles::iterator TrianglesIterator;
 typedef typename Triangles::const_iterator TrianglesConstIterator;
 typedef CGAL::Box_intersection_d::Box_with_handle_d<double,3,TrianglesIterator> Box;
 
+//scale factor reconstruciton
+typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
+typedef Kernel::Point_3 inexactPoint;
+typedef CGAL::Scale_space_surface_reconstruction_3< Kernel >    Reconstruction;
+typedef Reconstruction::Point                                   RPoint;
+typedef std::vector< RPoint >                                    Point_collection;
+typedef Reconstruction::Triple_const_iterator                   Triple_iterator;
 using namespace fcl;
 
 class MeshSurface
@@ -121,6 +142,9 @@ public:
     void setCGALMeshB(Triangles TB);
     void clear();
     void meshingPCL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangles& cgalMeshT, bool saveMeshFlag=false);
+    void meshingPoissonPCL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangles& cgalMeshT, bool saveMeshFlag=false);
+    void meshingScaleSpaceCGAL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangles& cgalMeshT, bool saveMeshFlag=false);
+
     double getIntersectionArea(Triangles& intersectionFaces);
     double getExtraArea(Triangles& extraAreaFaces);
     void box_up(Triangles & T, std::vector<Box> & boxes);

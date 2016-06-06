@@ -189,10 +189,10 @@ int main(int argc, char **argv)
     {
         fscanf(file1,"%lf %lf %lf %lf\n",&locationx,&locationy,&locationz,&yaw);
         pt.position.x=locationx; pt.position.y=locationy; pt.position.z=locationz;
-        //        pt.position.x=4.0; pt.position.y=-25; pt.position.z=5;
+//        pt.position.x=9.0; pt.position.y=-12; pt.position.z=3;
         tf::Quaternion tf_q ;
+//        yaw=1.57;
         tf_q= tf::createQuaternionFromYaw(yaw);
-        //        yaw=3.14;
         pt.orientation.x=tf_q.getX();pt.orientation.y=tf_q.getY();pt.orientation.z=tf_q.getZ();pt.orientation.w=tf_q.getW();
         points.poses.push_back(pt);
         loc= uav2camTransformation(pt,rpy,xyz);
@@ -209,10 +209,10 @@ int main(int argc, char **argv)
         ms.setCGALMeshB(TB);
         double extraArea=ms.getExtraArea(inter);
         std::cout<<"extra area:"<<extraArea<<std::endl;
-        std::cout<<"before size ms: "<<ms.meshTA.size()<<std::endl;
+//        std::cout<<"before size ms: "<<ms.meshTA.size()<<std::endl;
 
         ms.clear();
-        std::cout<<"After size ms: "<<ms.meshTA.size()<<std::endl;
+//        std::cout<<"After size ms: "<<ms.meshTA.size()<<std::endl;
 
         //testing the mesh_surface library
 
@@ -242,7 +242,7 @@ int main(int argc, char **argv)
         std::cout<<"average accuracy at "<<i<<" is " <<accuracyAvg<<"\n";
 
         //just to handle one point
-        if(i==0)
+        if(i==1)
             break;
         i++;
     }
