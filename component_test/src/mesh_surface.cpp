@@ -242,63 +242,67 @@ void MeshSurface::meshingScaleSpaceCGAL(pcl::PointCloud<pcl::PointXYZ> pointClou
 {
     ros::Time tic2 = ros::Time::now();
 
-     Point_collection points;
-     //convert the cloud to cgal
-     for(int i=0; i<pointCloud.points.size();i++)
-     {
-         RPoint pt;
-         pt = inexactPoint(pointCloud.points.at(i).x, pointCloud.points.at(i).y, pointCloud.points.at(i).z);
-         points.push_back(pt);
-     }
+    Point_collection points;
+    //convert the cloud to cgal
+    for(int i=0; i<pointCloud.points.size();i++)
+    {
+        RPoint pt;
+        pt = inexactPoint(pointCloud.points.at(i).x, pointCloud.points.at(i).y, pointCloud.points.at(i).z);
+        points.push_back(pt);
+    }
 
-     // Construct the reconstruction with parameters for
-     // the neighborhood squared radius estimation.
-     Reconstruction reconstruct( 5, 50 ); //was 10,100
-     // Add the points.
-     reconstruct.insert( points.begin(), points.end() );
-     // Advance the scale-space several steps.
-     // This automatically estimates the scale-space.
+    try{
+        // Construct the reconstruction with parameters for
+        // the neighborhood squared radius estimation.
+        Reconstruction reconstruct( 5, 50 ); //was 10,100
+        // Add the points.
+        reconstruct.insert( points.begin(), points.end() );
+        // Advance the scale-space several steps.
+        // This automatically estimates the scale-space.
 
-     reconstruct.increase_scale( 1 ); //was 2
-     // Reconstruct the surface from the current scale-space.
-     //     std::cout << "Neighborhood squared radius is "
-     //               << reconstruct.neighborhood_squared_radius() << std::endl;
-     reconstruct.reconstruct_surface();
-     std::cout << "First reconstruction done." << std::endl;
+        reconstruct.increase_scale( 1 ); //was 2
+        // Reconstruct the surface from the current scale-space.
+        //     std::cout << "Neighborhood squared radius is "
+        //               << reconstruct.neighborhood_squared_radius() << std::endl;
+        reconstruct.reconstruct_surface();
+        //     std::cout << "First reconstruction done." << std::endl;
 
 
-     //     reconstruct.increase_scale( 2 );
-     //     // Reconstruct the surface from the current scale-space.
-     //     std::cout << "Neighborhood squared radius is "
-     //               << reconstruct.neighborhood_squared_radius() << std::endl;
-     //     reconstruct.reconstruct_surface();
-     //     std::cout << "Second reconstruction done." << std::endl;
-     // Write the reconstruction.
+        //     reconstruct.increase_scale( 2 );
+        //     // Reconstruct the surface from the current scale-space.
+        //     std::cout << "Neighborhood squared radius is "
+        //               << reconstruct.neighborhood_squared_radius() << std::endl;
+        //     reconstruct.reconstruct_surface();
+        //     std::cout << "Second reconstruction done." << std::endl;
+        // Write the reconstruction.
 
-     ros::Time toc1 = ros::Time::now();
-     std::cout<<"\nscale space took:"<< toc1.toSec() - tic2.toSec()<<std::endl;
-     Triangle_3 tri;
 
-     for( Triple_iterator it = reconstruct.surface_begin(); it != reconstruct.surface_end(); ++it )
-     {
-         Reconstruction::Triple t = *it;
-         Point_3 p1(points.at(t.at(0))[0], points.at(t.at(0))[1], points.at(t.at(0))[2]);
-         Point_3 p2(points.at(t.at(1))[0], points.at(t.at(1))[1], points.at(t.at(1))[2]);
-         Point_3 p3(points.at(t.at(2))[0], points.at(t.at(2))[1], points.at(t.at(2))[2]);
-         tri = Triangle_3(p1,p2,p3);
-         cgalMeshT.push_back(tri);
-//         std::cout<<points.at(t.at(0))[0]<<" "<<points.at(t.at(0))[1]<<" "<<points.at(t.at(0))[2]<<std::endl;
+        ros::Time toc1 = ros::Time::now();
+        //     std::cout<<"\nscale space took:"<< toc1.toSec() - tic2.toSec()<<std::endl;
+        Triangle_3 tri;
 
-     }
+        for( Triple_iterator it = reconstruct.surface_begin(); it != reconstruct.surface_end(); ++it )
+        {
+            Reconstruction::Triple t = *it;
+            Point_3 p1(points.at(t.at(0))[0], points.at(t.at(0))[1], points.at(t.at(0))[2]);
+            Point_3 p2(points.at(t.at(1))[0], points.at(t.at(1))[1], points.at(t.at(1))[2]);
+            Point_3 p3(points.at(t.at(2))[0], points.at(t.at(2))[1], points.at(t.at(2))[2]);
+            tri = Triangle_3(p1,p2,p3);
+            cgalMeshT.push_back(tri);
+            //         std::cout<<points.at(t.at(0))[0]<<" "<<points.at(t.at(0))[1]<<" "<<points.at(t.at(0))[2]<<std::endl;
 
-     if(saveMeshFlag)
-     {
-         std::stringstream ss;
-         ss << count++;
-         std::string fileName=std::string("reconstruction")+ ss.str() +".off";
-         writeOFFReconstructionMesh(reconstruct, fileName);
-         std::cout <<"number of triangles :"<<reconstruct.number_of_triangles()<<std::endl;
-     }
+        }
+
+
+        if(saveMeshFlag)
+        {
+            std::stringstream ss;
+            ss << count++;
+            std::string fileName=std::string("reconstruction")+ ss.str() +".off";
+            writeOFFReconstructionMesh(reconstruct, fileName);
+            std::cout <<"number of triangles :"<<reconstruct.number_of_triangles()<<std::endl;
+        }
+    }catch(CGAL::Precondition_exception e){std::cout<<"*****CGAL scale space throwed an Exception****"<<std::endl;}
 }
 
 //creates boxes for each face of the cgal Triangle vector
@@ -385,7 +389,7 @@ double MeshSurface::getExtraArea(Triangles& extraAreaFaces)
                     B_boxes.begin(), B_boxes.end(),
                     &cb);
         ros::Time tic2 = ros::Time::now();
-        std::cout<<"\nintersection Calc:"<< tic2.toSec() - tic1.toSec();
+//        std::cout<<"\nintersection Calc:"<< tic2.toSec() - tic1.toSec();
     }catch(CGAL::Precondition_exception e){std::cout<<"*****Exception1****"<<std::endl;}
 
 

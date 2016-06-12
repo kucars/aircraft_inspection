@@ -437,7 +437,7 @@ void coverageFiltering(geometry_msgs::PoseArray& invectors, geometry_msgs::PoseA
 
             pts += obj.extractVisibleSurface(loc);
         }
-            if (pts.size()>=3)
+            if (pts.size()>5)
             {
     //            obj.visualizeFOV(loc);
                 globalCloud += pts;

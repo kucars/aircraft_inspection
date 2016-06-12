@@ -75,6 +75,10 @@ target_link_libraries(occlusion_culling frustum_culling voxel_grid_occlusion_est
 add_library(visualization_voxelgrid src/visualization_voxelgrid.cpp)
 target_link_libraries(visualization_voxelgrid voxel_grid ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES})
 
+add_executable(sensor_data_combination src/sensor_data_combination.cpp)
+add_dependencies(sensor_data_combination ${catkin_EXPORTED_TARGETS})
+target_link_libraries(sensor_data_combination occlusion_culling ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+
 add_executable(intersect_other src/intersect_other.cpp)
 target_include_directories(intersect_other PUBLIC include ${catkin_INCLUDE_DIRS})
 add_dependencies(intersect_other ${catkin_EXPORTED_TARGETS})
