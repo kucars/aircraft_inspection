@@ -98,28 +98,28 @@
 #include <CGAL/Scale_space_surface_reconstruction_3.h>
 #include <CGAL/IO/read_off_points.h>
 
-typedef CGAL::Exact_predicates_exact_constructions_kernel exactKernel; //CGAL::Exact_predicates_exact_constructions_kernel//it could be also CGAL::Exact_predicates_inexact_constructions_kernel CHECK LATER
-typedef CGAL::Simple_cartesian<double> simpleKernel;
-typedef CGAL::Point_3<exactKernel>    Point_3;
-typedef CGAL::Segment_3<exactKernel>  Segment_3;
-typedef CGAL::Triangle_3<exactKernel> Triangle_3;
-typedef CGAL::Plane_3<exactKernel>    Plane_3;
-typedef CGAL::Tetrahedron_3<exactKernel> Tetrahedron_3;
-typedef simpleKernel::Point_3   Point_3_S;
-typedef CGAL::Cartesian_converter<exactKernel,simpleKernel > converter;
+typedef CGAL::Exact_predicates_exact_constructions_kernel       exactKernel; //CGAL::Exact_predicates_exact_constructions_kernel//it could be also CGAL::Exact_predicates_inexact_constructions_kernel CHECK LATER
+typedef CGAL::Simple_cartesian<double>                          simpleKernel;
+typedef CGAL::Point_3<exactKernel>                              Point_3;
+typedef CGAL::Segment_3<exactKernel>                            Segment_3;
+typedef CGAL::Triangle_3<exactKernel>                           Triangle_3;
+typedef CGAL::Plane_3<exactKernel>                              Plane_3;
+typedef CGAL::Tetrahedron_3<exactKernel>                        Tetrahedron_3;
+typedef simpleKernel::Point_3                                   Point_3_S;
+typedef CGAL::Cartesian_converter<exactKernel,simpleKernel >    converter;
 
 // Axis-align boxes for all-pairs self-intersection detection
-typedef std::vector<Triangle_3> Triangles;
-typedef typename Triangles::iterator TrianglesIterator;
-typedef typename Triangles::const_iterator TrianglesConstIterator;
+typedef std::vector<Triangle_3>                                 Triangles;
+typedef typename Triangles::iterator                            TrianglesIterator;
+typedef typename Triangles::const_iterator                      TrianglesConstIterator;
 typedef CGAL::Box_intersection_d::Box_with_handle_d<double,3,TrianglesIterator> Box;
 
-//scale factor reconstruciton
-typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
-typedef Kernel::Point_3 inexactPoint;
-typedef CGAL::Scale_space_surface_reconstruction_3< Kernel >    Reconstruction;
+//scale space surface reconstruciton
+typedef CGAL::Exact_predicates_inexact_constructions_kernel     inexactKernel;
+typedef inexactKernel::Point_3                                  inexactPoint;
+typedef CGAL::Scale_space_surface_reconstruction_3< inexactKernel >    Reconstruction;
 typedef Reconstruction::Point                                   RPoint;
-typedef std::vector< RPoint >                                    Point_collection;
+typedef std::vector< RPoint >                                   Point_collection;
 typedef Reconstruction::Triple_const_iterator                   Triple_iterator;
 using namespace fcl;
 

@@ -254,7 +254,7 @@ void MeshSurface::meshingScaleSpaceCGAL(pcl::PointCloud<pcl::PointXYZ> pointClou
     try{
         // Construct the reconstruction with parameters for
         // the neighborhood squared radius estimation.
-        Reconstruction reconstruct( 5, 50 ); //was 10,100
+        Reconstruction reconstruct( 20, 200 ); //was 10neigbours,100samples
         // Add the points.
         reconstruct.insert( points.begin(), points.end() );
         // Advance the scale-space several steps.
