@@ -144,6 +144,8 @@ public:
     void meshingPCL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangles& cgalMeshT, bool saveMeshFlag=false);
     void meshingPoissonPCL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangles& cgalMeshT, bool saveMeshFlag=false);
     void meshingScaleSpaceCGAL(pcl::PointCloud<pcl::PointXYZ> pointCloud, Triangles& cgalMeshT, bool saveMeshFlag=false);
+    pcl::PointCloud<pcl::PointXYZ> pointsDifference(pcl::PointCloud<pcl::PointXYZ> cloud1, pcl::PointCloud<pcl::PointXYZ> cloud2);
+    bool containsCheck(pcl::PointCloud<pcl::PointXYZ> cloud, pcl::PointXYZ point);
 
     double getIntersectionArea(Triangles& intersectionFaces);
     double getExtraArea(Triangles& extraAreaFaces);

@@ -489,6 +489,31 @@ double MeshSurface::calcPCLMeshSurfaceArea(pcl::PolygonMesh::Ptr& mesh)
     return totalArea;
 }
 
+//function that checks if a point exist in a cloud
+bool MeshSurface::containsCheck(pcl::PointCloud<pcl::PointXYZ> cloud, pcl::PointXYZ point)
+{
+    pcl::PointCloud<pcl::PointXYZ>::iterator it = cloud.begin();
+    for (; it != cloud.end(); ++it) {
+        if (it->x == point.x && it->y == point.y && it->z == point.z)
+            return true;
+    }
+    return false;
+}
+
+//function that gets the cloud difference --> extra cloud from cloud 1
+pcl::PointCloud<pcl::PointXYZ> MeshSurface::pointsDifference(pcl::PointCloud<pcl::PointXYZ> cloud1, pcl::PointCloud<pcl::PointXYZ> cloud2)
+{
+    pcl::PointCloud<pcl::PointXYZ> cloud;
+    pcl::PointCloud<pcl::PointXYZ>::iterator it = cloud1.begin();
+    for (; it != cloud1.end(); ++it)
+    {
+        if (!containsCheck(cloud2, *it))//change from !contains to contains to get intersected cloud
+            cloud.push_back(*it);
+    }
+
+    return cloud;
+}
+
 //OPTIONAL:if you want to load obj file instead of doing meshing(reconstruction) from points
 void MeshSurface::loadOBJFile(const char* filename, std::vector<Vec3f>& points, Triangles& triangles)
 {
