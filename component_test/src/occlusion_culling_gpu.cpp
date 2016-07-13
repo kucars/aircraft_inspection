@@ -325,12 +325,12 @@ void OcclusionCullingGPU::visualizeFOV(geometry_msgs::Pose location)
 
     pcl::PointCloud <pcl::PointXYZ>::Ptr output (new pcl::PointCloud <pcl::PointXYZ>);
 
-    pcl::FrustumCullingGPU fc(true);
-    fc.setInputCloud (cloud);
-    fc.setVerticalFOV (45);
-    fc.setHorizontalFOV (58);
-    fc.setNearPlaneDistance (0.7);
-    fc.setFarPlaneDistance (6.0);
+    //    pcl::FrustumCullingGPU fc(true);
+    //    fc.setInputCloud (cloud);
+    //    fc.setVerticalFOV (45);
+    //    fc.setHorizontalFOV (58);
+    //    fc.setNearPlaneDistance (0.7);
+    //    fc.setFarPlaneDistance (6.0);
 
     Eigen::Matrix4f camera_pose;
     Eigen::Matrix3d Rd;
