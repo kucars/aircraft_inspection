@@ -34,6 +34,7 @@ public:
     //     ros::Publisher visible_pub;
     ros::Publisher fov_pub;
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloudCopy;
     pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud;
     pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeCloud;//I can add it to accumulate cloud if I want to extract visible surface from multiple locations
     pcl::PointCloud<pcl::PointXYZ>::Ptr FrustumCloud;//frustum cull
@@ -63,4 +64,4 @@ public:
 
 };
 
-#endif 
+#endif

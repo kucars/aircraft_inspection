@@ -29,8 +29,8 @@ VoxelGridVisualization::VoxelGridVisualization(ros::NodeHandle &n, std::string m
     originalCloudPub.publish(cloud1);
 }
 
-VoxelGridVisualization::VoxelGridVisualization():
-     model(NULL)
+VoxelGridVisualization::VoxelGridVisualization( pcl::VoxelGridT &grid):
+     voxelFilter(grid)
 {
 
 }
