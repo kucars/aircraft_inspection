@@ -73,6 +73,8 @@ namespace pcl
       Eigen::Vector4f unoccupied;
       Eigen::Vector4f unOccupiedPar;
       Eigen::Vector4f entropyTot;
+      Eigen::Vector4f maxAccuracy;
+      Eigen::Vector4f minAccuracy;
 
       /** \brief Empty constructor. */
       VoxelGridOcclusionEstimationGPU ()

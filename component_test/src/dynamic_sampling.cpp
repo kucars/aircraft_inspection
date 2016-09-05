@@ -92,6 +92,7 @@ geometry_msgs::Pose uav2camTransformation(geometry_msgs::Pose pose, Vec3f rpy, V
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr globalCloudPtr (new pcl::PointCloud<pcl::PointXYZ>);
 pcl::PointCloud<pcl::PointXYZ> globalCloud;
+std::vector<pcl::PointCloud<pcl::PointXYZ> > accuracy_clusters; //vector to store clusters
 
 int main(int argc, char **argv)
 {
@@ -214,9 +215,12 @@ int main(int argc, char **argv)
             distanceFiltering(1,16,j,vectors, tree, a, marker_array);
             coverageFiltering(vectors,filtered_vectors,camsVec,camsPose,obj);
 
-            std::cout << "filtered Vectors #"<<filtered_vectors.poses.size()<< std::endl;
+//            std::cout << "filtered Vectors #"<<filtered_vectors.poses.size()<< std::endl;
         }
     }
+
+    std::cout << "filtered Vectors #"<<filtered_vectors.poses.size()<< std::endl;
+
     ros::Time filtering_end = ros::Time::now();
     elapsed =  filtering_end.toSec() - filtering_begin.toSec();
     std::cout<<"filtering duration (s) = "<<elapsed<<"\n";
@@ -299,7 +303,7 @@ int main(int argc, char **argv)
     ///////////check the difference percentage///////////////
     double uncoveredPercent = ((double) diffPtr->size()/ (double) modelVoxels.size()) *100;
     std::cout<<" /////// Uncovered % : "<<uncoveredPercent <<" ////////"<<std::endl;
-    if(uncoveredPercent<=0.01) //termination condition
+    if(uncoveredPercent<=0.01 && accuracy_clusters.size()>0) //termination condition
         break;
 
     
@@ -350,9 +354,18 @@ int main(int argc, char **argv)
 
       j++;
     }
+    std::cout<<" clusters_pointcloud clusters size : "<< clusters_pointcloud.size() <<std::endl;
+    for(int i =0; i<accuracy_clusters.size(); i++)
+    {
+        clusters_pointcloud.push_back(accuracy_clusters[i]);
+        //accuracy_clusters.pop_back();
+    }
+    std::cout<<" clusters_pointcloud clusters size after adding the accuracy: "<< clusters_pointcloud.size() <<std::endl;
+    std::cout<<" accuracy clusters size : "<< accuracy_clusters.size() <<std::endl;
+    accuracy_clusters.erase(accuracy_clusters.begin(),accuracy_clusters.end());
 
-    
-    
+    std::cout<<" accuracy clusters size after free: "<< accuracy_clusters.size() <<std::endl;
+
     /////////////loop through the clusters and perform discretization and filtering//////////
     res -= 1.5;
     std::cout<<"resolution updated: "<<res;
@@ -371,10 +384,10 @@ int main(int argc, char **argv)
             grid.setLeafSize (voxelRes, voxelRes, voxelRes);
             grid.filter(cluster);
 
-            //        VoxelGridVisualization vgVis(grid);
-            VoxelGridVisualization vgVis(n,"etihad_nowheels_densed.pcd",grid,"base_point_cloud");
+            VoxelGridVisualization vgVis(grid);
+            //VoxelGridVisualization vgVis(n,"etihad_nowheels_densed.pcd",grid,"base_point_cloud");
             vgVis.getBBCentroids();
-            vgVis.visualizeBB();
+            //vgVis.visualizeBB();
 
             geometry_msgs::Point gridSize;
             gridSize.x = std::abs(vgVis.bb_centroids[7].x()-vgVis.bb_centroids[0].x());
@@ -411,13 +424,52 @@ int main(int argc, char **argv)
                 {
                     distanceFiltering(1,16,j,vectors, tree, a, marker_array);
                     coverageFiltering(vectors,filtered_vectors,camsVec,camsPose,obj);
-                    std::cout << "filtered Vectors #"<<filtered_vectors.poses.size()<< std::endl;
-                }
+//                    std::cout << "filtered Vectors #"<<filtered_vectors.poses.size()<< std::endl;
+                }               
             }//filtering
+            std::cout << "filtered Vectors #"<<filtered_vectors.poses.size()<< std::endl;
+
         }//clusters loop
     }//if statement
     else break;
     }//big loop
+
+    ///////////// Writing waypoints and viewpoints and covered cloud to files //////////
+    std::string modelName = "etihad_nowheels_nointernal_newdensed.pcd";
+
+    for(int i=0; i<camsPose.size();i++)
+    {
+        std::stringstream ss;
+        ss << i;
+        std::string file_loc = path+"/src/txt/SearchSpaceCam_1.5m_1to4_"+modelName+"_"+ss.str()+".txt";
+        const char * filename = file_loc.c_str();
+        std::ofstream cameraPointFile(filename);
+        for(int j=0; j<camsVec[i].poses.size(); j++)
+            cameraPointFile << camsVec[i].poses[j].position.x<<" "<<camsVec[i].poses[j].position.y<<" "<<camsVec[i].poses[j].position.z<<" "<<camsVec[i].poses[j].orientation.x<<" "<<camsVec[i].poses[j].orientation.y<<" "<<camsVec[i].poses[j].orientation.z<<" "<<camsVec[i].poses[j].orientation.w<<"\n";
+
+        cameraPointFile.close();
+    }
+    ofstream pointFile;
+
+    std::string file_loc = path+"/src/txt/SearchSpaceUAV_1.5m_1to4_"+modelName+"_dynamic.txt";
+    pointFile.open (file_loc.c_str());
+    for (int j=0; j<filtered_vectors.poses.size(); j++)
+        pointFile << filtered_vectors.poses[j].position.x<<" "<<filtered_vectors.poses[j].position.y<<" "<<filtered_vectors.poses[j].position.z<<" "<<filtered_vectors.poses[j].orientation.x<<" "<<filtered_vectors.poses[j].orientation.y<<" "<<filtered_vectors.poses[j].orientation.z<<" "<<filtered_vectors.poses[j].orientation.w<<"\n";
+
+    pointFile.close();
+
+    //PCD file writing
+    //write the occlusionfreecloud to pcd file used by the coverage_quantification to calculate the percentage
+    globalCloudPtr->points=globalCloud.points;
+    globalCloudPtr->width = globalCloudPtr->points.size();
+    globalCloudPtr->height = 1;
+    pcl::PCDWriter writer;
+    std::stringstream ss;
+    ss << res;
+    writer.write<pcl::PointXYZ> (path+"/src/pcd/occlusionFreeCloud_"+ ss.str()+"m_1to4_etihadNoWheels_dynamic.pcd", *(globalCloudPtr), false);
+    std::cout<<" DONE writing files"<<"\n";
+
+
 
     ros::Rate loop_rate(100);//it was 10
     sensor_msgs::PointCloud2 cloud1,cloud2,cloud3,cloud4;
@@ -585,6 +637,7 @@ void coverageFiltering(geometry_msgs::PoseArray& invectors, geometry_msgs::PoseA
         pcl::PointCloud<pcl::PointXYZ> pts;
         std::vector<geometry_msgs::Pose> poses;
         //going through the sensors per the UAV samples
+        double accuracy;
         for (int j =0; j<camsPose.size() ; j++)
         {
             Vec3f xyz(camsPose[j].position.x, camsPose[j].position.y, camsPose[j].position.z);
@@ -604,6 +657,12 @@ void coverageFiltering(geometry_msgs::PoseArray& invectors, geometry_msgs::PoseA
                 for (int j =0; j<camsPose.size() ; j++)
                 {
                     camVectors[j].poses.push_back(poses[j]);
+                }
+                accuracy = obj.calcAvgAccuracy(pts);
+                //std::cout<<"accuracy : "<<accuracy<<std::endl;
+                if(accuracy >= 0.00150)//1.5mm , for aircraft scaled it is limited between 0.2mm to 1.9mm
+                {
+                    accuracy_clusters.push_back(pts);
                 }
             }
     }

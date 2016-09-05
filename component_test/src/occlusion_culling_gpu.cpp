@@ -20,6 +20,7 @@ OcclusionCullingGPU::OcclusionCullingGPU(ros::NodeHandle &n, std::string modelNa
    voxelRes = 0.5f;
    OriginalVoxelsSize=0.0;
    id=0.0;
+   viewEntropy=0.0;
    voxelFilterOriginal.setInputCloud (cloud);
    voxelFilterOriginal.setLeafSize (voxelRes, voxelRes, voxelRes);
    voxelFilterOriginal.initializeVoxelGrid();
@@ -79,6 +80,7 @@ OcclusionCullingGPU::OcclusionCullingGPU(std::string modelName):
     voxelRes = 0.5f;
     OriginalVoxelsSize=0.0;
     id=0.0;
+    viewEntropy=0.0;
     voxelFilterOriginal.setInputCloud (cloud);
     voxelFilterOriginal.setLeafSize (voxelRes, voxelRes, voxelRes);
     voxelFilterOriginal.initializeVoxelGrid();
@@ -136,6 +138,7 @@ OcclusionCullingGPU::OcclusionCullingGPU():
     voxelRes = 0.5f;
     OriginalVoxelsSize=0.0;
     id=0.0;
+    viewEntropy=0.0;
     voxelFilterOriginal.setInputCloud (cloud);
     voxelFilterOriginal.setLeafSize (voxelRes, voxelRes, voxelRes);
     voxelFilterOriginal.initializeVoxelGrid();
@@ -224,11 +227,11 @@ pcl::PointCloud<pcl::PointXYZ> OcclusionCullingGPU::extractVisibleSurface(geomet
     voxelOcclusionEstimationFilter.setInputCloud(output);
     voxelOcclusionEstimationFilter.setLeafSize (voxelRes, voxelRes, voxelRes);
     voxelOcclusionEstimationFilter.initializeVoxelGrid();
-
     double timeOnRayTracing=0;
     freeCloud.clear();
     ros::Time t1 = ros::Time::now();
     voxelOcclusionEstimationFilter.occlusionFreeEstimationAll(output,freeCloud);
+    viewEntropy= voxelOcclusionEstimationFilter.entropyTot(0);
     occlusionFreeCloud->points = freeCloud.points;
     ros::Time t2 = ros::Time::now();
     timeOnRayTracing = (t2.toSec() - t1.toSec());

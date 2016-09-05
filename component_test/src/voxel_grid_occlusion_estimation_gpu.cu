@@ -57,6 +57,20 @@ pcl::VoxelGridOcclusionEstimationGPU::initializeVoxelGrid ()
   b_max_[1] = (static_cast<float> ( (max_b_[1]) + 1) * leaf_size_[1]);
   b_max_[2] = (static_cast<float> ( (max_b_[2]) + 1) * leaf_size_[2]);
 
+  // calculate the max and min error
+  double max=0,min=std::numeric_limits<double>::max();
+  for(int i=0; i<filtered_cloud_.points.size();i++){
+      double temp = filtered_cloud_.at(i).z;//depth
+      if(max<temp)
+         max=temp;
+      if(min>temp)
+         min=temp;
+  }
+  double maxAccuracyError = 0.0000285 * max*max;
+  maxAccuracy(0) = maxAccuracyError;
+  double minAccuracyError = 0.0000285 * min*min;
+  minAccuracy(0) = minAccuracyError;
+
   // set the sensor origin and sensor orientation
   sensor_origin_ = filtered_cloud_.sensor_origin_;
   sensor_orientation_ = filtered_cloud_.sensor_orientation_;
@@ -167,11 +181,12 @@ pcl::VoxelGridOcclusionEstimationGPU::occlusionEstimationAll (std::vector<Eigen:
       }
   return 0;
 }
-//                             (deviceX,    deviceY,  deviceZ,        inverse_leaf_size,         leaf_size,         b_min,       min_b,       max_b,         b_max,         sensor_origin,          occupied,           occupiedPar,       unoccupiedPar,            divb_mul,      occlusionFreePointsIndices,      occlusionFreePointsCount,    numPoints);
-__global__ void rayTraversalGPU(double *x, double*y, double*z,float * inverse_leaf_size_,float * leaf_size_,float * b_min_,int * min_b_,int * max_b_,float * b_max_,float * sensor_origin_,float * occupiedP_,float * occupiedPPar_,float * unOccupiedPPar_,int * leaf_layout_, int leaf_layout_size, int * divb_mul_,int *occlusionFreePointsIndices, float* occlusionFreePointsEntropies, int* occlusionFreePointsCount,int numPoints)
+//                             (deviceX,    deviceY,  deviceZ,        inverse_leaf_size,         leaf_size,         b_min,       min_b,       max_b,         b_max,         sensor_origin,                                                                divb_mul,      occlusionFreePointsIndices,      occlusionFreePointsCount,    numPoints);
+__global__ void rayTraversalGPU(double *x, double*y, double*z,float * inverse_leaf_size_,float * leaf_size_,float * b_min_,int * min_b_,int * max_b_,float * b_max_,float * sensor_origin_,float * maxAcc,int * leaf_layout_, int leaf_layout_size, int * divb_mul_,int *occlusionFreePointsIndices, float* occlusionFreePointsEntropies, int* occlusionFreePointsCount,int numPoints)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     float vLiklihood = 1;
+    double DepthAcc, normDepthAcc ;
     float Io, voxelEntrobyIv;
     if(idx<numPoints)
     {
@@ -198,6 +213,9 @@ __global__ void rayTraversalGPU(double *x, double*y, double*z,float * inverse_le
         double directionX = cX - sensor_origin_[0];
         double directionY = cY - sensor_origin_[1];
         double directionZ = cZ - sensor_origin_[2];
+
+        // Temporarily: will consider the cz is the distance from the camera to the voxel centroid (later move to the occlusion culling gpu)
+        DepthAcc = 0.0000285 * directionZ * directionZ;
 
         double directionLen = sqrt(directionX*directionX + directionY*directionY + directionZ*directionZ);
         //Normalize direction
@@ -344,7 +362,7 @@ __global__ void rayTraversalGPU(double *x, double*y, double*z,float * inverse_le
             {
                 index = -1;
                 //multiply (1 - unoccupied Prob.) of unoccupied voxels
-                vLiklihood *= unOccupiedPPar_[0];
+                //vLiklihood *= unOccupiedPPar_[0];
             }
             else
                  index = leaf_layout_[ii];
@@ -388,8 +406,10 @@ __global__ void rayTraversalGPU(double *x, double*y, double*z,float * inverse_le
         {
             occlusionFreePointsIndices[idx] = idx;
             //calculate the entroby
-            Io = -1*(occupiedP_[0])*log(occupiedP_[0])-(occupiedPPar_[0]*log(occupiedPPar_[0]) );
-            voxelEntrobyIv = Io*vLiklihood;
+            normDepthAcc = (maxAcc[0] - DepthAcc)/maxAcc[0];
+            Io = -1*(normDepthAcc)*log(normDepthAcc)-( (1- normDepthAcc)*log((1-normDepthAcc)) );
+            //voxelEntrobyIv = Io*vLiklihood;
+            voxelEntrobyIv = Io;
             // printf("%f \n", voxelEntrobyIv);
             occlusionFreePointsEntropies[idx] = voxelEntrobyIv;
             atomicAdd(&occlusionFreePointsCount[0], 1);
@@ -417,13 +437,15 @@ int pcl::VoxelGridOcclusionEstimationGPU::occlusionFreeEstimationAll(pcl::PointC
     int size  = numPoints*sizeof(double);
     int initialPointCount = 0;
     double *deviceX,*deviceY,*deviceZ,*x,*y,*z;
-    float *inverse_leaf_size, *leaf_size,*b_min,*sensor_origin,*b_max, *occupiedP, *occupiedPPar, *unOccupiedPPar, *occlusionFreePointsEntropies;
+    float *inverse_leaf_size, *leaf_size,*b_min,*sensor_origin,*b_max, *maxAcc, *occlusionFreePointsEntropies;
     int *leaf_layout, *occlusionFreePointsIndices,*occlusionFreePointsCount,*divb_mul,*min_b,*max_b;
     int leaf_layout_size;
-    occupied(0) = 0.5;
-    occupiedPar(0) = 1 - occupied(0);
-    unoccupied(0) = 0.5;
-    unOccupiedPar(0) = 1-unoccupied(0);
+
+    //probabilities used in calculating entroby
+    //occupied(0) = 0.5;
+    //occupiedPar(0) = 1 - occupied(0);
+    //unoccupied(0) = 0.5;
+    //unOccupiedPar(0) = 1 - unoccupied(0);
 
     cudaMalloc((void**)&deviceX, size);
     cudaMalloc((void**)&deviceY, size);
@@ -438,9 +460,10 @@ int pcl::VoxelGridOcclusionEstimationGPU::occlusionFreeEstimationAll(pcl::PointC
     cudaMalloc((void**)&b_min,             4*sizeof(float));
     cudaMalloc((void**)&b_max,             4*sizeof(float));
     cudaMalloc((void**)&sensor_origin,     4*sizeof(float));
-    cudaMalloc((void**)&occupiedP,         4*sizeof(float));
-    cudaMalloc((void**)&occupiedPPar,      4*sizeof(float));
-    cudaMalloc((void**)&unOccupiedPPar,    4*sizeof(float));
+    //cudaMalloc((void**)&occupiedP,         4*sizeof(float));
+    //cudaMalloc((void**)&occupiedPPar,      4*sizeof(float));
+    //cudaMalloc((void**)&unOccupiedPPar,    4*sizeof(float));
+    cudaMalloc((void**)&maxAcc,            4*sizeof(float));
     cudaMalloc((void**)&min_b,             4*sizeof(int));
     cudaMalloc((void**)&max_b,             4*sizeof(int));
     cudaMalloc((void**)&divb_mul,          4*sizeof(int));
@@ -468,9 +491,10 @@ int pcl::VoxelGridOcclusionEstimationGPU::occlusionFreeEstimationAll(pcl::PointC
     cudaMemcpy(max_b,max_b_.data(),4*sizeof(int),cudaMemcpyHostToDevice);
     cudaMemcpy(divb_mul,divb_mul_.data(),4*sizeof(int),cudaMemcpyHostToDevice);
     cudaMemcpy(sensor_origin,sensor_origin_.data(),4*sizeof(float),cudaMemcpyHostToDevice);
-    cudaMemcpy(occupiedP,occupied.data(),4*sizeof(float),cudaMemcpyHostToDevice);
-    cudaMemcpy(occupiedPPar,occupiedPar.data(),4*sizeof(float),cudaMemcpyHostToDevice);
-    cudaMemcpy(unOccupiedPPar,unOccupiedPar.data(),4*sizeof(float),cudaMemcpyHostToDevice);
+    //cudaMemcpy(occupiedP,occupied.data(),4*sizeof(float),cudaMemcpyHostToDevice);
+    //cudaMemcpy(occupiedPPar,occupiedPar.data(),4*sizeof(float),cudaMemcpyHostToDevice);
+    //cudaMemcpy(unOccupiedPPar,unOccupiedPar.data(),4*sizeof(float),cudaMemcpyHostToDevice);
+    cudaMemcpy(maxAcc,maxAccuracy.data(),4*sizeof(float),cudaMemcpyHostToDevice);
     cudaMemcpy(leaf_layout,leaf_layout_.data(),leaf_layout_.size()*sizeof(int),cudaMemcpyHostToDevice);
     cudaMemcpy(occlusionFreePointsCount,&initialPointCount,sizeof(int),cudaMemcpyHostToDevice);
     leaf_layout_size = leaf_layout_.size();
@@ -484,7 +508,7 @@ int pcl::VoxelGridOcclusionEstimationGPU::occlusionFreeEstimationAll(pcl::PointC
 
     //std::cout<<"\nNumber of blocks to be used:"<<numberOfBlocks<<" the number of threads:"<<numberOfThreads;
 
-    rayTraversalGPU<<<numberOfBlocks, numberOfThreads>>>(deviceX,deviceY,deviceZ,inverse_leaf_size,leaf_size,b_min,min_b,max_b,b_max,sensor_origin,occupiedP,occupiedPPar,unOccupiedPPar,leaf_layout,leaf_layout_size,divb_mul,occlusionFreePointsIndices,occlusionFreePointsEntropies,occlusionFreePointsCount,numPoints);
+    rayTraversalGPU<<<numberOfBlocks, numberOfThreads>>>(deviceX,deviceY,deviceZ,inverse_leaf_size,leaf_size,b_min,min_b,max_b,b_max,sensor_origin,maxAcc,leaf_layout,leaf_layout_size,divb_mul,occlusionFreePointsIndices,occlusionFreePointsEntropies,occlusionFreePointsCount,numPoints);
 
     cudaDeviceSynchronize();
 
@@ -534,9 +558,10 @@ int pcl::VoxelGridOcclusionEstimationGPU::occlusionFreeEstimationAll(pcl::PointC
     cudaFree(leaf_size);
     cudaFree(b_min);
     cudaFree(sensor_origin);
-    cudaFree(occupiedP);
-    cudaFree(occupiedPPar);
-    cudaFree(unOccupiedPPar);
+    //cudaFree(occupiedP);
+    //cudaFree(occupiedPPar);
+    //cudaFree(unOccupiedPPar);
+    cudaFree(maxAcc);
     cudaFree(divb_mul);
     cudaFree(leaf_layout);
     cudaFree(occlusionFreePointsIndices);

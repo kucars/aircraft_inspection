@@ -40,7 +40,7 @@ public:
     pcl::PointCloud<pcl::PointXYZ>::Ptr FrustumCloud;//frustum cull
 
     pcl::PointCloud<pcl::PointXYZ> freeCloud;
-    float voxelRes, OriginalVoxelsSize;
+    float voxelRes, OriginalVoxelsSize, viewEntropy;
     double id;
     pcl::VoxelGridOcclusionEstimationGPU voxelFilterOriginal;
     Eigen::Vector3i  max_b1, min_b1;
