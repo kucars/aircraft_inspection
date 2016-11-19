@@ -109,11 +109,11 @@ int main(int argc, char **argv)
     pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/etihad_nowheels_nointernal_scaled_newdensed.pcd", *cloudPtr);
 
     cout << "generating octomap" << endl;
-    OcTree* tree = new OcTree(0.25);  // create empty tree with resolution 0.1
+    OcTree* tree = new OcTree(0.5);  // create empty tree with resolution 0.1
     OcclusionCullingGPU obj(n,"etihad_nowheels_nointernal_scaled_newdensed.pcd");
 
     //1: reading the path from a file
-    std::string str1 = path+"/src/txt/2_5_10pathV.txt";//3_90path_new
+    std::string str1 = path+"/src/txt/viewpoints_dynamic.txt";//3_90path_new
     const char * filename1 = str1.c_str();
     assert(filename1 != NULL);
     filename1 = strdup(filename1);
@@ -123,21 +123,18 @@ int main(int argc, char **argv)
         std::cout<<"\nCan not open the File";
         fclose(file1);
     }
-    pcl::PointCloud<pcl::PointXYZ> modelVoxels;
-    pcl::VoxelGridOcclusionEstimationGPU voxelgrid;
-    voxelgrid.setInputCloud (cloudPtr);
-    voxelgrid.setLeafSize (0.25, 0.25, 0.25);
-    voxelgrid.initializeVoxelGrid();
-    voxelgrid.filter(modelVoxels);
 
     geometry_msgs::PoseArray viewpoints,points;
     geometry_msgs::Pose pt;
     geometry_msgs::Pose loc;
     visualization_msgs::MarkerArray marker_array ;
     visualization_msgs::Marker marker ;
-    double locationx,locationy,locationz,yaw;
-    fcl::Vec3f rpy(0,0.349,0);
-    fcl::Vec3f xyz(0,0.022,-0.065);
+    double locationx,locationy,locationz,yaw, sensorx,sensory,sensorz, sensorw;
+    fcl::Vec3f rpy1(0,-0.349,0);
+    fcl::Vec3f xyz1(0,0.022,0.065);
+    fcl::Vec3f rpy2(0,0.349,0);
+    fcl::Vec3f xyz2(0,0.022,-0.065);
+
     tree->setProbHit(0.99999);
     tree->setProbMiss(0.5);
     tree->setClampingThresMax(0.99999);
@@ -150,122 +147,216 @@ int main(int argc, char **argv)
         octomap::point3d endpoint((float) obj.cloud->points[i].x,(float) obj.cloud->points[i].y,(float) obj.cloud->points[i].z);
         octPointCloud.push_back(endpoint);
     }
-    octomap::OcTree fullModelTree(0.25);
+    octomap::OcTree fullModelTree(0.5);
     octomap::KeySet freeKeys,occupiedKeys;
     fullModelTree.computeUpdate(octPointCloud,octomap::point3d(0,0,0),freeKeys,occupiedKeys,-1);
     double modelVolume = 0;
+    double totalEntroby=0;
     int i=0;
     for (KeySet::iterator it = occupiedKeys.begin(); it != occupiedKeys.end(); ++it) {
-        modelVolume += (0.25*0.25*0.25);
+        modelVolume += (0.5*0.5*0.5);
         fullModelTree.updateNode(*it, true);
+        totalEntroby += ( -1*(0.5)*(log(0.5)/log(2)) );//0.5 for unknown
         i++;
     }
-    std::cout<<"volume of the tree1: "<<modelVolume<<std::endl;
-    std::cout<<"number of occupied voxels after: "<<i<<std::endl;
+//    std::cout<<"volume of the tree1: "<<modelVolume<<std::endl;
+//    std::cout<<"number of occupied voxels after: "<<i<<std::endl;
 
     //going through path
     double coveredVolume=0;
-    int j=0;
+    double maxDepth = std::sqrt(obj.maxAccuracyError/0.0000285);
+    int r=0;
     int num=0;
+    ofstream entrobiesFile,fFile;
+    std::string file_loc = ros::package::getPath("component_test")+"/src/txt/"+"entrobies_new"+".txt";
+    entrobiesFile.open (file_loc.c_str());
+    std::string file_loc1 = ros::package::getPath("component_test")+"/src/txt/"+"entrobies_fvalue"+".txt";
+    fFile.open (file_loc1.c_str());
+
+    double globalF=0.0;
+    double tempEntroby;
+    geometry_msgs::Point pt1,pt2;
     while (!feof(file1))
     {
-        fscanf(file1,"%lf %lf %lf %lf\n",&locationx,&locationy,&locationz,&yaw);
+        double localF;
+        fscanf(file1,"%lf %lf %lf %lf %lf %lf %lf\n",&locationx,&locationy,&locationz, &sensorx, &sensory, &sensorz, &sensorw );
         pt.position.x=locationx; pt.position.y=locationy; pt.position.z=locationz;
-        tf::Quaternion tf_q ;
-        tf_q= tf::createQuaternionFromYaw(yaw);
-        pt.orientation.x=tf_q.getX();pt.orientation.y=tf_q.getY();pt.orientation.z=tf_q.getZ();pt.orientation.w=tf_q.getW();
+//        tf::Quaternion tf_q ;
+//        tf_q= tf::createQuaternionFromYaw(yaw);
+        pt.orientation.x=sensorx;pt.orientation.y=sensory;pt.orientation.z=sensorz;pt.orientation.w=sensorw;
         points.poses.push_back(pt);
-        loc= uav2camTransformation(pt,rpy,xyz);
+        geometry_msgs::PoseArray sensorPoses;
+
+        loc= uav2camTransformation(pt,rpy1,xyz1);
+        sensorPoses.poses.push_back(loc);
         viewpoints.poses.push_back(loc);
 
-        pcl::PointCloud<pcl::PointXYZ> visible;
-        octomap::Pointcloud octPointCloud;
+        loc= uav2camTransformation(pt,rpy2,xyz2);
+        sensorPoses.poses.push_back(loc);
+        viewpoints.poses.push_back(loc);
 
-        visible = obj.extractVisibleSurface(loc);
-
-        //put the visible cloud in the octomap
-        for(int i = 0;i<visible.points.size();i++)
+        for(int j=0; j<sensorPoses.poses.size(); j++)
         {
-            octomap::point3d endpoint((float) visible.points[i].x,(float) visible.points[i].y,(float) visible.points[i].z);
-            octPointCloud.push_back(endpoint);
-        }
-        //        std::cout<<"visible cloud size: "<<visible.points.size()<<std::endl;
-        //        std::cout<<"number of nodes before: "<<tree.calcNumNodes()<<std::endl;
+            pcl::PointCloud<pcl::PointXYZ> visible1;
+            octomap::Pointcloud octPointCloud;
+            visible1 = obj.extractVisibleSurface(sensorPoses.poses[j]);
 
-        octomap::point3d origin(loc.position.x,loc.position.y,loc.position.z);
-        KeySet freeKeys,occupiedKeys;
-        tree->computeUpdate(octPointCloud,origin,freeKeys,occupiedKeys,-1);
 
-        for (KeySet::iterator it = occupiedKeys.begin(); it != occupiedKeys.end(); ++it) {
-            octomap::point3d center = tree->keyToCoord(*it);
-            fcl::Vec3f vec2(center.x(), center.y(), center.z());
-            double dist =  std::sqrt(( vec2[0] - origin.x())*(vec2[0] - origin.x()) + (vec2[1] - origin.y())*(vec2[1] - origin.y()) + (vec2[2] -origin.z())*(vec2[2] -origin.z()));
-            double normAcc = (obj.maxAccuracyError - 0.0000285 * dist * dist*0.5)/obj.maxAccuracyError;
-            float lg = octomap::logodds(normAcc);
-
-            octomap::OcTreeNode* result = tree->search(*it);
-            if(result!=NULL)//it is occupied
+            //put the visible cloud in the octomap
+            for(int i = 0;i<visible1.points.size();i++)
             {
-//                std::cout<<"prob: "<<result->getOccupancy()<<std::endl;
+                octomap::point3d endpoint((float) visible1.points[i].x,(float) visible1.points[i].y,(float) visible1.points[i].z);
+                octPointCloud.push_back(endpoint);
             }
-            else //it is NULL (unknown)
-            {
-                coveredVolume += (0.25*0.25*0.25);
-                tree->setNodeValue(*it, lg);
-                num++;
-            }
-        }
+            //        std::cout<<"visible cloud size: "<<visible.points.size()<<std::endl;
+            //        std::cout<<"number of nodes before: "<<tree.calcNumNodes()<<std::endl;
 
-//        tree.insertPointCloud(octPointCloud,origin);
-//        tree.updateInnerOccupancy();
+            octomap::point3d origin(sensorPoses.poses[j].position.x,sensorPoses.poses[j].position.y,sensorPoses.poses[j].position.z);
+            KeySet freeKeys,occupiedKeys;
+            tree->computeUpdate(octPointCloud,origin,freeKeys,occupiedKeys,-1);
+
+            for (KeySet::iterator it = occupiedKeys.begin(); it != occupiedKeys.end(); ++it) {
+                octomap::point3d center = tree->keyToCoord(*it);
+                fcl::Vec3f vec2(center.x(), center.y(), center.z());
+                double dist =  std::sqrt(( vec2[0] - origin.x())*(vec2[0] - origin.x()) + (vec2[1] - origin.y())*(vec2[1] - origin.y()) + (vec2[2] -origin.z())*(vec2[2] -origin.z()));
+                if(dist>maxDepth)
+                    dist=maxDepth;
+                double normAcc = (obj.maxAccuracyError - 0.0000285 * dist * dist*0.5)/obj.maxAccuracyError;
+//                float lg = octomap::logodds(normAcc);
+
+                octomap::OcTreeNode* result = tree->search(*it);
+                if(result!=NULL)//it is occupied
+                {
+                    if(r!=0)
+                    {
+//                        std::cout<<">>>> entroby (Occupied voxl) : "<<totalEntroby<<std::endl;
+
+                        double prob = result->getOccupancy();
+//                        std::cout<<"prior P: "<<prob<<std::endl;
+                        double entropy = ( -1*prob*(log(prob)/log(2)) ) ;
+
+                        totalEntroby -= entropy;
+                        double postProb = (normAcc*prob) / ( (normAcc*prob)+( (1-normAcc)*(1-prob) ) );
+//                        std::cout<<"after P: "<<postProb<<std::endl;
+
+                        double logO = octomap::logodds(postProb);
+//                        std::cout<<"logodd P: "<<logO<<std::endl;
+
+                        tree->setNodeValue(*it, logO);
+                        entropy = ( -1*postProb*(log(postProb)/log(2)) ) ;
+                        totalEntroby += entropy;
+
+                    }
+                }
+                else //it is NULL (unknown)
+                {
+//                    std::cout<<">>>> entroby (NULL voxl) : "<<totalEntroby<<std::endl;
+
+                    double entropy = ( -1*(0.5)*(log(0.5)/log(2)) ) ; //subtract the unknown prob 0.5 entroby
+                    totalEntroby -= entropy;
+                    double postProb = (normAcc*0.5) / ( (normAcc*0.5)+( (1-normAcc)*(1-0.5) ) );
+//                    std::cout<<"after P: "<<postProb<<std::endl;
+
+                    double logO = octomap::logodds(postProb);
+//                    std::cout<<"logodd P: "<<logO<<std::endl;
+
+                    tree->setNodeValue(*it, logO);
+                    entropy = ( -1*postProb*(log(postProb)/log(2)) ) ;
+                    totalEntroby += entropy;
+                }
+            }
+            r++;
+//            entrobiesFile<<num<<" "<<totalEntroby<<std::endl;
+//            std::cout<<"Entroby of viewpoint: "<<totalEntroby<<std::endl;
+        }//end of sensors
+
+        entrobiesFile<<num<<" "<<totalEntroby<<std::endl;
+        std::cout<<"Entroby of viewpoint: "<<totalEntroby<<std::endl;
+        if(num==0)
+        {
+            tempEntroby = totalEntroby;
+            globalF = totalEntroby;
+            pt1.x = locationx; pt1.y = locationy; pt1.z = locationz;
+            fFile<<num<<" "<<tempEntroby<<std::endl;
+            std::cout<<"f value of viewpoint: "<<tempEntroby<<std::endl;
+        }
+        else
+        {
+            pt2.x = locationx; pt2.y = locationy; pt2.z = locationz;
+            double d = std::sqrt(std::pow(pt1.x - pt2.x,2) + std::pow(pt1.y - pt2.y,2)+ std::pow(pt1.z - pt2.z,2) );
+            std::cout<<"distance : "<<d<<std::endl;
+            double localE = totalEntroby - tempEntroby;
+            std::cout<<"localE : "<<localE<<std::endl;
+            localF = globalF + localE * std::exp(-0.2*d);
+            std::cout<<"local f : "<<localF<<std::endl;
+
+            globalF = localF;
+            std::cout<<"global f : "<<globalF<<std::endl;
+
+            tempEntroby = totalEntroby;
+            pt1.x = locationx; pt1.y = locationy; pt1.z = locationz;
+            fFile<<num<<" "<<localF<<std::endl;
+            std::cout<<"f value of viewpoint: "<<localF<<std::endl;
+
+        }
+        num++;
+//        if(num==10)
+//            break;
+
+        //        tree.insertPointCloud(octPointCloud,origin);
+        //        tree.updateInnerOccupancy();
+
+        std::cout<<"\n********************************************************"<<std::endl;
+
 
     }
 
+    fFile.close();
+    entrobiesFile.close();
+//    std::cout<<"clamping threshhold max: "<<tree->getClampingThresMax()<<std::endl;
+//    std::cout<<"clamping threshhold min: "<<tree->getClampingThresMin()<<std::endl;
+//    std::cout<<"clamping threshhold logodd max: "<<tree->getClampingThresMaxLog()<<std::endl;
+//    std::cout<<"clamping threshhold logodd min: "<<tree->getClampingThresMinLog()<<std::endl;
+//    std::cout<<"Prob hit: "<<tree->getProbHit()<<std::endl;
+//    std::cout<<"Prob miss: "<<tree->getProbMiss()<<std::endl;
+//    std::cout<<"Prob hit logodd: "<<tree->getProbHitLog()<<std::endl;
+//    std::cout<<"Prob miss logodd: "<<tree->getProbMissLog()<<std::endl;
+//    std::cout<<"number of voxels: " <<num <<" covered volume percent: "<<(coveredVolume/modelVolume)*100<<std::endl;
 
-    std::cout<<"clamping threshhold max: "<<tree->getClampingThresMax()<<std::endl;
-    std::cout<<"clamping threshhold min: "<<tree->getClampingThresMin()<<std::endl;
-    std::cout<<"clamping threshhold logodd max: "<<tree->getClampingThresMaxLog()<<std::endl;
-    std::cout<<"clamping threshhold logodd min: "<<tree->getClampingThresMinLog()<<std::endl;
-    std::cout<<"Prob hit: "<<tree->getProbHit()<<std::endl;
-    std::cout<<"Prob miss: "<<tree->getProbMiss()<<std::endl;
-    std::cout<<"Prob hit logodd: "<<tree->getProbHitLog()<<std::endl;
-    std::cout<<"Prob miss logodd: "<<tree->getProbMissLog()<<std::endl;
-    std::cout<<"number of voxels: " <<num <<" covered volume percent: "<<(coveredVolume/modelVolume)*100<<std::endl;
-
-    int r =0 ;
-    //another way of looping through octomap (entire tree)
-    //visualizing the occupied voxels
-    for(OcTree::iterator it = tree->begin(); it!= tree->end(); ++it)
-    {
-        if(it->getValue()>0.0)
-        {
-            fcl::Vec3f vec2(it.getCoordinate().x(), it.getCoordinate().y(), it.getCoordinate().z());
-            marker = drawCUBE(vec2,r,1,0.25) ;
-            marker_array.markers.push_back(marker);
-        }
-        r++;
-    }
+//    int r =0 ;
+//    //another way of looping through octomap (entire tree)
+//    //visualizing the occupied voxels
+//    for(OcTree::iterator it = tree->begin(); it!= tree->end(); ++it)
+//    {
+//        if(it->getValue()>0.0)
+//        {
+//            fcl::Vec3f vec2(it.getCoordinate().x(), it.getCoordinate().y(), it.getCoordinate().z());
+//            marker = drawCUBE(vec2,r,1,0.25) ;
+//            marker_array.markers.push_back(marker);
+//        }
+//        r++;
+//    }
 
 
-    cout << endl;
-    cout << "performing some queries:" << endl;
+//    cout << endl;
+//    cout << "performing some queries:" << endl;
 
-    //    point3d query1 (-0.125, -35.375, 4.625);
-    point3d query1 (-1.125, -32.125, 6.625);
-    OcTreeNode* result1 = tree->search (query1);
-    print_query_info(query1, result1);
+//    //    point3d query1 (-0.125, -35.375, 4.625);
+//    point3d query1 (-1.125, -32.125, 6.625);
+//    OcTreeNode* result1 = tree->search (query1);
+//    print_query_info(query1, result1);
 
-    point3d query (1.375, -31.375, 4.625);
-    OcTreeNode* result = tree->search (query);
-    print_query_info(query, result);
+//    point3d query (1.375, -31.375, 4.625);
+//    OcTreeNode* result = tree->search (query);
+//    print_query_info(query, result);
 
-    point3d query2 (9.125, -6.625, 4.125);
-    OcTreeNode* result2 = tree->search (query2);
-    print_query_info(query2, result2);
+//    point3d query2 (9.125, -6.625, 4.125);
+//    OcTreeNode* result2 = tree->search (query2);
+//    print_query_info(query2, result2);
 
-    point3d query3 (1.625, -30.375, 6.875);
-    OcTreeNode* result3 = tree->search (query3);
-    print_query_info(query3, result3);
+//    point3d query3 (1.625, -30.375, 6.875);
+//    OcTreeNode* result3 = tree->search (query3);
+//    print_query_info(query3, result3);
 
 
     ros::Rate loop_rate(10);//it was 10

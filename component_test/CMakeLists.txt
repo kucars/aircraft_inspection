@@ -104,7 +104,7 @@ target_link_libraries(surface_coverage_evaluation occlusion_culling occlusion_cu
 
 add_executable(accuracy_check src/accuracy_check.cpp)
 add_dependencies(accuracy_check ${catkin_EXPORTED_TARGETS})
-target_link_libraries(accuracy_check occlusion_culling ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+target_link_libraries(accuracy_check occlusion_culling occlusion_culling_gpu ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
 add_executable(coverage_comparison src/coverage_comparison.cpp)
 add_dependencies(coverage_comparison ${catkin_EXPORTED_TARGETS})
