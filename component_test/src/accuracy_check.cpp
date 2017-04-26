@@ -61,7 +61,7 @@
 
 using namespace fcl;
 geometry_msgs::Pose uav2camTransformation(geometry_msgs::Pose pose, Vec3f rpy, Vec3f xyz);
-pcl::PointCloud<pcl::PointXYZ> pointCloudViewportTransform(pcl::PointCloud<pcl::PointXYZ> pointCloud, geometry_msgs::Pose cameraPose, Vec3f rpy);
+pcl::PointCloud<pcl::PointXYZ> pointCloudViewportTransform(pcl::PointCloud<pcl::PointXYZ> pointCloud, geometry_msgs::Pose cameraPose);
 void transformPointMatVec(tf::Vector3 translation, tf::Matrix3x3 rotation, geometry_msgs::Point32 in, geometry_msgs::Point32 &out);
 
 int main(int argc, char **argv)
@@ -75,7 +75,7 @@ int main(int argc, char **argv)
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr originalCloud(new pcl::PointCloud<pcl::PointXYZ>);
     OcclusionCullingGPU obj(n,"hoa_translated_densed_scaled.pcd");
-    double locationx,locationy,locationz,yaw,max=0, EMax,min=1,EMin;
+    double locationx,locationy,locationz,yaw,max=0, EMax,min=std::numeric_limits<double>::max(),EMin;
 
     //reading the original cloud
     std::string path = ros::package::getPath("component_test");
@@ -153,12 +153,10 @@ int main(int argc, char **argv)
             visible += obj.extractVisibleSurface(loc);
             //obj.visualizeFOV(pt); //uncomment if you want to visualize the FOV
 
-
-            loc.orientation.w = yaw; //using yaw angle in the transformation
-            transformedVisible = pointCloudViewportTransform(visible, loc, rpy);
+            transformedVisible = pointCloudViewportTransform(visible, loc);
             global +=transformedVisible;
             globalVis += visible;
-            std::cout<<"num of visible points :  "<<visible.size()<<"points, num of transformed: "<<transformedVisible.points.size() <<"points \n";
+            //std::cout<<"num of visible points :  "<<visible.size()<<"points, num of transformed: "<<transformedVisible.points.size() <<"points \n";
             for(int i=0; i<transformedVisible.points.size();i++){
                 double temp = transformedVisible.points[i].x;//depth (it is at x axis because of the frustum culling camera pose requirement)
                 //std::cout<<"depth are :  "<<temp<<"points\n";
@@ -175,8 +173,8 @@ int main(int argc, char **argv)
 
 
         //for debugging purposes (work on few viewpoints)
-        //if(r++==5)
-        //    break;
+        if(r++==5)
+            break;
     }
 
     //4: calculate the Maximum Error
@@ -363,7 +361,7 @@ void transformPointMatVec(tf::Vector3 translation, tf::Matrix3x3 rotation, geome
 
 
 //translate the pcd viewport (0,0,0) to the camera viewport (viewpoints)
-pcl::PointCloud<pcl::PointXYZ> pointCloudViewportTransform(pcl::PointCloud<pcl::PointXYZ> pointCloud, geometry_msgs::Pose cameraPose, Vec3f rpy)
+pcl::PointCloud<pcl::PointXYZ> pointCloudViewportTransform(pcl::PointCloud<pcl::PointXYZ> pointCloud, geometry_msgs::Pose cameraPose)
 {
 
     pcl::PointCloud<pcl::PointXYZ> posArray;
@@ -381,7 +379,10 @@ pcl::PointCloud<pcl::PointXYZ> pointCloudViewportTransform(pcl::PointCloud<pcl::
                   0,0,1);
 
     // rotation of the uav interms of the previous viewport of the pointcloud
-    double yaw = -1 * cameraPose.orientation.w;
+    tf::Quaternion qt(cameraPose.orientation.x, cameraPose.orientation.y, cameraPose.orientation.z, cameraPose.orientation.w) ;
+    double r, p, y;
+    tf::Matrix3x3(qt).getRPY(r, p, y);
+    double yaw = -1 * y;
     //std::cout<<" yaw angle: "<<yaw<<std::endl;
     //std::cout<<" cos angle: "<<std::cos(yaw)<<std::endl;
     //std::cout<<" sin angle: "<<std::sin(yaw)<<std::endl;
@@ -397,7 +398,7 @@ pcl::PointCloud<pcl::PointXYZ> pointCloudViewportTransform(pcl::PointCloud<pcl::
                   0, std::sin(roll),std::cos(roll)  );
 
     // rotation for the camera orientation
-    double pitch = 1 * (rpy[1]);
+    double pitch = -1 * p;
     //std::cout<<" pitch angle: "<<pitch<<std::endl;
 
     rotY.setValue(std::cos(pitch),0,std::sin(pitch),
@@ -426,7 +427,7 @@ pcl::PointCloud<pcl::PointXYZ> pointCloudViewportTransform(pcl::PointCloud<pcl::
         transformPointMatVec(transE, rotY, ptOUT1, ptOUT2);
         //std::cout<<"point out3 : "<<ptOUT2.x<<" "<<ptOUT2.y << " "<<ptOUT2.z<<" "<<std::endl;
 
-        //rotation around x (roll)
+        //rotation around x (roll) (not necessary for now)
         //transformPointMatVec(transE, rotX, ptOUT2, ptOUT3);
         //std::cout<<"point out4 : "<<ptOUT3.x<<" "<<ptOUT3.y << " "<<ptOUT3.z<<" "<<std::endl;
 
