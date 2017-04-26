@@ -75,17 +75,6 @@ OcclusionCulling::OcclusionCulling(ros::NodeHandle &n, std::string modelName):
    fc.setNearPlaneDistance (0.7);
    fc.setFarPlaneDistance (6.0);
 
-   //max accuracy calculation
-   double max=0,min=std::numeric_limits<double>::max();
-   for(int i=0; i<cloud->points.size();i++){
-       double temp = cloud->at(i).z;//depth
-       if(max<temp)
-          max=temp;
-       if(min>temp)
-          min=temp;
-   }
-   maxAccuracyError = 0.0000285 * max*max;
-   minAccuracyError = 0.0000285 * min*min;
 }
 OcclusionCulling::OcclusionCulling(std::string modelName):
     model(modelName),
@@ -133,17 +122,6 @@ OcclusionCulling::OcclusionCulling(std::string modelName):
     fc.setNearPlaneDistance (0.7);
     fc.setFarPlaneDistance (6.0);
 
-    //max accuracy calculation
-    double max=0,min=std::numeric_limits<double>::max();
-    for(int i=0; i<cloud->points.size();i++){
-        double temp = cloud->at(i).z;//depth
-        if(max<temp)
-           max=temp;
-        if(min>temp)
-           min=temp;
-    }
-    maxAccuracyError = 0.0000285 * max*max;
-    minAccuracyError = 0.0000285 * min*min;
 }
 OcclusionCulling::OcclusionCulling():
     model(NULL),
@@ -191,17 +169,6 @@ OcclusionCulling::OcclusionCulling():
     fc.setNearPlaneDistance (0.7);
     fc.setFarPlaneDistance (6.0);
 
-    //max accuracy calculation
-    double max=0,min=std::numeric_limits<double>::max();
-    for(int i=0; i<cloud->points.size();i++){
-        double temp = cloud->at(i).z;//depth
-        if(max<temp)
-           max=temp;
-        if(min>temp)
-           min=temp;
-    }
-    maxAccuracyError = 0.0000285 * max*max;
-    minAccuracyError = 0.0000285 * min*min;
 }
 OcclusionCulling::~OcclusionCulling()
 {
