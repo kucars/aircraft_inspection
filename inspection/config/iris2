@@ -43,6 +43,7 @@ param set MPC_Z_VEL_I 0.15
 param set EKF2_GBIAS_INIT 0.01
 param set EKF2_ANGERR_INIT 0.01
 param set LPE_FUSION 247
+param set SITL_UDP_PRT 14565
 # 11110111 no vis yaw (1 << 3)
 
 replay tryapplyparams
