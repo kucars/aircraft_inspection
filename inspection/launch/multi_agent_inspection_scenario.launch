@@ -1,0 +1,236 @@
+<?xml version="1.0"?>
+
+<launch>
+
+    <!-- MAVROS posix SITL environment launch script -->
+
+    <arg name="headless" default="false"/>
+    <arg name="gui" default="true"/>
+    <arg name="debug" default="false"/>
+    <arg name="verbose" default="false"/>
+    <arg name="paused" default="false"/> 
+    <arg name="pluginlists_yaml" default="$(find mavros)/launch/px4_pluginlists.yaml" />
+    <arg name="config_yaml" default="$(find mavros)/launch/px4_config.yaml" />
+    <arg name="screen" default="screen"/>
+   <!-- world files : etihad_aircraft_world_scaled, bridge_world, burj_arab_world, hoe_world, iceland_aircraft_world     -->
+    <arg name="world" default="$(find aircraft_inspection)/gazebo_models/world/aircraft_world_new.world"/>
+
+  
+   <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="headless" value="$(arg headless)"/>
+        <arg name="gui" value="$(arg gui)"/>
+        <arg name="world_name" value="$(arg world)" />
+        <arg name="debug" value="$(arg debug)" />
+        <arg name="verbose" value="$(arg verbose)" />
+        <arg name="paused" value="$(arg paused)" />
+    </include>
+
+  <!-- Link the cameras to the base of the drone odometry sensor  -->
+  
+   <!-- uav 1     -->
+   <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0 0 0.0 -0.5 0.5 -0.5 0.5 uav_1/xtion_sensor_down/ground_truth/uav_1/xtion_sensor_down/ground_truth/odometry_sensor_link uav_1/xtion_sensor_down/camera_depth_optical_frame 1000" />
+   <node pkg="tf" type="static_transform_publisher" name="link2_broadcaster" args="0 0 0.0 -0.5 0.5 -0.5 0.5 uav_1/xtion_sensor_up/ground_truth/uav_1/xtion_sensor_up/ground_truth/odometry_sensor_link uav_1/xtion_sensor_up/camera_depth_optical_frame 1000" />
+
+    <node pkg="tf" type="static_transform_publisher" name="link3_broadcaster" args="0 0.022 0.065 0.9848 0 0 -0.173703 uav_1/ground_truth/uav_1/ground_truth/odometry_sensorgt_link uav_1/xtion_sensor_up/uav_1/ground_truth/xtion_sensor_up/ground_truth/odometry_sensor_link 1000" />
+    <node pkg="tf" type="static_transform_publisher" name="link4_broadcaster" args="0 0.022 -0.065 0.9848 0 0 0.173703 uav_1/ground_truth/uav_1/ground_truth/odometry_sensorgt_link uav_1/xtion_sensor_down/ground_truth/uav_1/xtion_sensor_down/ground_truth/odometry_sensor_link 1000" />
+
+   <!-- uav 2     -->
+   <node pkg="tf" type="static_transform_publisher" name="link5_broadcaster" args="0 0 0.0 -0.5 0.5 -0.5 0.5 uav_2/xtion_sensor_down/ground_truth/uav_2/xtion_sensor_down/ground_truth/odometry_sensor_link uav_2/xtion_sensor_down/camera_depth_optical_frame 1000" />
+   <node pkg="tf" type="static_transform_publisher" name="link6_broadcaster" args="0 0 0.0 -0.5 0.5 -0.5 0.5 uav_2/xtion_sensor_up/ground_truth/uav_2/xtion_sensor_up/ground_truth/odometry_sensor_link uav_2/xtion_sensor_up/camera_depth_optical_frame 1000" />
+
+    <node pkg="tf" type="static_transform_publisher" name="link7_broadcaster" args="0 0.022 0.065 0.9848 0 0 -0.173703 uav_2/ground_truth/uav_2/ground_truth/odometry_sensorgt_link uav_2/xtion_sensor_up/ground_truth/uav_2/xtion_sensor_up/ground_truth/odometry_sensor_link 1000" />
+    <node pkg="tf" type="static_transform_publisher" name="link8_broadcaster" args="0 0.022 -0.065 0.9848 0 0 0.173703 uav_2/ground_truth/uav_2/ground_truth/odometry_sensorgt_link uav_2/xtion_sensor_down/ground_truth/uav_2/xtion_sensor_down/ground_truth/odometry_sensor_link 1000" />
+
+   <!-- uav 3     -->
+   <node pkg="tf" type="static_transform_publisher" name="link9_broadcaster" args="0 0 0.0 -0.5 0.5 -0.5 0.5 uav_3/xtion_sensor_down/ground_truth/uav_3/xtion_sensor_down/ground_truth/odometry_sensor_link uav_3/xtion_sensor_down/camera_depth_optical_frame 1000" />
+   <node pkg="tf" type="static_transform_publisher" name="link10_broadcaster" args="0 0 0.0 -0.5 0.5 -0.5 0.5 uav_3/xtion_sensor_up/ground_truth/uav_3/xtion_sensor_up/ground_truth/odometry_sensor_link uav_3/xtion_sensor_up/camera_depth_optical_frame 1000" />
+
+    <node pkg="tf" type="static_transform_publisher" name="link11_broadcaster" args="0 0.022 0.065 0.9848 0 0 -0.173703 uav_3/ground_truth/uav_3/ground_truth/odometry_sensorgt_link uav_3/xtion_sensor_up/ground_truth/uav_3/xtion_sensor_up/ground_truth/odometry_sensor_link 1000" />
+    <node pkg="tf" type="static_transform_publisher" name="link12_broadcaster" args="0 0.022 -0.065 0.9848 0 0 0.173703 uav_3/ground_truth/uav_3/ground_truth/odometry_sensorgt_link uav_3/xtion_sensor_down/ground_truth/uav_3/xtion_sensor_down/ground_truth/odometry_sensor_link 1000" />    
+  
+  
+      <!-- UAV 1 - IRIS 1 -->
+    <group ns="uav_1">
+    <arg name="name" default="uav_1"/>
+    <arg name="ns" default="/uav_1/"/>
+    <arg name="fcu_url" default="udp://:14556@localhost:14557"/>
+    <arg name="vehicle" default="iris1"/>
+    <arg name="rcS" default="$(find aircraft_inspection)/config/$(arg vehicle)"/>
+    <arg name="x" default="6"/>
+    <arg name="y" default="-6"/>
+    <arg name="z" default="0"/>
+    <arg name="R" default="0"/>
+    <arg name="P" default="0"/>
+    <arg name="Y" default="3.14"/>
+    
+  <arg name="enable_logging" default="false"/>
+  <arg name="enable_ground_truth" default="true"/>
+  <arg name="enable_mavlink_interface" default="true"/>  
+  <arg name="mavlink_udp_port" default="14560"/>  
+  <arg name="sensor_ns" default="uav_1"/> 
+  <arg name="log_file" default="iris"/>
+  <arg name="model" value="$(find aircraft_inspection)/urdf/iris/iris_inspection_multi_sensors.gazebo" />
+
+  <param name="robot_description" command="
+    $(find xacro)/xacro.py '$(arg model)'
+    enable_logging:=$(arg enable_logging)
+    enable_ground_truth:=$(arg enable_ground_truth)
+    enable_mavlink_interface:=$(arg enable_mavlink_interface)
+    mavlink_udp_port:=$(arg mavlink_udp_port)
+    sensor_ns:=$(arg sensor_ns) 
+    log_file:=$(arg log_file)"
+  />
+
+  <!-- push robot_description to factory and spawn robot in gazebo -->
+  <node name="spawn_iris" pkg="gazebo_ros" type="spawn_model"
+   args="-param robot_description
+         -urdf
+         -x $(arg x)
+         -y $(arg y)
+         -z $(arg z)
+	 -Y $(arg Y)
+         -model $(arg name)"
+   respawn="false" output="screen">
+  </node>    
+    
+  
+    <node name="sitl" pkg="px4" type="px4" output="$(arg screen)"
+        args="$(find px4) $(arg rcS)">
+    </node>
+
+    <include file="$(find px4)/launch/mavros.launch">
+        <arg name="ns" value="$(arg ns)"/>
+        <arg name="gcs_url" value=""/> 
+        <arg name="fcu_url" value="$(arg fcu_url)"/>
+        <arg name="pluginlists_yaml" value="$(arg pluginlists_yaml)" />
+        <arg name="config_yaml" value="$(arg config_yaml)" />
+    </include>
+
+    </group>
+    
+    
+    
+    
+    
+          <!-- UAV 2 - IRIS 2 -->
+    <group ns="uav_2">
+    <arg name="name" default="uav_2"/>
+    <arg name="ns" default="/uav_2/"/>
+    <arg name="fcu_url" default="udp://:14540@localhost:14545"/>
+    <arg name="vehicle" default="iris2"/>
+    <arg name="rcS" default="$(find aircraft_inspection)/config/$(arg vehicle)"/>
+    <arg name="x" default="13.5"/>
+    <arg name="y" default="3"/>
+    <arg name="z" default="0"/>
+    <arg name="R" default="0"/>
+    <arg name="P" default="0"/>
+    <arg name="Y" default="3.14"/>
+    
+  <arg name="enable_logging" default="false"/>
+  <arg name="enable_ground_truth" default="true"/>
+  <arg name="enable_mavlink_interface" default="true"/>  
+  <arg name="mavlink_udp_port" default="14565"/>  
+  <arg name="sensor_ns" default="uav_2"/>  
+  <arg name="log_file" default="iris"/>
+  <arg name="model" value="$(find aircraft_inspection)/urdf/iris/iris_inspection_multi_sensors.gazebo" />
+
+  <param name="robot_description" command="
+    $(find xacro)/xacro.py '$(arg model)'
+    enable_logging:=$(arg enable_logging)
+    enable_ground_truth:=$(arg enable_ground_truth)
+    enable_mavlink_interface:=$(arg enable_mavlink_interface)
+    mavlink_udp_port:=$(arg mavlink_udp_port)
+    sensor_ns:=$(arg sensor_ns) 
+    log_file:=$(arg log_file)"
+  />
+
+  <!-- push robot_description to factory and spawn robot in gazebo -->
+  <node name="spawn_iris" pkg="gazebo_ros" type="spawn_model"
+   args="-param robot_description
+         -urdf
+         -x $(arg x)
+         -y $(arg y)
+         -z $(arg z)
+	 -Y $(arg Y)
+         -model $(arg name)"
+   respawn="false" output="screen">
+  </node>    
+    
+  
+    <node name="sitl" pkg="px4" type="px4" output="$(arg screen)"
+        args="$(find px4) $(arg rcS)">
+    </node>
+
+    <include file="$(find px4)/launch/mavros.launch">
+        <arg name="ns" value="$(arg ns)"/>
+        <arg name="gcs_url" value=""/> 
+        <arg name="fcu_url" value="$(arg fcu_url)"/>
+        <arg name="pluginlists_yaml" value="$(arg pluginlists_yaml)" />
+        <arg name="config_yaml" value="$(arg config_yaml)" />
+    </include>
+
+    </group>
+    
+    
+    
+          <!-- UAV 3 - IRIS 3 -->
+    <group ns="uav_3">
+    <arg name="name" default="uav_3"/>
+    <arg name="ns" default="/uav_3/"/>
+    <arg name="fcu_url" default="udp://:14550@localhost:14555"/>
+    <arg name="vehicle" default="iris3"/>
+    <arg name="rcS" default="$(find aircraft_inspection)/config/$(arg vehicle)"/>
+    <arg name="x" default="4.5"/>
+    <arg name="y" default="15.0"/>
+    <arg name="z" default="0"/>
+    <arg name="R" default="0"/>
+    <arg name="P" default="0"/>
+    <arg name="Y" default="3.14"/>
+    
+  <arg name="enable_logging" default="false"/>
+  <arg name="enable_ground_truth" default="true"/>
+  <arg name="enable_mavlink_interface" default="true"/>  
+  <arg name="mavlink_udp_port" default="14570"/>  
+  <arg name="sensor_ns" default="uav_3"/>  
+  <arg name="log_file" default="iris"/>
+  <arg name="model" value="$(find aircraft_inspection)/urdf/iris/iris_inspection_multi_sensors.gazebo" />
+
+  <param name="robot_description" command="
+    $(find xacro)/xacro.py '$(arg model)'
+    enable_logging:=$(arg enable_logging)
+    enable_ground_truth:=$(arg enable_ground_truth)
+    enable_mavlink_interface:=$(arg enable_mavlink_interface)
+    mavlink_udp_port:=$(arg mavlink_udp_port)
+    sensor_ns:=$(arg sensor_ns) 
+    log_file:=$(arg log_file)"
+  />
+
+  <!-- push robot_description to factory and spawn robot in gazebo -->
+  <node name="spawn_iris" pkg="gazebo_ros" type="spawn_model"
+   args="-param robot_description
+         -urdf
+         -x $(arg x)
+         -y $(arg y)
+         -z $(arg z)
+	 -Y $(arg Y)
+         -model $(arg name)"
+   respawn="false" output="screen">
+  </node>    
+    
+  
+    <node name="sitl" pkg="px4" type="px4" output="$(arg screen)"
+        args="$(find px4) $(arg rcS)">
+    </node>
+
+    <include file="$(find px4)/launch/mavros.launch">
+        <arg name="ns" value="$(arg ns)"/>
+        <arg name="gcs_url" value=""/> 
+        <arg name="fcu_url" value="$(arg fcu_url)"/>
+        <arg name="pluginlists_yaml" value="$(arg pluginlists_yaml)" />
+        <arg name="config_yaml" value="$(arg config_yaml)" />
+    </include>
+
+    </group>
+</launch>
+
+<!-- vim: set et ft=xml fenc=utf-8 ff=unix sts=0 sw=4 ts=4 : -->
