@@ -180,7 +180,7 @@ int main(int argc, char **argv)
     Transform3f tf1;
     tf1.setIdentity();
     tf1.setTranslation(Vec3f(0,0,0));
-    CollisionObject* obj = new CollisionObject(boost::shared_ptr<CollisionGeometry>(m1), tf1);
+    CollisionObject* obj = new CollisionObject(std::shared_ptr<CollisionGeometry>(m1), tf1);
     Transform3f tf0;
 
     visualization_msgs::MarkerArray marker_array ;
@@ -195,7 +195,7 @@ int main(int argc, char **argv)
     pointfile.open (file_loc.c_str());
     for (int j=0; j<points.poses.size();j++)
     {
-        boost::shared_ptr<Box> Sample(new Box(1));
+        std::shared_ptr<Box> Sample(new Box(1));
         tf0.setIdentity();
         tf0.setTranslation(Vec3f(points.poses[j].position.x , points.poses[j].position.y  ,points.poses[j].position.z ));
         CollisionObject co0(Sample, tf0);

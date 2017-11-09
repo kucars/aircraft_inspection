@@ -118,8 +118,10 @@ int main(int argc, char **argv)
     std::string str = path+"/src/mesh/desktop_scaleddown.obj";
     loadOBJFile(str.c_str(), p1, t1);
 
-    BVHModel<OBBRSS>* m1 = new BVHModel<OBBRSS>();
-    boost::shared_ptr<CollisionGeometry> m1_ptr(m1);
+    std::shared_ptr<BVHModel<OBBRSS>> m1(new BVHModel<OBBRSS>());
+
+    //BVHModel<OBBRSS>* m1 = new BVHModel<OBBRSS>();
+    std::shared_ptr<CollisionGeometry> m1_ptr(m1);
 
     m1->beginModel();
     m1->addSubModel(p1, t1);
@@ -128,7 +130,13 @@ int main(int argc, char **argv)
     Transform3f tf1;
     tf1.setIdentity();
     tf1.setTranslation(Vec3f(0,0,0));
-    CollisionObject* obj = new CollisionObject(boost::shared_ptr<CollisionGeometry>(m1), tf1);
+    //CollisionObject* obj = new CollisionObject(boost::shared_ptr<CollisionGeometry>(m1), tf1);
+    CollisionObject* obj = new CollisionObject(std::shared_ptr<CollisionGeometry>(m1), tf1);
+    /*
+    BVHModel<OBBRSS<S>>* model = new BVHModel<OBBRSS<S>>();
+    generateBVHModel(*model, box, Transform3<S>::Identity());
+    env.push_back(new CollisionObject<S>(std::shared_ptr<CollisionGeometry<S>>(model), transforms[i]));
+    */
     Transform3f tf0;
 
     visualization_msgs::MarkerArray marker_array ;
@@ -136,7 +144,7 @@ int main(int argc, char **argv)
 
     for(int j=0; j<=points_num; j++)
     {
-        boost::shared_ptr<Box> Sample(new Box(1));
+        std::shared_ptr<Box> Sample(new Box(1));
         tf0.setIdentity();
         tf0.setTranslation(Vec3f(points.poses[j].position.x , points.poses[j].position.y  ,points.poses[j].position.z ));
         CollisionObject co0(Sample, tf0);

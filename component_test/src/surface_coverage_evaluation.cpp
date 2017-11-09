@@ -451,7 +451,7 @@ void meshingVTK(pcl::PointCloud<pcl::PointXYZ> pointcloud, pcl::PolygonMeshPtr& 
     vtkSmartPointer<vtkPolyData> polydatatest  = vtkSmartPointer<vtkPolyData>::New();
     polydatatest->Reset();
     polydatatest= reverse->GetOutput();
-    polydatatest->Update();
+    //polydatatest->Update();
     std::cout<<"polygons are "<<polydatatest->GetNumberOfPolys()<<"\n";
     //     pcl::PolygonMesh::Ptr result(new pcl::PolygonMesh());
 
