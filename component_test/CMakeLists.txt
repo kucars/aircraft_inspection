@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5.1)
 project( component_test )
-SET ( CMAKE_CXX_FLAGS "-frounding-math" )
+#SET ( CMAKE_CXX_FLAGS "-frounding-math" )
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 find_package(catkin REQUIRED COMPONENTS
@@ -17,33 +17,33 @@ find_package(catkin REQUIRED COMPONENTS
   rviz_visual_tools
   )
 
-find_package(PCL REQUIRED)
+set( ROS_DISTRO $ENV{ROS_DISTRO} )
+if(${ROS_DISTRO} STREQUAL "indigo" )
+    find_package(fcl REQUIRED)
+elseif(${ROS_DISTRO} STREQUAL "kinetic")
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(LIBFCL REQUIRED fcl)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+else()
+    message("Unsupported ROS Distro")
+endif()
+
+FIND_PACKAGE(CUDA)
 find_package(Boost REQUIRED)
-find_package(fcl REQUIRED)
 find_package(octomap REQUIRED)
 # CGAL and its components
-find_package( CGAL QUIET COMPONENTS  )
+find_package(CGAL QUIET COMPONENTS)
 find_package(VTK REQUIRED)
 find_package(OpenMP)
 if (OPENMP_FOUND)
     message(STATUS "*************************************************************************************************")
-#    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
-#Cuda related Flags
-find_package(CUDA QUIET)
-#list(APPEND CMAKE_CXX_FLAGS "-std=c++11 -O3")
-#list(APPEND CUDA_NVCC_FLAGS "-std=c++11;-O2;-DVERBOSE")
-#set(CUDA_PROPAGATE_HOST_FLAGS OFF)
 
 if ( NOT CGAL_FOUND )
   message(STATUS "This project requires the CGAL library, and will not be compiled.")
-  return()  
+  return()
 endif()
-
-include_directories(${PCL_INCLUDE_DIRS} /usr/local/cuda/include/ ${OPENMP_INCLUDE_DIRS})
-link_directories(${PCL_LIBRARY_DIRS})
-add_definitions(${PCL_DEFINITIONS})
 
 catkin_package(
    INCLUDE_DIRS include
@@ -55,8 +55,39 @@ include_directories(include
   ${catkin_INCLUDE_DIRS}
   ${rviz_visual_tools_INCLUDE_DIRS}
   ${OCTOMAP_INCLUDE_DIRS}
-#  /usr/local/cuda/include/
 )
+
+if (CUDA_FOUND)
+  message(STATUS "CUDA Version: ${CUDA_VERSION_STRINGS}")
+  message(STATUS "CUDA Libararies: ${CUDA_LIBRARIES}")
+  set(
+    CUDA_NVCC_FLAGS
+    ${CUDA_NVCC_FLAGS};
+    -O3
+    -gencode arch=compute_30,code=sm_30
+    -gencode arch=compute_35,code=sm_35
+    -gencode arch=compute_50,code=[sm_50,compute_50]
+    -gencode arch=compute_52,code=[sm_52,compute_52]
+    #-gencode arch=compute_61,code=sm_61
+    #-gencode arch=compute_62,code=sm_62
+  )
+  #add_definitions(-DGPU)
+  cuda_add_library(frustum_culling_gpu src/frustum_culling_gpu.cu)
+  cuda_add_library(voxel_grid_occlusion_estimation_gpu src/voxel_grid_occlusion_estimation_gpu.cu)
+  add_library(occlusion_culling_gpu src/occlusion_culling_gpu.cpp)
+  target_link_libraries(occlusion_culling_gpu frustum_culling_gpu voxel_grid_occlusion_estimation_gpu ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+  cuda_add_executable(test_cuda /home/tarek/workspace/catkin_ws/src/aircraft_inspection/component_test/src/test_cuda.cu)
+  add_executable(coverage_quantification_gpu src/coverage_quantification_gpu.cpp)
+  add_dependencies(coverage_quantification_gpu ${catkin_EXPORTED_TARGETS})
+  target_link_libraries(coverage_quantification_gpu occlusion_culling_gpu ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+endif()
+
+#PLC introduces erros to CUDA if included before CUDA
+find_package(PCL REQUIRED)
+
+include_directories(${PCL_INCLUDE_DIRS} ${OPENMP_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 
 add_library(fcl_test src/fcl_utility.cpp )
 add_library(voxel_grid src/voxel_grid.cpp )
@@ -138,7 +169,6 @@ add_executable(coverage_quantification src/coverage_quantification.cpp)
 add_dependencies(coverage_quantification ${catkin_EXPORTED_TARGETS})
 target_link_libraries(coverage_quantification occlusion_culling ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
-
 add_executable(occlusion_culling_debug src/occlusion_culling_debug.cpp)
 add_dependencies(occlusion_culling_debug ${catkin_EXPORTED_TARGETS})
 target_link_libraries(occlusion_culling_debug voxel_grid_occlusion_estimation ${catkin_LIBRARIES} ${PCL_LIBRARIES})
@@ -149,19 +179,19 @@ target_link_libraries(discretization ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(filtering_old src/filtering_old.cpp)
 add_dependencies(filtering_old ${catkin_EXPORTED_TARGETS})
-target_link_libraries(filtering_old fcl_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+target_link_libraries(filtering_old fcl_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${LIBFCL_LIBRARIES})
 
 add_executable(collision_distance_test src/collision_distance_test.cpp)
 add_dependencies(collision_distance_test ${catkin_EXPORTED_TARGETS})
-target_link_libraries(collision_distance_test fcl_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES})
+target_link_libraries(collision_distance_test fcl_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES})
 
 add_executable(samples_orientation src/samples_orientation.cpp)
 add_dependencies(samples_orientation ${catkin_EXPORTED_TARGETS})
-target_link_libraries(samples_orientation fcl_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES})
+target_link_libraries(samples_orientation fcl_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES})
 
 add_executable(orientation_testing src/orientation_testing.cpp)
 add_dependencies(orientation_testing ${catkin_EXPORTED_TARGETS})
-target_link_libraries(orientation_testing fcl_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES})
+target_link_libraries(orientation_testing fcl_test ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES})
 
 add_executable(reconstruction src/reconstruction.cpp)
 add_dependencies(reconstruction ${catkin_EXPORTED_TARGETS})
@@ -186,13 +216,3 @@ target_link_libraries(triangulation_mesh -lgmp -lmpfr ${catkin_LIBRARIES} ${CGAL
 add_executable(cgal_reconstruction src/cgal_reconstruction.cpp)
 add_dependencies(cgal_reconstruction ${catkin_EXPORTED_TARGETS})
 target_link_libraries(cgal_reconstruction -lgmp -lmpfr ${catkin_LIBRARIES} ${CGAL_Core_LIBRARY} ${CGAL_LIBRARY} ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
-if (CUDA_FOUND)
-    cuda_add_library(frustum_culling_gpu src/frustum_culling_gpu.cu )
-    cuda_add_library(voxel_grid_occlusion_estimation_gpu src/voxel_grid_occlusion_estimation_gpu.cu )
-    add_library(occlusion_culling_gpu src/occlusion_culling_gpu.cpp)
-    target_link_libraries(occlusion_culling_gpu frustum_culling_gpu voxel_grid_occlusion_estimation_gpu ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-    cuda_add_executable(test_cuda src/test_cuda.cu)
-    add_executable(coverage_quantification_gpu src/coverage_quantification_gpu.cpp)
-    add_dependencies(coverage_quantification_gpu ${catkin_EXPORTED_TARGETS})
-    target_link_libraries(coverage_quantification_gpu occlusion_culling_gpu ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
-endif (CUDA_FOUND)
