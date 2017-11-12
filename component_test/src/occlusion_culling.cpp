@@ -1,3 +1,25 @@
+/***************************************************************************
+ *   Copyright (C) 2015 - 2017 by                                          *
+ *      Tarek Taha, KURI  <tataha@tarektaha.com>                           *
+ *      Randa Almadhoun   <randa.almadhoun@kustar.ac.ae>                   *
+ *                                                                         *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   51 Franklin Steet, Fifth Floor, Boston, MA  02111-1307, USA.          *
+ ***************************************************************************/
+
 #include "component_test/occlusion_culling.h"
 
 
@@ -53,17 +75,6 @@ OcclusionCulling::OcclusionCulling(ros::NodeHandle &n, std::string modelName):
    fc.setNearPlaneDistance (0.7);
    fc.setFarPlaneDistance (6.0);
 
-   //max accuracy calculation
-   double max=0,min=std::numeric_limits<double>::max();
-   for(int i=0; i<cloud->points.size();i++){
-       double temp = cloud->at(i).z;//depth
-       if(max<temp)
-          max=temp;
-       if(min>temp)
-          min=temp;
-   }
-   maxAccuracyError = 0.0000285 * max*max;
-   minAccuracyError = 0.0000285 * min*min;
 }
 OcclusionCulling::OcclusionCulling(std::string modelName):
     model(modelName),
@@ -111,17 +122,6 @@ OcclusionCulling::OcclusionCulling(std::string modelName):
     fc.setNearPlaneDistance (0.7);
     fc.setFarPlaneDistance (6.0);
 
-    //max accuracy calculation
-    double max=0,min=std::numeric_limits<double>::max();
-    for(int i=0; i<cloud->points.size();i++){
-        double temp = cloud->at(i).z;//depth
-        if(max<temp)
-           max=temp;
-        if(min>temp)
-           min=temp;
-    }
-    maxAccuracyError = 0.0000285 * max*max;
-    minAccuracyError = 0.0000285 * min*min;
 }
 OcclusionCulling::OcclusionCulling():
     model(NULL),
@@ -169,17 +169,6 @@ OcclusionCulling::OcclusionCulling():
     fc.setNearPlaneDistance (0.7);
     fc.setFarPlaneDistance (6.0);
 
-    //max accuracy calculation
-    double max=0,min=std::numeric_limits<double>::max();
-    for(int i=0; i<cloud->points.size();i++){
-        double temp = cloud->at(i).z;//depth
-        if(max<temp)
-           max=temp;
-        if(min>temp)
-           min=temp;
-    }
-    maxAccuracyError = 0.0000285 * max*max;
-    minAccuracyError = 0.0000285 * min*min;
 }
 OcclusionCulling::~OcclusionCulling()
 {
@@ -404,6 +393,171 @@ double OcclusionCulling::calcAvgAccuracy(pcl::PointCloud<pcl::PointXYZ> pointClo
     avgAccuracy=errorSum/pointCloud.size();
     return avgAccuracy;
 }
+double OcclusionCulling::calcAvgAccuracy(pcl::PointCloud<pcl::PointXYZ> pointCloud, geometry_msgs::Pose cameraPose)
+{
+
+        double avgAccuracy;
+        double pointError,val,errorSum=0;
+        pcl::PointCloud<pcl::PointXYZ> transformedPointCloud;
+        transformedPointCloud = pointCloudViewportTransform(pointCloud, cameraPose);
+
+        for (int j=0; j<transformedPointCloud.size(); j++)
+        {
+            val = transformedPointCloud.at(j).x;//depth (it is at x axis because of the frustum culling camera pose requirement)
+            pointError= 0.0000285 * val * val;
+            errorSum += pointError;
+        }
+        avgAccuracy=errorSum/transformedPointCloud.size();
+        return avgAccuracy;
+}
+
+void OcclusionCulling::SSMaxMinAccuracy(std::vector<geometry_msgs::PoseArray> sensorsPoses)
+{
+
+    pcl::PointCloud<pcl::PointXYZ> global, globalVis;
+    double max=0,min=std::numeric_limits<double>::max();
+
+    for (int i = 0 ; i<sensorsPoses.size(); i++)
+    {
+        for (int j = 0; j<sensorsPoses[i].poses.size(); j++)
+        {
+                tf::Quaternion qt(sensorsPoses[i].poses[j].orientation.x, sensorsPoses[i].poses[j].orientation.y, sensorsPoses[i].poses[j].orientation.z, sensorsPoses[i].poses[j].orientation.w) ;
+                double r, p, y;
+                tf::Matrix3x3(qt).getRPY(r, p, y);
+                //std::cout<<" camera: "<<r<<" "<<p<<" "<<y<<std::endl;
+                //std::cout<<" camera: "<<r*180/M_PI<<" "<<p*180/M_PI<<" "<<y*180/M_PI<<std::endl;
+
+                pcl::PointCloud<pcl::PointXYZ> visible;
+                pcl::PointCloud<pcl::PointXYZ> transformedVisible;
+
+                visible += extractVisibleSurface(sensorsPoses[i].poses[j]);
+
+                transformedVisible = pointCloudViewportTransform(visible, sensorsPoses[i].poses[j]);
+
+                global +=transformedVisible;
+                globalVis += visible;
+
+                for(int i=0; i<transformedVisible.points.size();i++){
+                    double temp = transformedVisible.points[i].x;//depth (it is at x axis because of the frustum culling camera pose requirement)
+                    //std::cout<<"depth are :  "<<temp<<"points\n";
+                    if(max<temp)
+                        max=temp;
+                    if(min>temp)
+                        min=temp;
+                }
+        }
+
+    }
+
+
+    maxAccuracyError = 0.0000285 * max*max;// the standard deviation equation is taken from paper
+    minAccuracyError = 0.0000285 * min*min;
+    std::cout<<"Maximum error: "<<maxAccuracyError<<" for the depth of: "<<max<<"\n";
+    std::cout<<"Minimum error: "<<minAccuracyError<<" for the depth of: "<<min<<"\n";
+
+    AccuracyMaxSet = true;
+
+}
+
+void OcclusionCulling::transformPointMatVec(tf::Vector3 translation, tf::Matrix3x3 rotation, geometry_msgs::Point32 in, geometry_msgs::Point32& out)
+{
+
+    double x = rotation[0].x() * in.x + rotation[0].y() * in.y + rotation[0].z() * in.z + translation.x();
+    double y = rotation[1].x() * in.x + rotation[1].y() * in.y + rotation[1].z() * in.z + translation.y();
+    double z = rotation[2].x() * in.x + rotation[2].y() * in.y + rotation[2].z() * in.z + translation.z();
+
+    out.x = x;
+    out.y = y;
+    out.z = z;
+}
+
+
+//translate the pcd viewport (0,0,0) to the camera viewport (viewpoints)
+//All pcd files have viewports set to (0,0,0) ... occlusion culling extract the point cloud but doesn't change the point cloud depth
+//This function will transform the viewport to the new viewport
+pcl::PointCloud<pcl::PointXYZ> OcclusionCulling::pointCloudViewportTransform(pcl::PointCloud<pcl::PointXYZ> pointCloud, geometry_msgs::Pose cameraPose)
+{
+
+    pcl::PointCloud<pcl::PointXYZ> posArray;
+    tf::Matrix3x3 rotZ, rotX, rotY, rotE;
+
+    //traslation accroding to the camera position
+    tf::Vector3 cameraPoseTrans(-1*cameraPose.position.x, -1* cameraPose.position.y, -1*cameraPose.position.z);
+    //std::cout<<"camera position: "<< cameraPose.position.x<<" "<<cameraPose.position.y<<" "<< cameraPose.position.z<<std::endl;
+
+    //vector and matrice to help in performing no translation or no rotation
+    tf::Vector3 transE(0, 0, 0); //No translation
+    //No Rotation
+    rotE.setValue(1,0,0,
+                  0,1,0,
+                  0,0,1);
+
+    // rotation of the uav interms of the previous viewport of the pointcloud
+    tf::Quaternion qt(cameraPose.orientation.x, cameraPose.orientation.y, cameraPose.orientation.z, cameraPose.orientation.w) ;
+    double r, p, y;
+    tf::Matrix3x3(qt).getRPY(r, p, y);
+    double yaw = -1 * y;
+    //std::cout<<" yaw angle: "<<yaw<<std::endl;
+    //std::cout<<" cos angle: "<<std::cos(yaw)<<std::endl;
+    //std::cout<<" sin angle: "<<std::sin(yaw)<<std::endl;
+
+    rotZ.setValue(std::cos(yaw),-1*std::sin(yaw),0,
+                  std::sin(yaw),std::cos(yaw),0,
+                  0, 0, 1);
+
+    // rotation required for frustum culling (not required !)
+    double roll = -1 * 90;
+    rotX.setValue(1,0,0,
+                  0, std::cos(roll),-1*std::sin(roll),
+                  0, std::sin(roll),std::cos(roll)  );
+
+    // rotation for the camera orientation
+    double pitch = -1 * p;
+    //std::cout<<" pitch angle: "<<pitch<<std::endl;
+
+    rotY.setValue(std::cos(pitch),0,std::sin(pitch),
+                  0,1,0,
+                  -1*std::sin(pitch), 0, std::cos(pitch));
+
+    for (int i = 0; i < pointCloud.size() ; i++) {
+
+        geometry_msgs::Point32 ptIN, ptOUT, ptOUT1, ptOUT2, ptOUT3 ;
+        ptIN.x = pointCloud.points[i].data[0];
+        ptIN.y = pointCloud.points[i].data[1];
+        ptIN.z = pointCloud.points[i].data[2];
+
+        //std::cout<<"camera position: "<< cameraPose.position.x<<" "<<cameraPose.position.y<<" "<< cameraPose.position.z<<std::endl;
+        //std::cout<<"point in : "<<ptIN.x<<" "<<ptIN.y << " "<<ptIN.z<<" "<<std::endl;
+
+        //translation to camera position
+        transformPointMatVec(cameraPoseTrans, rotE, ptIN, ptOUT);
+        //std::cout<<"point out1 : "<<ptOUT.x<<" "<<ptOUT.y << " "<<ptOUT.z<<" "<<std::endl;
+
+        //rotation around z (yaw) according to the camera orientation
+        transformPointMatVec(transE, rotZ, ptOUT, ptOUT1);
+        //std::cout<<"point out2 : "<<ptOUT1.x<<" "<<ptOUT1.y << " "<<ptOUT1.z<<" "<<std::endl;
+
+        //rotation around y (pitch) according to the camera tilt
+        transformPointMatVec(transE, rotY, ptOUT1, ptOUT2);
+        //std::cout<<"point out3 : "<<ptOUT2.x<<" "<<ptOUT2.y << " "<<ptOUT2.z<<" "<<std::endl;
+
+        //rotation around x (roll)
+        //transformPointMatVec(transE, rotX, ptOUT2, ptOUT3);
+        //std::cout<<"point out4 : "<<ptOUT3.x<<" "<<ptOUT3.y << " "<<ptOUT3.z<<" "<<std::endl;
+
+        pcl::PointXYZ finalPt;
+        finalPt.data[0] = ptOUT2.x;
+        finalPt.data[1] = ptOUT2.y;
+        finalPt.data[2] = ptOUT2.z;
+        posArray.points.push_back(finalPt);
+
+    }
+
+    posArray.header = pointCloud.header;
+    return posArray;
+}
+
+
 //float OcclusionCulling::calcCoveragePercent(geometry_msgs::Pose location)
 //{
 

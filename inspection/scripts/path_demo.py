@@ -138,17 +138,17 @@ def setpoint_demo():
     setpoint = SetpointPosition()
     
     #read from a file
-    theFile = open("/home/randa/workspace/catkin_ws/src/aircraft_inspection/inspection/scripts/path_check.txt", "r")
+    theFile = open("/home/kuri/workspace/catkin_ws/src/aircraft_inspection/inspection/scripts/path_check.txt", "r")
     
     rospy.loginfo("File Open")
     
     begin= rospy.get_time()    # stamp should update
     rospy.loginfo("TAKEOFF 1")
     #setpoint.set(4.0, -30.0, 4.0, 3.14, 3)
-    setpoint.set(3.0, -34.5, 5.0, 3.14, 5)
-    rospy.loginfo("TAKEOFF 2")
-    #setpoint.set(4.0, -30.0, 9.0, 3.14, 6)
-    setpoint.set(3.0, -34.5, 9.0, 3.14, 6)  
+    setpoint.set(0.75, -18.75, 5.0, 3.14, 5)
+    #rospy.loginfo("TAKEOFF 2")
+    ##setpoint.set(4.0, -30.0, 9.0, 3.14, 6)
+    #setpoint.set(0.75, -18.75, 9.0, 3.14, 6)  
     rospy.loginfo("MOVING using data from the file")
     #setpoint.set(4.0, -29.0, 9.0, -2.3562, 8)
     data = theFile.readlines()
@@ -157,10 +157,10 @@ def setpoint_demo():
     temp_valsy = []
     temp_valsz = []
 
-    temp_vals.append(9.0)
-    temp_valsx.append(3.0)
-    temp_valsy.append(-34.5)
-    temp_valsz.append(9.0)
+    temp_vals.append(5.0)
+    temp_valsx.append(0.75)
+    temp_valsy.append(-18.75)
+    temp_valsz.append(5.0)
 
     index=0
     for line in data:

@@ -54,6 +54,7 @@ catkin_package(
 include_directories(include
   ${catkin_INCLUDE_DIRS}
   ${rviz_visual_tools_INCLUDE_DIRS}
+  ${OCTOMAP_INCLUDE_DIRS}
 )
 
 if (CUDA_FOUND)
@@ -106,6 +107,14 @@ target_link_libraries(occlusion_culling frustum_culling voxel_grid_occlusion_est
 add_library(visualization_voxelgrid src/visualization_voxelgrid.cpp)
 target_link_libraries(visualization_voxelgrid voxel_grid ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES})
 
+add_executable(octomap_test src/octomap_test.cpp)
+add_dependencies(octomap_test ${catkin_EXPORTED_TARGETS})
+target_link_libraries(octomap_test occlusion_culling occlusion_culling_gpu visualization_voxelgrid voxel_grid ${catkin_LIBRARIES} ${CGAL_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+
+add_executable(dynamic_sampling src/dynamic_sampling.cpp)
+add_dependencies(dynamic_sampling ${catkin_EXPORTED_TARGETS})
+target_link_libraries(dynamic_sampling occlusion_culling occlusion_culling_gpu visualization_voxelgrid voxel_grid ${catkin_LIBRARIES} ${CGAL_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+
 add_executable(surface_area_path_test src/surface_area_path_test.cpp)
 add_dependencies(surface_area_path_test ${catkin_EXPORTED_TARGETS})
 target_link_libraries(surface_area_path_test occlusion_culling occlusion_culling_gpu mesh_surface ${rviz_visual_tools_LIBRARIES} ${VTK_LIBRARIES} ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
@@ -126,7 +135,7 @@ target_link_libraries(surface_coverage_evaluation occlusion_culling occlusion_cu
 
 add_executable(accuracy_check src/accuracy_check.cpp)
 add_dependencies(accuracy_check ${catkin_EXPORTED_TARGETS})
-target_link_libraries(accuracy_check occlusion_culling ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+target_link_libraries(accuracy_check occlusion_culling occlusion_culling_gpu ${catkin_LIBRARIES} -lgmp -lmpfr ${CGAL_LIBRARY} ${CGAL_Core_LIBRARY} ${PCL_LIBRARIES} ${fcl_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
 add_executable(coverage_comparison src/coverage_comparison.cpp)
 add_dependencies(coverage_comparison ${catkin_EXPORTED_TARGETS})

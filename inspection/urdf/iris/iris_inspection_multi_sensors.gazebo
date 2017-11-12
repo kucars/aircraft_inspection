@@ -1,0 +1,193 @@
+<?xml version="1.0"?>
+<!--
+  Copyright 2015 Fadri Furrer, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Michael Burri, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Mina Kamel, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Janosch Nikolic, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Markus Achtelik, ASL, ETH Zurich, Switzerland
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<robot name="iris" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:property name="pi" value="3.14159265359" />
+
+  <!-- Instantiate firefly with a generic odometry sensor. -->
+
+ <xacro:arg name='name' default='iris' />
+  <xacro:arg name='mavlink_addr' default='INADDR_ANY' />
+  <xacro:arg name='mavlink_udp_port' default='14560' />
+  <xacro:arg name='visual_material' default='DarkGrey' />
+  <xacro:arg name='enable_mavlink_interface' default='true' />
+  <xacro:arg name='enable_wind' default='false' />
+  <xacro:arg name='enable_ground_truth' default='true' />
+  <xacro:arg name='enable_logging' default='false' />
+  <xacro:arg name='log_file' default='iris' />
+  <xacro:arg name='sensor_ns' default='iris' />
+
+  <!-- macros for gazebo plugins, sensors -->
+  <xacro:include filename="$(find aircraft_inspection)/urdf/iris_accessories/component_snippets.xacro" />
+
+
+
+  <!-- Instantiate iris "mechanics" -->
+  <xacro:include filename="$(find aircraft_inspection)/urdf/iris_accessories/iris.xacro" />
+
+  <xacro:if value="$(arg enable_wind)">
+    <xacro:wind_plugin_macro
+        namespace="${namespace}"
+        wind_direction="0 0 1"
+        wind_force_mean="0.7"
+        xyz_offset="1 0 0"
+        wind_gust_direction="0 0 0"
+        wind_gust_duration="0"
+        wind_gust_start="0"
+        wind_gust_force_mean="0"
+        />
+  </xacro:if>
+
+  <xacro:if value="$(arg enable_mavlink_interface)">
+  <!-- Instantiate mavlink telemetry interface. -->
+  <xacro:mavlink_interface_macro
+    namespace="${namespace}"
+    imu_sub_topic="/imu"
+    mavlink_addr="INADDR_ANY"
+    mavlink_udp_port="$(arg mavlink_udp_port)"
+    >
+  </xacro:mavlink_interface_macro>
+  </xacro:if>
+
+  <!-- Mount an ADIS16448 IMU. -->
+  <xacro:imu_plugin_macro
+    namespace="${namespace}"
+    imu_suffix=""
+    parent_link="base_link"
+    imu_topic="/imu"
+    mass_imu_sensor="0.015"
+    gyroscope_noise_density="0.0003394"
+    gyroscopoe_random_walk="0.000038785"
+    gyroscope_bias_correlation_time="1000.0"
+    gyroscope_turn_on_bias_sigma="0.0087"
+    accelerometer_noise_density="0.004"
+    accelerometer_random_walk="0.006"
+    accelerometer_bias_correlation_time="300.0"
+    accelerometer_turn_on_bias_sigma="0.1960"
+  >
+    <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </xacro:imu_plugin_macro>
+
+  <xacro:if value="$(arg enable_ground_truth)">
+    <!-- Mount an IMU providing ground truth. -->
+    <xacro:imu_plugin_macro
+      namespace="${namespace}"
+      imu_suffix="gt"
+      parent_link="base_link"
+      imu_topic="ground_truth/imu"
+      mass_imu_sensor="0.00001"
+      gyroscope_noise_density="0.0"
+      gyroscopoe_random_walk="0.0"
+      gyroscope_bias_correlation_time="1000.0"
+      gyroscope_turn_on_bias_sigma="0.0"
+      accelerometer_noise_density="0.0"
+      accelerometer_random_walk="0.0"
+      accelerometer_bias_correlation_time="300.0"
+      accelerometer_turn_on_bias_sigma="0.0"
+    >
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001" />
+      <origin xyz="0 0 0" rpy="0 0 0" />
+    </xacro:imu_plugin_macro>
+
+    <!-- Mount a generic odometry sensor providing ground truth. -->
+    <xacro:odometry_plugin_macro
+      namespace="$(arg sensor_ns)/ground_truth"
+      odometry_sensor_suffix="gt"
+      parent_link="base_link"
+      pose_topic="pose"
+      pose_with_covariance_topic="pose_with_covariance"
+      position_topic="position"
+      transform_topic="transform"
+      odometry_topic="odometry"
+      parent_frame_id="world"
+      mass_odometry_sensor="0.00001"
+      measurement_divisor="1"
+      measurement_delay="0"
+      unknown_delay="0.0"
+      noise_normal_position="0 0 0"
+      noise_normal_quaternion="0 0 0"
+      noise_normal_linear_velocity="0 0 0"
+      noise_normal_angular_velocity="0 0 0"
+      noise_uniform_position="0 0 0"
+      noise_uniform_quaternion="0 0 0"
+      noise_uniform_linear_velocity="0 0 0"
+      noise_uniform_angular_velocity="0 0 0"
+      enable_odometry_map="false"
+      odometry_map=""
+      image_scale=""
+    >
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001" /> <!-- [kg.m^2] [kg.m^2] [kg.m^2] [kg.m^2] [kg.m^2] [kg.m^2] -->
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+    </xacro:odometry_plugin_macro>
+  </xacro:if>
+
+  <xacro:if value="$(arg enable_logging)">
+    <!-- Instantiate a logger -->
+    <xacro:bag_plugin_macro
+      namespace="${namespace}"
+      bag_file="$(arg log_file)"
+      rotor_velocity_slowdown_sim="${rotor_velocity_slowdown_sim}"
+    >
+    </xacro:bag_plugin_macro>
+  </xacro:if>
+
+
+
+  <xacro:include filename="$(find aircraft_inspection)/urdf/iris_accessories/extra_sensors.urdf.xacro"/>
+
+     <!-- Mount a Xtion sensor down under IRIS  -->
+  <xacro:sensor_asus_xtion_macro
+    namespace="$(arg sensor_ns)/xtion_sensor_down"
+    parent_link="base_link"
+    enable_ground_truth="true"
+  >
+    <origin xyz="0.0 0.022 -0.065" rpy="0 0.349 0" /> 
+  </xacro:sensor_asus_xtion_macro>
+  
+   <!-- Mount a Xtion sensor up under IRIS  -->
+  <xacro:sensor_asus_xtion_macro
+    namespace="$(arg sensor_ns)/xtion_sensor_up"
+    parent_link="base_link"
+    enable_ground_truth="true"
+  >
+    <origin xyz="0.0 0.022 0.065" rpy="0 -0.349 0" /> 
+  </xacro:sensor_asus_xtion_macro>
+
+
+  <!-- GPS -->
+  <gazebo>
+    <plugin name="gps_controller" filename="libhector_gazebo_ros_gps.so">
+      <updateRate>40</updateRate>
+      <robotNamespace>${namespace}</robotNamespace>
+      <bodyName>base_link</bodyName>
+      <frameId>base_link</frameId>
+      <topicName>navsat/fix</topicName>
+      <velocityTopicName>navsat/vel</velocityTopicName>
+      <referenceLatitude>49.9</referenceLatitude>
+      <referenceLongitude>8.9</referenceLongitude>
+      <referenceHeading>0</referenceHeading>
+      <referenceAltitude>0</referenceAltitude>
+      <drift>0.0001 0.0001 0.0001</drift>
+    </plugin>
+  </gazebo>
+  
+</robot>

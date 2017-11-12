@@ -62,7 +62,7 @@ public:
 
     //methods
     VoxelGridVisualization(ros::NodeHandle &n, std::string modelName, pcl::VoxelGridT &grid, std::string frame_id);
-    VoxelGridVisualization();
+    VoxelGridVisualization(pcl::VoxelGridT &grid);
     ~VoxelGridVisualization();
     visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int c_color[], double scale, std::string frame_id);
     visualization_msgs::Marker drawPoints(std::vector<geometry_msgs::Point> points, int c_color[], double scale, std::string frame_id);
@@ -76,4 +76,4 @@ public:
 
 };
 
-#endif 
+#endif

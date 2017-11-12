@@ -46,7 +46,7 @@
 namespace pcl
 {
   /** \brief VoxelGrid to estimate occluded space in the scene.
-    * The ray traversal algorithm is implemented by the work of 
+    * The ray traversal algorithm is implemented by the work of
     * 'John Amanatides and Andrew Woo, A Fast Voxel Traversal Algorithm for Ray Tracing'
     *
     * \author Christian Potthast
@@ -66,6 +66,16 @@ namespace pcl
       typedef typename PointCloud::ConstPtr PointCloudConstPtr;
 
     public:
+      //occupancy probability
+      //TODO: change the variables type, the variables should not be vectors, its just one value (cuda related)
+      Eigen::Vector4f occupied;
+      Eigen::Vector4f occupiedPar;
+      Eigen::Vector4f unoccupied;
+      Eigen::Vector4f unOccupiedPar;
+      Eigen::Vector4f entropyTot;
+      Eigen::Vector4f maxAccuracy;
+      Eigen::Vector4f minAccuracy;
+
       /** \brief Empty constructor. */
       VoxelGridOcclusionEstimationGPU ()
       {
@@ -127,7 +137,7 @@ namespace pcl
       inline PointCloud
       getFilteredPointCloud () { return filtered_cloud_; }
 
-      
+
       /** \brief Returns the minimum bounding of coordinates of the voxel grid (x,y,z).
         * \return the minimum coordinates (x,y,z)
         */
@@ -197,7 +207,7 @@ namespace pcl
         */
       int
       rayTraversal (const Eigen::Vector3i& target_voxel,
-                    const Eigen::Vector4f& origin, 
+                    const Eigen::Vector4f& origin,
                     const Eigen::Vector4f& direction,
                     const float t_min);
 
@@ -213,11 +223,11 @@ namespace pcl
       int
       rayTraversal (std::vector<Eigen::Vector3i, Eigen::aligned_allocator<Eigen::Vector3i> >& out_ray,
                     const Eigen::Vector3i& target_voxel,
-                    const Eigen::Vector4f& origin, 
+                    const Eigen::Vector4f& origin,
                     const Eigen::Vector4f& direction,
                     const float t_min);
 
-      /** \brief Returns a rounded value. 
+      /** \brief Returns a rounded value.
         * \param[in] d
         * \return rounded value
         */

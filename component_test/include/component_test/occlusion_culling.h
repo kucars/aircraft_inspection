@@ -1,3 +1,24 @@
+/***************************************************************************
+ *   Copyright (C) 2015 - 2017 by                                          *
+ *      Tarek Taha, KURI  <tataha@tarektaha.com>                           *
+ *      Randa Almadhoun   <randa.almadhoun@kustar.ac.ae>                   *
+ *                                                                         *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   51 Franklin Steet, Fifth Floor, Boston, MA  02111-1307, USA.          *
+ ***************************************************************************/
 #ifndef OCCLUSION_H_
 #define OCCLUSION_H_
 
@@ -23,6 +44,8 @@
 #include <pcl/common/transforms.h>
 #include <pcl/range_image/range_image.h>
 #include <voxel_grid_occlusion_estimation.h>
+#include <geometry_msgs/Point32.h>
+#include <geometry_msgs/PoseArray.h>
 
 class OcclusionCulling
 {
@@ -47,6 +70,7 @@ public:
     visualization_msgs::MarkerArray marker_array;
     pcl::FrustumCullingTT fc;
     double maxAccuracyError, minAccuracyError;
+    bool AccuracyMaxSet;
 
     //methods
     OcclusionCulling(ros::NodeHandle & n, std::string modelName);
@@ -57,6 +81,10 @@ public:
     //    float calcCoveragePercent(geometry_msgs::Pose location);
     float calcCoveragePercent(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered);
     double calcAvgAccuracy(pcl::PointCloud<pcl::PointXYZ> pointCloud);
+    double calcAvgAccuracy(pcl::PointCloud<pcl::PointXYZ> pointCloud, geometry_msgs::Pose cameraPose);
+    void transformPointMatVec(tf::Vector3 translation, tf::Matrix3x3 rotation, geometry_msgs::Point32 in, geometry_msgs::Point32& out);
+    pcl::PointCloud<pcl::PointXYZ> pointCloudViewportTransform(pcl::PointCloud<pcl::PointXYZ> pointCloud, geometry_msgs::Pose cameraPose);
+    void SSMaxMinAccuracy(std::vector<geometry_msgs::PoseArray> sensorsPoses);
     void visualizeFOV(geometry_msgs::Pose location);
     visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color[]);
 
